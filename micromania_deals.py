@@ -371,22 +371,24 @@ def _session():
     return s
 
 
-# Auto-régulation : limiteur de débit global (jamais de rafale) + disjoncteur
-# (si l'anti-bot bloque, on se met en pause tout seul puis on reprend).
-MIN_REQUEST_INTERVAL = float(os.environ.get("MIN_REQUEST_INTERVAL", "0.4"))
-BLOCK_COOLDOWN = float(os.environ.get("BLOCK_COOLDOWN", "300"))  # pause si bloqué (s)
-BLOCK_THRESHOLD = int(os.environ.get("BLOCK_THRESHOLD", "5"))  # blocages d'affilée
+# Limiteur de débit ADAPTATIF : le bot trouve tout seul la vitesse max que
+# l'anti-bot tolère. À chaque blocage il RALENTIT ; quand tout va bien il
+# ré-accélère doucement. Résultat : il scanne en continu, sans jamais se faire
+# bannir durablement, sans intervention.
+RATE_MIN = float(os.environ.get("RATE_MIN", "0.3"))   # intervalle plancher (rapide)
+RATE_MAX = float(os.environ.get("RATE_MAX", "4.0"))   # intervalle plafond (lent)
+RATE_START = float(os.environ.get("RATE_START", "0.5"))
 _rate_lock = threading.Lock()
 _last_req = [0.0]
-_blocked_until = [0.0]
-_consec_blocks = [0]
+_interval = [RATE_START]   # intervalle courant (s entre 2 requêtes), adaptatif
+_ok_streak = [0]
 
 
 def _rate_gate() -> None:
-    """Réserve un créneau espacé (anti-rafale) et respecte la pause anti-bot."""
+    """Réserve un créneau espacé selon l'intervalle adaptatif courant."""
     with _rate_lock:
         now = time.monotonic()
-        target = max(now, _last_req[0] + MIN_REQUEST_INTERVAL, _blocked_until[0])
+        target = max(now, _last_req[0] + _interval[0])
         _last_req[0] = target
     delay = target - time.monotonic()
     if delay > 0:
@@ -394,16 +396,26 @@ def _rate_gate() -> None:
 
 
 def _note_block() -> None:
+    """Blocage détecté -> on ralentit (×1.6)."""
     with _rate_lock:
-        _consec_blocks[0] += 1
-        if _consec_blocks[0] >= BLOCK_THRESHOLD and time.monotonic() >= _blocked_until[0]:
-            _blocked_until[0] = time.monotonic() + BLOCK_COOLDOWN
-            _consec_blocks[0] = 0
+        _ok_streak[0] = 0
+        old = _interval[0]
+        _interval[0] = min(_interval[0] * 1.6, RATE_MAX)
+        if _interval[0] != old:
             print(
-                f"[anti-bot] IP bloquée → pause auto {BLOCK_COOLDOWN / 60:.0f} min "
-                f"puis reprise automatique.",
+                f"[auto-débit] ralentissement → {_interval[0]:.2f}s/requête "
+                f"(anti-ban)",
                 file=sys.stderr,
             )
+
+
+def _note_ok() -> None:
+    """Succès -> on ré-accélère doucement après une bonne série."""
+    with _rate_lock:
+        _ok_streak[0] += 1
+        if _ok_streak[0] >= 40 and _interval[0] > RATE_MIN:
+            _ok_streak[0] = 0
+            _interval[0] = max(_interval[0] * 0.9, RATE_MIN)
 
 
 def http_get(url: str, retries: int = 3) -> bytes:
@@ -429,8 +441,7 @@ def http_get(url: str, retries: int = 3) -> bytes:
                     last_err = RuntimeError(f"HTTP {r.status_code}")
                     time.sleep(1.0 * (attempt + 1))
                     continue
-                if _consec_blocks[0]:
-                    _consec_blocks[0] = 0  # succès -> on remet le compteur à zéro
+                _note_ok()  # succès -> on ré-accélère doucement
                 return r.content
             except RuntimeError:
                 raise
