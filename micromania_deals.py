@@ -130,6 +130,51 @@ DRY_RUN = os.environ.get("DRY_RUN", "false").lower() == "true"
 FULL_SCAN = os.environ.get("FULL_SCAN", "false").lower() == "true"
 
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
+# Routage multi-salons : un webhook par catégorie et/ou un salon "pépites"
+# (deals chers). Non renseigné => retombe sur DISCORD_WEBHOOK_URL.
+WEBHOOK_JEUX = os.environ.get("DISCORD_WEBHOOK_JEUX", "").strip()
+WEBHOOK_COLLECTOR = os.environ.get("DISCORD_WEBHOOK_COLLECTOR", "").strip()
+WEBHOOK_GOODIES = os.environ.get("DISCORD_WEBHOOK_GOODIES", "").strip()
+WEBHOOK_PEPITES = os.environ.get("DISCORD_WEBHOOK_PEPITES", "").strip()
+# Prix de référence à partir duquel un deal va dans le salon "pépites".
+PEPITE_MIN = float(os.environ.get("PEPITE_MIN", "80"))
+
+def _slug_type(slug: str) -> str:
+    """Type de deal (jeux / collector / goodies) d'après le slug catégorie."""
+    s = slug.lower()
+    # Collector/packs/exclus d'abord (avant le préfixe générique "jeux-").
+    if (
+        "collector" in s
+        or "edition-limitee" in s
+        or s.startswith("exclusivites")
+        or s.startswith("tous-nos-packs")
+        or s == "produits-derives-premium"
+    ):
+        return "collector"
+    if s.startswith("jeux-") or s == "retrogaming":
+        return "jeux"
+    return "goodies"
+
+
+def _webhook_for(v: dict) -> str:
+    """Choisit le salon Discord selon le prix (pépites) puis la catégorie."""
+    if WEBHOOK_PEPITES and v.get("reference", 0) >= PEPITE_MIN:
+        return WEBHOOK_PEPITES
+    wh = {
+        "jeux": WEBHOOK_JEUX,
+        "collector": WEBHOOK_COLLECTOR,
+        "goodies": WEBHOOK_GOODIES,
+    }.get(v.get("type", ""), "")
+    return wh or DISCORD_WEBHOOK_URL
+
+
+ANY_DISCORD = bool(
+    DISCORD_WEBHOOK_URL
+    or WEBHOOK_JEUX
+    or WEBHOOK_COLLECTOR
+    or WEBHOOK_GOODIES
+    or WEBHOOK_PEPITES
+)
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
 
@@ -716,6 +761,9 @@ def _enrich_image(v: dict) -> None:
 
 
 def _send_discord(v: dict) -> None:
+    webhook = _webhook_for(v)
+    if not webhook:
+        return
     if not v.get("image"):
         _enrich_image(v)
     embed = _discord_embed(v)
@@ -727,9 +775,9 @@ def _send_discord(v: dict) -> None:
     }
     # Essai avec bouton lien ; repli sur embed seul si le webhook le refuse.
     try:
-        _http_post_json(DISCORD_WEBHOOK_URL, {"embeds": [embed], "components": [button]})
+        _http_post_json(webhook, {"embeds": [embed], "components": [button]})
     except Exception:  # noqa: BLE001
-        _http_post_json(DISCORD_WEBHOOK_URL, {"embeds": [embed]})
+        _http_post_json(webhook, {"embeds": [embed]})
 
 
 def _send_telegram(v: dict) -> None:
@@ -766,7 +814,7 @@ def send_alert(v: dict) -> None:
         print("[DRY_RUN] " + text.replace("\n", " | "))
         return
 
-    if DISCORD_WEBHOOK_URL:
+    if ANY_DISCORD:
         try:
             _throttle()
             _send_discord(v)
@@ -835,7 +883,11 @@ def run_once(force_full: bool = False, extra_only: bool = False) -> int:
 
     def scan_cat(slug: str) -> list[dict]:
         try:
-            return parse_category_tiles(slug)
+            tiles = parse_category_tiles(slug)
+            t = _slug_type(slug)
+            for v in tiles:
+                v["type"] = t
+            return tiles
         except Exception as err:  # noqa: BLE001
             print(f"[catégorie] {slug}: {err}", file=sys.stderr)
             return []
