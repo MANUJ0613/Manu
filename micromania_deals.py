@@ -395,10 +395,17 @@ def _is_challenge(content: bytes) -> bool:
     )
 
 
-def _new_session():
-    url = _next_proxy_url()
-    _tls.proxy_url = url or ""   # mémorise le proxy de cette session (clé débit)
-    proxies = {"http": url, "https": url} if url else None
+def _new_session(direct: bool = False):
+    """Crée une session curl_cffi réchauffée. direct=True -> connexion DIRECTE
+    (sans proxy, donc l'IP de la machine/téléphone), utilisée pour aller chercher
+    les images sur les fiches : peu de requêtes, et ça épargne les proxies."""
+    if direct:
+        proxies = None
+        _tls.direct_key = "DIRECT"
+    else:
+        url = _next_proxy_url()
+        _tls.proxy_url = url or ""   # mémorise le proxy de cette session (clé débit)
+        proxies = {"http": url, "https": url} if url else None
     s = cffi.Session(impersonate=IMPERSONATE, proxies=proxies)
     try:
         s.headers.update(_BROWSER_HEADERS)
@@ -418,11 +425,12 @@ def _new_session():
     return s
 
 
-def _session():
-    s = getattr(_tls, "s", None)
+def _session(direct: bool = False):
+    attr = "sd" if direct else "s"
+    s = getattr(_tls, attr, None)
     if s is None:
-        s = _new_session()
-        _tls.s = s
+        s = _new_session(direct=direct)
+        setattr(_tls, attr, s)
     return s
 
 
@@ -487,24 +495,30 @@ def _note_ok(key: str = "") -> None:
             st["interval"] = max(st["interval"] * 0.9, RATE_MIN)
 
 
-def http_get(url: str, retries: int = 3) -> bytes:
+def http_get(url: str, retries: int = 3, direct: bool = False) -> bytes:
     """GET résistant à Incapsula : session réchauffée + auto-régulation
-    (limiteur de débit + pause automatique en cas de blocage)."""
+    (limiteur de débit + pause automatique en cas de blocage).
+
+    direct=True -> passe par la connexion DIRECTE (IP machine/téléphone) au lieu
+    des proxies : réservé à l'enrichissement image (peu de requêtes), ça épargne
+    les proxies. Si l'IP directe est freinée, on n'insiste pas (l'image saute,
+    le scan via proxies continue)."""
     last_err: Exception | None = None
+    sess_attr = "sd" if direct else "s"
 
     if HAVE_CFFI:
         for attempt in range(retries):
             try:
-                sess = _session()  # crée/relance la session -> fixe _tls.proxy_url
-                key = getattr(_tls, "proxy_url", "")
+                sess = _session(direct=direct)  # fixe _tls.proxy_url / direct_key
+                key = "DIRECT" if direct else getattr(_tls, "proxy_url", "")
                 _rate_gate(key)
                 r = sess.get(url, timeout=REQUEST_TIMEOUT)
                 if r.status_code in (404, 410):
                     raise RuntimeError(f"GET {url}: HTTP {r.status_code}")
                 if r.status_code == 403 or _is_challenge(r.content):
                     # Bloqué : session neuve (autre proxy en rotation) + on
-                    # ralentit CE proxy seulement.
-                    _tls.s = None
+                    # ralentit CE proxy / l'IP directe seulement.
+                    setattr(_tls, sess_attr, None)
                     _note_block(key)
                     last_err = RuntimeError("blocage anti-bot (challenge)")
                     time.sleep(1.0 * (attempt + 1))
@@ -513,13 +527,13 @@ def http_get(url: str, retries: int = 3) -> bytes:
                     last_err = RuntimeError(f"HTTP {r.status_code}")
                     time.sleep(1.0 * (attempt + 1))
                     continue
-                _note_ok(key)  # succès -> ce proxy ré-accélère doucement
+                _note_ok(key)  # succès -> ce proxy/IP ré-accélère doucement
                 return r.content
             except RuntimeError:
                 raise
             except Exception as err:  # noqa: BLE001
-                key = getattr(_tls, "proxy_url", "")
-                _tls.s = None  # session cassée -> on repart sur un autre proxy
+                key = "DIRECT" if direct else getattr(_tls, "proxy_url", "")
+                setattr(_tls, sess_attr, None)  # session cassée -> on repart
                 _note_block(key)  # curl(16) = blocage déguisé -> compte aussi
                 last_err = err
                 time.sleep(1.0 * (attempt + 1))
@@ -989,6 +1003,13 @@ _og_lock = threading.Lock()
 ENRICH_IMAGES = os.environ.get("ENRICH_IMAGES", "true").lower() in (
     "1", "true", "yes", "on"
 )
+# IMAGE_VIA_DIRECT=true -> chercher l'image via la connexion DIRECTE (IP de la
+# machine) plutôt que les proxies. UTILE seulement si l'IP directe n'est PAS
+# bannie. Sur le téléphone (IP bannie) on laisse FALSE : tout passe par les
+# proxies.
+IMAGE_VIA_DIRECT = os.environ.get("IMAGE_VIA_DIRECT", "false").lower() in (
+    "1", "true", "yes", "on"
+)
 
 
 def _enrich_image(v: dict) -> None:
@@ -1002,8 +1023,10 @@ def _enrich_image(v: dict) -> None:
             v["image"] = _og_cache[u]
             return
     img = ""
+    # Image via l'IP directe (téléphone) si des proxies existent -> on les épargne.
+    use_direct = bool(PROXY_POOL) and IMAGE_VIA_DIRECT
     try:
-        page = html.unescape(http_get(u).decode("utf-8", "replace"))
+        page = html.unescape(http_get(u, direct=use_direct).decode("utf-8", "replace"))
         mm = IMAGE_RE.search(page) or OG_IMAGE_RE.search(page)
         if mm:
             img = _clean_img(mm.group(1))
