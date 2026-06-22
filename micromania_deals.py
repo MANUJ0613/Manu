@@ -994,11 +994,11 @@ def run_once(force_full: bool = False, extra_only: bool = False) -> int:
     print(f"Catégories scannées: {len(cats)} | produits vus: {stats['products']}")
 
     # 2) URLs produits via parse_product : packs (par ID) + sitemap optionnel.
-    #    UNIQUEMENT au passage complet. Énumération DOUCE : on ne sonde qu'une
-    #    petite fenêtre d'IDs récents (les packs éphémères ont un ID neuf, en
-    #    haut de la plage) -> ~70 requêtes au lieu de 740 -> pas de ban.
+    #    Énumération packs à CHAQUE passage (toutes les ~2 min) : fenêtre récente
+    #    (nouveaux packs) + balayage tournant -> toute la plage couverte en
+    #    ~25 min, en restant léger (~130 requêtes/passage). Pas de ban.
     url_candidates: set[str] = set()
-    if PACK_ID_ENUM and not extra_only:
+    if PACK_ID_ENUM:
         floor = max(int(state.get("pack_id_max", 0)), 700)
         ids: set[int] = set()
         if PACK_ID_MAX:
