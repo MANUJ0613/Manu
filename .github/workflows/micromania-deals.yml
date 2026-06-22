@@ -45,7 +45,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           DISCOUNT_THRESHOLD: "0.50"
-          MIN_REFERENCE_PRICE: "5"
+          MIN_REFERENCE_PRICE: "3"
           INCLUDE_UNAVAILABLE: "true"
           SCAN_SITEMAP: "true"
           CONCURRENCY: "24"
