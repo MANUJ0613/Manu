@@ -257,7 +257,13 @@ def format_alert(v: dict) -> str:
 def post_json(url: str, payload: dict) -> None:
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
-        url, data=data, headers={"Content-Type": "application/json"}
+        url,
+        data=data,
+        headers={
+            "Content-Type": "application/json",
+            # Discord renvoie 403 sans User-Agent explicite.
+            "User-Agent": "MicromaniaDealsBot (https://github.com, 1.0)",
+        },
     )
     with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
         resp.read()
