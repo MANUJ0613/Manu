@@ -103,6 +103,9 @@ PACK_ID_ENUM = os.environ.get("PACK_ID_ENUM", "true").lower() == "true"
 PACK_ID_MAX = int(os.environ.get("PACK_ID_MAX", "0"))  # 0 = auto (frontière)
 PACK_ID_BUFFER = int(os.environ.get("PACK_ID_BUFFER", "40"))  # IDs sondés au-dessus
 PACK_ID_LOOKBACK = int(os.environ.get("PACK_ID_LOOKBACK", "30"))  # et en-dessous
+# Balayage TOURNANT : à chaque passage on sonde aussi un bout de la plage
+# complète (qui avance), pour couvrir TOUS les IDs au fil du temps sans ban.
+PACK_ROLL_CHUNK = int(os.environ.get("PACK_ROLL_CHUNK", "60"))
 CONCURRENCY = int(os.environ.get("CONCURRENCY", "8"))
 REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "20"))
 INCLUDE_USED = os.environ.get("INCLUDE_USED", "false").lower() == "true"
@@ -997,12 +1000,27 @@ def run_once(force_full: bool = False, extra_only: bool = False) -> int:
     url_candidates: set[str] = set()
     if PACK_ID_ENUM and not extra_only:
         floor = max(int(state.get("pack_id_max", 0)), 700)
+        ids: set[int] = set()
         if PACK_ID_MAX:
-            lo, hi = 1, PACK_ID_MAX
+            ids = set(range(1, PACK_ID_MAX + 1))
+            print(f"Énumération packs: mb1..mb{PACK_ID_MAX}")
         else:
-            lo, hi = max(1, floor - PACK_ID_LOOKBACK), floor + PACK_ID_BUFFER
-        url_candidates |= {f"{SITE_ROOT}/mb{n}.html" for n in range(lo, hi + 1)}
-        print(f"Énumération packs (douce): mb{lo}..mb{hi}")
+            # a) Fenêtre récente : capte vite les nouveaux packs éphémères.
+            ids |= set(range(max(1, floor - PACK_ID_LOOKBACK), floor + PACK_ID_BUFFER + 1))
+            # b) Balayage tournant : un bout de toute la plage, qui avance à
+            #    chaque passage -> couvre TOUS les IDs au fil du temps.
+            roll = int(state.get("pack_roll", 1))
+            if roll < 1 or roll > floor:
+                roll = 1
+            ids |= set(range(roll, min(roll + PACK_ROLL_CHUNK, floor) + 1))
+            nxt = roll + PACK_ROLL_CHUNK
+            state["pack_roll"] = nxt if nxt <= floor else 1
+            print(
+                f"Énumération packs : récents mb{floor - PACK_ID_LOOKBACK}.."
+                f"mb{floor + PACK_ID_BUFFER} + balayage mb{roll}.."
+                f"mb{min(roll + PACK_ROLL_CHUNK, floor)}"
+            )
+        url_candidates |= {f"{SITE_ROOT}/mb{n}.html" for n in ids}
     if SCAN_SITEMAP and not extra_only:
         for sm in get_product_sitemaps():
             try:
