@@ -55,6 +55,11 @@ REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "20"))
 INCLUDE_USED = os.environ.get("INCLUDE_USED", "false").lower() == "true"
 INCLUDE_PRECOMMANDE = os.environ.get("INCLUDE_PRECOMMANDE", "false").lower() == "true"
 
+# Mode boucle : si LOOP_INTERVAL_SECONDS > 0, le script reste actif et
+# relance un scan toutes les N secondes, pendant au plus LOOP_MAX_SECONDS.
+LOOP_INTERVAL_SECONDS = int(os.environ.get("LOOP_INTERVAL_SECONDS", "0"))
+LOOP_MAX_SECONDS = int(os.environ.get("LOOP_MAX_SECONDS", "19800"))  # ~5h30
+
 STATE_FILE = os.environ.get("STATE_FILE", "state/state.json")
 DEALS_LOG = os.environ.get("DEALS_LOG", "state/deals.log")
 DRY_RUN = os.environ.get("DRY_RUN", "false").lower() == "true"
@@ -316,7 +321,7 @@ def send_alert(message: str) -> None:
 # Main
 # --------------------------------------------------------------------------- #
 
-def main() -> int:
+def run_once() -> int:
     state = load_state()
     now = datetime.now(timezone.utc)
 
@@ -403,6 +408,29 @@ def main() -> int:
 
     print(f"Terminé: {processed} fiches inspectées, {new_deals} alerte(s).")
     return 0
+
+
+def main() -> int:
+    if LOOP_INTERVAL_SECONDS <= 0:
+        return run_once()
+
+    # Mode boucle : scans répétés jusqu'à LOOP_MAX_SECONDS.
+    deadline = time.monotonic() + LOOP_MAX_SECONDS
+    print(
+        f"Mode BOUCLE : scan toutes les {LOOP_INTERVAL_SECONDS}s "
+        f"pendant ~{LOOP_MAX_SECONDS // 60} min."
+    )
+    while True:
+        start = time.monotonic()
+        try:
+            run_once()
+        except Exception as err:  # noqa: BLE001 - la boucle ne doit pas mourir
+            print(f"[boucle] erreur de scan: {err}", file=sys.stderr)
+        if time.monotonic() >= deadline:
+            print("Fin de la fenêtre de boucle.")
+            return 0
+        elapsed = time.monotonic() - start
+        time.sleep(max(0, LOOP_INTERVAL_SECONDS - elapsed))
 
 
 if __name__ == "__main__":
