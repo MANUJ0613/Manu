@@ -1,0 +1,4 @@
+# Optionnel mais FORTEMENT recommandé sur un VPS / IP datacenter :
+# contourne l'anti-bot DataDome de Micromania via l'impersonation TLS de Chrome.
+# Sans lui, le bot retombe sur urllib (suffisant uniquement sur une IP non bloquée).
+curl_cffi>=0.7

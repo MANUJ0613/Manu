@@ -111,21 +111,102 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
 
 
 # --------------------------------------------------------------------------- #
-# HTTP
+# HTTP — Micromania est protégé par DataDome. Depuis une IP datacenter (VPS),
+# les requêtes "nues" (urllib) sont bloquées en 403. Il faut :
+#   1) imiter l'empreinte TLS d'un vrai Chrome  -> curl_cffi(impersonate="chrome")
+#   2) faire un GET "à froid" de la home pour obtenir le cookie DataDome, puis
+#      le réutiliser sur les requêtes suivantes.
+# Si curl_cffi n'est pas installé, on retombe sur urllib (OK sur une IP non
+# bloquée, ex. GitHub Actions / dev).
 # --------------------------------------------------------------------------- #
 
+IMPERSONATE = os.environ.get("IMPERSONATE", "chrome")
+
+try:
+    from curl_cffi import requests as cffi  # type: ignore
+
+    HAVE_CFFI = True
+except Exception:  # noqa: BLE001
+    HAVE_CFFI = False
+
+_dd_cookies: dict[str, str] = {}
+_dd_lock = threading.Lock()
+_warmed = [False]
+
+_BROWSER_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "fr-FR,fr;q=0.9",
+}
+
+
+def _warmup(force: bool = False) -> None:
+    """GET la home avec impersonation pour (re)charger le cookie DataDome."""
+    if not HAVE_CFFI:
+        return
+    with _dd_lock:
+        if _warmed[0] and not force:
+            return
+        try:
+            r = cffi.get(
+                SITE_ROOT + "/",
+                impersonate=IMPERSONATE,
+                headers=_BROWSER_HEADERS,
+                timeout=REQUEST_TIMEOUT,
+            )
+            for k, v in r.cookies.items():
+                _dd_cookies[k] = v
+            _warmed[0] = True
+            print(f"[warmup] cookies DataDome: {list(_dd_cookies)}")
+        except Exception as err:  # noqa: BLE001
+            print(f"[warmup] échec: {err}", file=sys.stderr)
+
+
 def http_get(url: str, retries: int = 3) -> bytes:
-    """GET avec User-Agent, gestion gzip et quelques retries."""
+    """GET résistant à DataDome (curl_cffi) avec repli urllib."""
     last_err: Exception | None = None
+
+    if HAVE_CFFI:
+        if not _warmed[0]:
+            _warmup()
+        for attempt in range(retries):
+            try:
+                r = cffi.get(
+                    url,
+                    impersonate=IMPERSONATE,
+                    headers=_BROWSER_HEADERS,
+                    cookies=_dd_cookies,
+                    timeout=REQUEST_TIMEOUT,
+                )
+                if r.status_code in (404, 410):
+                    raise RuntimeError(f"GET {url}: HTTP {r.status_code}")
+                if r.status_code == 403:
+                    # Bloqué par DataDome : on re-seed le cookie et on retente.
+                    _warmup(force=True)
+                    last_err = RuntimeError("HTTP 403 (DataDome)")
+                    time.sleep(1.0 * (attempt + 1))
+                    continue
+                if r.status_code >= 400:
+                    last_err = RuntimeError(f"HTTP {r.status_code}")
+                    time.sleep(1.0 * (attempt + 1))
+                    continue
+                return r.content
+            except RuntimeError:
+                raise
+            except Exception as err:  # noqa: BLE001
+                last_err = err
+                time.sleep(1.0 * (attempt + 1))
+        raise RuntimeError(f"GET échoué pour {url}: {last_err}")
+
+    # --- Repli urllib (IP non bloquée) ---
     for attempt in range(retries):
         try:
             req = urllib.request.Request(
                 url,
-                headers={
-                    "User-Agent": USER_AGENT,
-                    "Accept-Encoding": "gzip",
-                    "Accept-Language": "fr-FR,fr;q=0.9",
-                },
+                headers={**_BROWSER_HEADERS, "Accept-Encoding": "gzip"},
             )
             with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
                 raw = resp.read()
@@ -133,13 +214,11 @@ def http_get(url: str, retries: int = 3) -> bytes:
                     raw = gzip.decompress(raw)
                 return raw
         except urllib.error.HTTPError as err:
-            # 404/410 = ressource absente (ID de pack inexistant) : inutile de
-            # réessayer, on remonte tout de suite.
             if err.code in (404, 410, 403):
                 raise RuntimeError(f"GET {url}: HTTP {err.code}") from err
             last_err = err
             time.sleep(1.5 * (attempt + 1))
-        except Exception as err:  # noqa: BLE001 - on retente quoiqu'il arrive
+        except Exception as err:  # noqa: BLE001
             last_err = err
             time.sleep(1.5 * (attempt + 1))
     raise RuntimeError(f"GET échoué pour {url}: {last_err}")

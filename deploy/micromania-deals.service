@@ -7,7 +7,7 @@ Wants=network-online.target
 Type=simple
 WorkingDirectory=/opt/micromania-deals
 EnvironmentFile=/etc/micromania-deals.env
-ExecStart=/usr/bin/python3 /opt/micromania-deals/micromania_deals.py
+ExecStart=/opt/micromania-deals/venv/bin/python /opt/micromania-deals/micromania_deals.py
 Restart=always
 RestartSec=10
 # Redémarre proprement si le process se fige
