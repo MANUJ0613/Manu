@@ -167,6 +167,7 @@ HREF_RE = re.compile(
     r'href=["\'](?:https?://www\.micromania\.fr)?(/[^"\'#?]+\.html)["\']'
 )
 PACK_SUFFIX_RE = re.compile(r"-mb\d+\.html$")
+MB_URL_RE = re.compile(r"/mb(\d+)\.html")
 
 
 def get_category_products(slug: str) -> set[str]:
@@ -587,8 +588,16 @@ def run_once(force_full: bool = False, extra_only: bool = False) -> int:
             print(f"[catégorie] {slug}: {err}", file=sys.stderr)
 
     # b) Énumération des IDs de packs (capte les packs éphémères / non listés).
+    #    On sonde toujours au-delà de la "frontière" connue (plus haut ID de
+    #    pack vivant déjà vu), pour attraper les nouveaux packs même non listés.
     if PACK_ID_ENUM:
-        mx = PACK_ID_MAX or ((max(pack_ids) if pack_ids else 700) + PACK_ID_BUFFER)
+        if PACK_ID_MAX:
+            mx = PACK_ID_MAX
+        else:
+            floor = max(
+                [*pack_ids, int(state.get("pack_id_max", 0)), 700]
+            )
+            mx = floor + PACK_ID_BUFFER
         probed = sum(add(f"{SITE_ROOT}/mb{n}.html") for n in range(1, mx + 1))
         extra += probed
         print(f"Énumération packs: mb1..mb{mx} (+{probed} à sonder)")
@@ -620,11 +629,15 @@ def run_once(force_full: bool = False, extra_only: bool = False) -> int:
                 print(f"[produit] {url}: {err}", file=sys.stderr)
             return []
 
+    mb_seen: list[int] = []  # IDs de packs vivants vus (suivi de frontière)
     with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
         futures = {pool.submit(worker, c): c for c in candidates}
         for fut in as_completed(futures):
             processed += 1
             for v in fut.result():
+                mm = MB_URL_RE.search(v["url"])
+                if mm and v["reference"] > 0:
+                    mb_seen.append(int(mm.group(1)))
                 if not is_deal(v):
                     continue
                 # Dédup : on ré-alerte si le prix a encore baissé.
@@ -638,8 +651,10 @@ def run_once(force_full: bool = False, extra_only: bool = False) -> int:
             if processed % 250 == 0:
                 print(f"  …{processed}/{len(candidates)} fiches")
 
-    # 3. Sauvegarde de l'état.
+    # 3. Sauvegarde de l'état (dont la frontière d'IDs de packs).
     state["seen"] = seen
+    if mb_seen:
+        state["pack_id_max"] = max(int(state.get("pack_id_max", 0)), max(mb_seen))
     if not extra_only:
         state["last_scan"] = now.isoformat()
     save_state(state)
