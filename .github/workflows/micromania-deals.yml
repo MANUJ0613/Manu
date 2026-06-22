@@ -1,0 +1,61 @@
+name: Micromania deals watcher
+
+# Détecte les grosses réductions / erreurs de prix sur micromania.fr
+# et envoie une alerte Discord / Telegram.
+
+on:
+  schedule:
+    # Toutes les 30 minutes (heure UTC). Ajuste à ta convenance.
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+    inputs:
+      full_scan:
+        description: "Scanner TOUT le catalogue (sinon: seulement les fiches modifiées)"
+        type: boolean
+        default: false
+
+# Nécessaire pour committer le fichier d'état (state/) sur la branche.
+permissions:
+  contents: write
+
+# Empêche deux runs de se chevaucher.
+concurrency:
+  group: micromania-deals
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Détecter les deals
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          DISCOUNT_THRESHOLD: "0.50"
+          MIN_REFERENCE_PRICE: "50"
+          INITIAL_WINDOW_HOURS: "24"
+          MAX_PRODUCTS: "5000"
+          CONCURRENCY: "8"
+          FULL_SCAN: ${{ github.event.inputs.full_scan || 'false' }}
+        run: python3 micromania_deals.py
+
+      - name: Sauvegarder l'état (dédup)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add state/
+          if git diff --cached --quiet; then
+            echo "Aucun changement d'état à committer."
+          else
+            git commit -m "chore: mise à jour de l'état du watcher Micromania [skip ci]"
+            git push
+          fi
