@@ -158,17 +158,24 @@ TIER_WEBHOOKS = [
 
 # Routage par CATÉGORIE. Un deal va aussi dans son salon de catégorie (en plus
 # de son salon de prix => il peut apparaître dans 2 salons : double envoi).
-WEBHOOK_JEUX = os.environ.get("DISCORD_WEBHOOK_JEUX", "").strip()
-WEBHOOK_FIGURINES = os.environ.get("DISCORD_WEBHOOK_FIGURINES", "").strip()
-WEBHOOK_COLLECTOR = os.environ.get("DISCORD_WEBHOOK_COLLECTOR", "").strip()
-WEBHOOK_GOODIES = os.environ.get("DISCORD_WEBHOOK_GOODIES", "").strip()
-WEBHOOK_PEPITES = os.environ.get("DISCORD_WEBHOOK_PEPITES", "").strip()
+# Jeux séparés par plateforme : PS5 / PS4 / Xbox / Switch / PC.
+def _wh(name: str) -> str:
+    return os.environ.get(name, "").strip()
+
+
+WEBHOOK_PEPITES = _wh("DISCORD_WEBHOOK_PEPITES")
 PEPITE_MIN = float(os.environ.get("PEPITE_MIN", "80"))
 CATEGORY_WEBHOOKS = {
-    "jeux": WEBHOOK_JEUX,
-    "figurines": WEBHOOK_FIGURINES,
-    "collector": WEBHOOK_COLLECTOR,
-    "goodies": WEBHOOK_GOODIES,
+    "ps5": _wh("DISCORD_WEBHOOK_PS5"),
+    "ps4": _wh("DISCORD_WEBHOOK_PS4"),
+    "xbox": _wh("DISCORD_WEBHOOK_XBOX"),
+    "switch": _wh("DISCORD_WEBHOOK_SWITCH"),
+    "pc": _wh("DISCORD_WEBHOOK_PC"),
+    # repli "jeux" si tu veux UN seul salon jeux au lieu de par plateforme
+    "jeux": _wh("DISCORD_WEBHOOK_JEUX"),
+    "figurines": _wh("DISCORD_WEBHOOK_FIGURINES"),
+    "collector": _wh("DISCORD_WEBHOOK_COLLECTOR"),
+    "goodies": _wh("DISCORD_WEBHOOK_GOODIES"),
 }
 
 def _slug_type(slug: str) -> str:
@@ -183,7 +190,10 @@ def _slug_type(slug: str) -> str:
         or s == "produits-derives-premium"
     ):
         return "collector"
-    if s.startswith("jeux-") or s == "retrogaming":
+    if s.startswith("jeux-"):
+        plat = s.replace("jeux-", "", 1)
+        return plat if plat in ("ps5", "ps4", "xbox", "switch", "pc") else "jeux"
+    if s == "retrogaming":
         return "jeux"
     if "figurine" in s:
         return "figurines"
@@ -201,8 +211,13 @@ def _destinations(v: dict) -> list[str]:
         if w and w not in dests:
             dests.append(w)
 
-    # a) Salon de catégorie.
-    add(CATEGORY_WEBHOOKS.get(v.get("type", ""), ""))
+    # a) Salon de catégorie (repli sur un salon "jeux" global si la plateforme
+    #    n'a pas son propre salon).
+    typ = v.get("type", "")
+    cwh = CATEGORY_WEBHOOKS.get(typ, "")
+    if not cwh and typ in ("ps5", "ps4", "xbox", "switch", "pc"):
+        cwh = CATEGORY_WEBHOOKS.get("jeux", "")
+    add(cwh)
     # b) Salon par % de réduction.
     if DISCOUNT_TIERS and any(DISCOUNT_TIER_WEBHOOKS) and ref > 0:
         idx = sum(1 for b in DISCOUNT_TIERS if (1 - cur / ref) * 100 >= b)
