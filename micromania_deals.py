@@ -148,7 +148,18 @@ COND_RE = re.compile(r'"condition":"([^"]*)"')
 PRECO_RE = re.compile(r'"precommande":(\d+)')
 EDITION_RE = re.compile(r'"edition":"([^"]*)"')
 PLATFORM_RE = re.compile(r'"platform":"([^"]*)"')
+IMAGE_RE = re.compile(r'"urlImage":"([^"]+)"')
+PEGI_RE = re.compile(r'"rating_pegi":"([^"]*)"')
+GENRE_RE = re.compile(r'"genre":"([^"]*)"')
 TITLE_RE = re.compile(r"<title>(.*?)</title>", re.IGNORECASE | re.DOTALL)
+OG_TITLE_RE = re.compile(
+    r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\'](.*?)["\']',
+    re.IGNORECASE | re.DOTALL,
+)
+OG_IMAGE_RE = re.compile(
+    r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\'](.*?)["\']',
+    re.IGNORECASE | re.DOTALL,
+)
 
 
 def _enclosing_object(text: str, pos: int) -> str:
@@ -176,11 +187,22 @@ def parse_product(url: str) -> list[dict]:
     page = http_get(url).decode("utf-8", "replace")
     decoded = html.unescape(page)
 
+    # Titre propre : og:title de préférence, sinon <title> nettoyé.
     title = ""
-    tm = TITLE_RE.search(decoded)
-    if tm:
-        title = re.sub(r"\s+", " ", tm.group(1)).strip()
-        title = title.split("|")[0].strip()
+    ogm = OG_TITLE_RE.search(decoded)
+    if ogm:
+        title = re.sub(r"\s+", " ", ogm.group(1)).strip()
+    if not title:
+        tm = TITLE_RE.search(decoded)
+        if tm:
+            title = re.sub(r"\s+", " ", tm.group(1)).strip()
+    # Coupe les suffixes marketing ("... sur PS5, tous les jeux ...", "| Micromania").
+    title = re.split(r"\s+sur\s+\w|\s*\|\s*", title)[0].strip()
+
+    page_image = ""
+    ogi = OG_IMAGE_RE.search(decoded)
+    if ogi:
+        page_image = ogi.group(1).strip()
 
     variants: list[dict] = []
     for m in METRIC_RE.finditer(decoded):
@@ -191,6 +213,9 @@ def parse_product(url: str) -> list[dict]:
         preco_m = PRECO_RE.search(obj)
         edition_m = EDITION_RE.search(obj)
         platform_m = PLATFORM_RE.search(obj)
+        img_m = IMAGE_RE.search(obj)
+        pegi_m = PEGI_RE.search(obj)
+        genre_m = GENRE_RE.search(obj)
         variants.append(
             {
                 "url": url,
@@ -201,6 +226,9 @@ def parse_product(url: str) -> list[dict]:
                 "precommande": int(preco_m.group(1)) if preco_m else 0,
                 "edition": edition_m.group(1) if edition_m else "",
                 "platform": platform_m.group(1) if platform_m else "",
+                "image": (img_m.group(1) if img_m else "") or page_image,
+                "pegi": pegi_m.group(1) if pegi_m else "",
+                "genre": genre_m.group(1) if genre_m else "",
             }
         )
     return variants
@@ -246,20 +274,68 @@ def save_state(state: dict) -> None:
 # Alertes
 # --------------------------------------------------------------------------- #
 
-def format_alert(v: dict) -> str:
+USER_AGENT_BOT = "MicromaniaDealsBot (https://github.com, 1.0)"
+
+
+def _cond_label(v: dict) -> str:
+    return "Neuf" if v["condition"].lower() in ("new", "neuf") else (
+        "Occasion" if v["condition"].lower() in ("used", "occasion") else v["condition"]
+    )
+
+
+def _euro(x: float) -> str:
+    return f"{x:.2f}".replace(".", ",") + " €"
+
+
+def format_text(v: dict) -> str:
+    """Version texte (Telegram / logs / fallback)."""
     pct = discount_pct(v)
-    cond = "Neuf" if v["condition"].lower() in ("new", "neuf") else v["condition"]
-    extra = " ".join(filter(None, [v.get("platform"), v.get("edition")]))
-    extra = f" ({extra.strip()})" if extra.strip() else ""
+    extra = " ".join(filter(None, [v.get("platform"), v.get("edition")])).strip()
+    extra = f" ({extra})" if extra else ""
     return (
         f"🔥 DEAL Micromania -{pct}%\n"
         f"🏷 {v['title']}{extra}\n"
-        f"💰 {v['current']:.2f}€ (au lieu de {v['reference']:.2f}€) — {cond}\n"
+        f"💰 {_euro(v['current'])} (au lieu de {_euro(v['reference'])}) — {_cond_label(v)}\n"
         f"🔗 {v['url']}"
     )
 
 
-def post_json(url: str, payload: dict) -> None:
+def _discord_embed(v: dict) -> dict:
+    pct = discount_pct(v)
+    # Couleur : rouge vif pour les remises massives, orange sinon.
+    color = 0xC0392B if pct >= 70 else 0xE67E22
+    fields = [
+        {"name": "💰 Prix", "value": f"**{_euro(v['current'])}**", "inline": True},
+        {"name": "🏷 Avant", "value": f"~~{_euro(v['reference'])}~~", "inline": True},
+        {"name": "📉 Réduction", "value": f"**-{pct}%**", "inline": True},
+        {"name": "📦 État", "value": _cond_label(v), "inline": True},
+    ]
+    if v.get("platform"):
+        fields.append({"name": "🎮 Plateforme", "value": v["platform"], "inline": True})
+    if v.get("edition"):
+        fields.append({"name": "✨ Édition", "value": v["edition"], "inline": True})
+    if v.get("pegi"):
+        fields.append({"name": "🔞 PEGI", "value": v["pegi"], "inline": True})
+
+    economy = v["reference"] - v["current"]
+    embed = {
+        "title": f"🔥 {v['title']}"[:256],
+        "url": v["url"],
+        "description": (
+            f"**{_euro(v['current'])}**  ~~{_euro(v['reference'])}~~   "
+            f"•   **-{pct}%**  (tu économises {_euro(economy)})"
+        ),
+        "color": color,
+        "fields": fields,
+        "footer": {"text": "Micromania deals watcher"},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    if v.get("image"):
+        embed["image"] = {"url": v["image"]}
+    return embed
+
+
+def _http_post_json(url: str, payload: dict) -> None:
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         url,
@@ -267,53 +343,82 @@ def post_json(url: str, payload: dict) -> None:
         headers={
             "Content-Type": "application/json",
             # Discord renvoie 403 sans User-Agent explicite.
-            "User-Agent": "MicromaniaDealsBot (https://github.com, 1.0)",
+            "User-Agent": USER_AGENT_BOT,
         },
     )
     with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
         resp.read()
 
 
-def send_alert(message: str) -> None:
+def _send_discord(v: dict) -> None:
+    embed = _discord_embed(v)
+    button = {
+        "type": 1,
+        "components": [
+            {"type": 2, "style": 5, "label": "🛒 Voir le deal", "url": v["url"]}
+        ],
+    }
+    # Essai avec bouton lien ; repli sur embed seul si le webhook le refuse.
+    try:
+        _http_post_json(DISCORD_WEBHOOK_URL, {"embeds": [embed], "components": [button]})
+    except Exception:  # noqa: BLE001
+        _http_post_json(DISCORD_WEBHOOK_URL, {"embeds": [embed]})
+
+
+def _send_telegram(v: dict) -> None:
+    base = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
+    caption = format_text(v)
+    markup = {
+        "inline_keyboard": [[{"text": "🛒 Voir le deal", "url": v["url"]}]]
+    }
+    if v.get("image"):
+        _http_post_json(
+            f"{base}/sendPhoto",
+            {
+                "chat_id": TELEGRAM_CHAT_ID,
+                "photo": v["image"],
+                "caption": caption,
+                "reply_markup": markup,
+            },
+        )
+    else:
+        _http_post_json(
+            f"{base}/sendMessage",
+            {
+                "chat_id": TELEGRAM_CHAT_ID,
+                "text": caption,
+                "reply_markup": markup,
+                "disable_web_page_preview": False,
+            },
+        )
+
+
+def send_alert(v: dict) -> None:
+    text = format_text(v)
     if DRY_RUN:
-        print("[DRY_RUN] " + message.replace("\n", " | "))
+        print("[DRY_RUN] " + text.replace("\n", " | "))
         return
 
-    delivered = False
     if DISCORD_WEBHOOK_URL:
         try:
-            post_json(DISCORD_WEBHOOK_URL, {"content": message})
-            delivered = True
+            _send_discord(v)
         except Exception as err:  # noqa: BLE001
             print(f"[discord] échec: {err}", file=sys.stderr)
 
     if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
         try:
-            api = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-            post_json(
-                api,
-                {
-                    "chat_id": TELEGRAM_CHAT_ID,
-                    "text": message,
-                    "disable_web_page_preview": False,
-                },
-            )
-            delivered = True
+            _send_telegram(v)
         except Exception as err:  # noqa: BLE001
             print(f"[telegram] échec: {err}", file=sys.stderr)
 
-    # Toujours journaliser dans un fichier (et sur stdout) en complément.
-    print(message)
+    # Toujours journaliser (stdout + fichier).
+    print(text)
     print("-" * 60)
     try:
         os.makedirs(os.path.dirname(DEALS_LOG) or ".", exist_ok=True)
         with open(DEALS_LOG, "a", encoding="utf-8") as fh:
-            fh.write(f"{datetime.now(timezone.utc).isoformat()}\n{message}\n\n")
+            fh.write(f"{datetime.now(timezone.utc).isoformat()}\n{text}\n\n")
     except OSError:
-        pass
-
-    if not delivered and not (DISCORD_WEBHOOK_URL or TELEGRAM_BOT_TOKEN):
-        # Aucun canal configuré : c'est normal, on a quand même loggé.
         pass
 
 
@@ -395,7 +500,7 @@ def run_once() -> int:
                 prev = seen.get(key)
                 if prev is not None and v["current"] >= float(prev):
                     continue
-                send_alert(format_alert(v))
+                send_alert(v)
                 seen[key] = v["current"]
                 new_deals += 1
             if processed % 250 == 0:
