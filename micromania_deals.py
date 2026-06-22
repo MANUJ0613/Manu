@@ -303,11 +303,55 @@ def sd_notify(state: str) -> None:
 
 IMPERSONATE = os.environ.get("IMPERSONATE", "chrome")
 
-# Proxy (idéalement RÉSIDENTIEL "sticky") pour contourner le bannissement
-# Incapsula des IP datacenter. Ex : http://user:pass@host:port
-# Avec un proxy résidentiel, on peut remonter la cadence sans se faire bannir.
-PROXY = os.environ.get("PROXY", "").strip()
-_PROXIES = {"http": PROXY, "https": PROXY} if PROXY else None
+# Proxy(s) RÉSIDENTIEL(s) pour contourner le bannissement Incapsula des IP
+# datacenter ET répartir la charge sur plusieurs IP (donc scanner VITE sans
+# bannissement).
+#   • PROXY       = un seul proxy        -> http://user:pass@host:port
+#   • PROXY_LIST  = plusieurs proxies    -> séparés par virgule, espace, ou
+#                   saut de ligne. Ex (Webshare static residential, 20 IP) :
+#                   PROXY_LIST="http://user:pass@195.40.128.56:6776,http://user:pass@192.53.70.90:5804,..."
+#                   Format "host:port:user:pass" (export Webshare) aussi accepté.
+# Chaque thread/session pioche un proxy différent (round-robin) : les 20 IP
+# tournent et se partagent les requêtes -> cadence élevée, charge divisée par 20.
+def _parse_proxy_entry(raw: str) -> str:
+    """Normalise une entrée proxy en URL http://user:pass@host:port."""
+    raw = raw.strip()
+    if not raw:
+        return ""
+    if "://" in raw:
+        return raw
+    parts = raw.split(":")
+    # Format Webshare exporté : host:port:user:pass
+    if len(parts) == 4:
+        host, port, user, pwd = parts
+        return f"http://{user}:{pwd}@{host}:{port}"
+    # Format host:port (sans auth)
+    if len(parts) == 2:
+        return f"http://{raw}"
+    return "http://" + raw
+
+
+_proxy_raw = os.environ.get("PROXY_LIST", "") or os.environ.get("PROXY", "")
+PROXY_POOL = [
+    _parse_proxy_entry(p)
+    for p in re.split(r"[,\s]+", _proxy_raw.strip())
+    if p.strip()
+]
+# Compat : variable globale pour les usages restants (1er proxy du pool).
+PROXY = PROXY_POOL[0] if PROXY_POOL else ""
+_proxy_rr = [0]
+_proxy_rr_lock = threading.Lock()
+
+
+def _next_proxies():
+    """Renvoie le mapping proxies curl_cffi pour la prochaine session (round-robin
+    sur le pool), ou None si aucun proxy configuré."""
+    if not PROXY_POOL:
+        return None
+    with _proxy_rr_lock:
+        url = PROXY_POOL[_proxy_rr[0] % len(PROXY_POOL)]
+        _proxy_rr[0] += 1
+    return {"http": url, "https": url}
 
 try:
     from curl_cffi import requests as cffi  # type: ignore
@@ -346,7 +390,8 @@ def _is_challenge(content: bytes) -> bool:
 
 
 def _new_session():
-    s = cffi.Session(impersonate=IMPERSONATE, proxies=_PROXIES)
+    proxies = _next_proxies()
+    s = cffi.Session(impersonate=IMPERSONATE, proxies=proxies)
     try:
         s.headers.update(_BROWSER_HEADERS)
     except Exception:  # noqa: BLE001
@@ -359,7 +404,9 @@ def _new_session():
     with _warm_lock:
         if not _warm_logged[0]:
             _warm_logged[0] = True
-            print("[warmup] session curl_cffi réchauffée (home à froid)")
+            n = len(PROXY_POOL)
+            via = f" via {n} proxies (rotation)" if n else ""
+            print(f"[warmup] session curl_cffi réchauffée (home à froid){via}")
     return s
 
 
@@ -383,12 +430,19 @@ _last_req = [0.0]
 _interval = [RATE_START]   # intervalle courant (s entre 2 requêtes), adaptatif
 _ok_streak = [0]
 
+# Avec N proxies, la charge se répartit sur N IP : chaque IP garde l'espacement
+# adaptatif sûr (_interval), mais le DÉBIT TOTAL est multiplié par N. On divise
+# donc l'intervalle global par le nombre de proxies (mini 1). Résultat : 20 IP
+# = ~20× plus rapide, sans taper plus fort sur une IP donnée.
+_RATE_DIVISOR = max(1, len(PROXY_POOL))
+
 
 def _rate_gate() -> None:
-    """Réserve un créneau espacé selon l'intervalle adaptatif courant."""
+    """Réserve un créneau espacé selon l'intervalle adaptatif courant, divisé
+    par le nombre de proxies (débit total ∝ nombre d'IP)."""
     with _rate_lock:
         now = time.monotonic()
-        target = max(now, _last_req[0] + _interval[0])
+        target = max(now, _last_req[0] + _interval[0] / _RATE_DIVISOR)
         _last_req[0] = target
     delay = target - time.monotonic()
     if delay > 0:
@@ -453,13 +507,18 @@ def http_get(url: str, retries: int = 3) -> bytes:
         raise RuntimeError(f"GET échoué pour {url}: {last_err}")
 
     # --- Repli urllib (IP non bloquée) ---
+    _opener = None
+    if PROXY_POOL:
+        _p = _next_proxies()
+        _opener = urllib.request.build_opener(urllib.request.ProxyHandler(_p))
     for attempt in range(retries):
         try:
             req = urllib.request.Request(
                 url,
                 headers={**_BROWSER_HEADERS, "Accept-Encoding": "gzip"},
             )
-            with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
+            _open = _opener.open if _opener else urllib.request.urlopen
+            with _open(req, timeout=REQUEST_TIMEOUT) as resp:
                 raw = resp.read()
                 if resp.headers.get("Content-Encoding") == "gzip":
                     raw = gzip.decompress(raw)
