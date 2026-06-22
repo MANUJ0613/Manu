@@ -130,6 +130,17 @@ DRY_RUN = os.environ.get("DRY_RUN", "false").lower() == "true"
 FULL_SCAN = os.environ.get("FULL_SCAN", "false").lower() == "true"
 
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
+# Routage par TRANCHES DE % DE RÉDUCTION (prioritaire sur le prix).
+# DISCOUNT_TIERS = bornes croissantes en %, ex "60,80" -> 3 tranches :
+#   <60% / 60-80% / >=80%. DISCORD_WEBHOOK_DISCOUNT_TIERS = 1 webhook/tranche.
+DISCOUNT_TIERS = [
+    float(x) for x in os.environ.get("DISCOUNT_TIERS", "").split(",") if x.strip()
+]
+DISCOUNT_TIER_WEBHOOKS = [
+    w.strip()
+    for w in os.environ.get("DISCORD_WEBHOOK_DISCOUNT_TIERS", "").split(",")
+]
+
 # Routage par TRANCHES DE PRIX (sur le prix de référence).
 # PRICE_TIERS = bornes croissantes, ex "20,80" -> 3 tranches : <20 / 20-80 / >=80
 # DISCORD_WEBHOOK_TIERS = un webhook par tranche (séparés par des virgules),
@@ -166,8 +177,15 @@ def _slug_type(slug: str) -> str:
 
 
 def _webhook_for(v: dict) -> str:
-    """Choisit le salon Discord : tranches de prix d'abord, sinon catégorie."""
+    """Choisit le salon Discord : % de réduction, puis prix, puis catégorie."""
     ref = v.get("reference", 0)
+    cur = v.get("current", 0)
+    # 0) Tranches de % de réduction (si configurées).
+    if DISCOUNT_TIERS and any(DISCOUNT_TIER_WEBHOOKS) and ref > 0:
+        pct = (1 - cur / ref) * 100
+        idx = sum(1 for b in DISCOUNT_TIERS if pct >= b)
+        if idx < len(DISCOUNT_TIER_WEBHOOKS) and DISCOUNT_TIER_WEBHOOKS[idx]:
+            return DISCOUNT_TIER_WEBHOOKS[idx]
     # 1) Tranches de prix (si configurées).
     if PRICE_TIERS and any(TIER_WEBHOOKS):
         idx = sum(1 for b in PRICE_TIERS if ref >= b)
@@ -187,6 +205,7 @@ def _webhook_for(v: dict) -> str:
 
 ANY_DISCORD = bool(
     DISCORD_WEBHOOK_URL
+    or any(DISCOUNT_TIER_WEBHOOKS)
     or any(TIER_WEBHOOKS)
     or WEBHOOK_JEUX
     or WEBHOOK_COLLECTOR
