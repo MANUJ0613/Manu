@@ -614,7 +614,7 @@ def _extract_tiles(page: str, out: dict) -> None:
             "precommande": int(pr.group(1)) if (pr := PRECO_RE.search(obj)) else 0,
             "edition": e.group(1) if (e := EDITION_RE.search(obj)) else "",
             "platform": p.group(1) if (p := PLATFORM_RE.search(obj)) else "",
-            "image": i.group(1) if (i := IMAGE_RE.search(obj)) else "",
+            "image": _clean_img(i.group(1)) if (i := IMAGE_RE.search(obj)) else "",
             "pegi": pe.group(1) if (pe := PEGI_RE.search(obj)) else "",
             "genre": g.group(1) if (g := GENRE_RE.search(obj)) else "",
             "available": (int(dispo_m.group(1)) == 1) if dispo_m else True,
@@ -707,6 +707,27 @@ EDITION_RE = re.compile(r'"edition":"([^"]*)"')
 PLATFORM_RE = re.compile(r'"platform":"([^"]*)"')
 DISPO_RE = re.compile(r'"dispoweb":(\d+)')
 IMAGE_RE = re.compile(r'"urlImage":"([^"]+)"')
+
+
+def _clean_img(u: str) -> str:
+    """Nettoie une URL d'image issue du JSON embarqué : les slashes y sont
+    échappés (https:\\/\\/...) et Discord refuse alors de charger l'image.
+    On dé-échappe \\/ -> / (et \\uXXXX éventuels)."""
+    u = (u or "").strip()
+    if not u:
+        return ""
+    u = u.replace("\\/", "/")
+    if "\\u" in u:
+        try:
+            u = u.encode("utf-8").decode("unicode_escape")
+        except Exception:  # noqa: BLE001
+            pass
+    # URL protocole-relative (//...) -> https://
+    if u.startswith("//"):
+        u = "https:" + u
+    return u
+
+
 PEGI_RE = re.compile(r'"rating_pegi":"([^"]*)"')
 GENRE_RE = re.compile(r'"genre":"([^"]*)"')
 TITLE_RE = re.compile(r"<title>(.*?)</title>", re.IGNORECASE | re.DOTALL)
@@ -760,7 +781,7 @@ def parse_product(url: str) -> list[dict]:
     page_image = ""
     ogi = OG_IMAGE_RE.search(decoded)
     if ogi:
-        page_image = ogi.group(1).strip()
+        page_image = _clean_img(ogi.group(1))
 
     variants: list[dict] = []
     for m in METRIC_RE.finditer(decoded):
@@ -785,7 +806,7 @@ def parse_product(url: str) -> list[dict]:
                 "precommande": int(preco_m.group(1)) if preco_m else 0,
                 "edition": edition_m.group(1) if edition_m else "",
                 "platform": platform_m.group(1) if platform_m else "",
-                "image": (img_m.group(1) if img_m else "") or page_image,
+                "image": (_clean_img(img_m.group(1)) if img_m else "") or page_image,
                 "pegi": pegi_m.group(1) if pegi_m else "",
                 "genre": genre_m.group(1) if genre_m else "",
                 # dispoweb=1 -> disponible à l'achat sur le web.
@@ -935,8 +956,9 @@ def _discord_embed(v: dict) -> dict:
         "footer": {"text": "Micromania deals watcher"},
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
-    if v.get("image"):
-        embed["image"] = {"url": v["image"]}
+    img = _clean_img(v.get("image", ""))
+    if img.startswith("http"):
+        embed["image"] = {"url": img}
     return embed
 
 
@@ -974,7 +996,7 @@ def _enrich_image(v: dict) -> None:
         page = html.unescape(http_get(u).decode("utf-8", "replace"))
         mm = IMAGE_RE.search(page) or OG_IMAGE_RE.search(page)
         if mm:
-            img = mm.group(1).strip()
+            img = _clean_img(mm.group(1))
     except Exception:  # noqa: BLE001
         pass
     with _og_lock:
