@@ -63,6 +63,9 @@ INCLUDE_UNAVAILABLE = os.environ.get("INCLUDE_UNAVAILABLE", "false").lower() == 
 # relance un scan toutes les N secondes, pendant au plus LOOP_MAX_SECONDS.
 LOOP_INTERVAL_SECONDS = int(os.environ.get("LOOP_INTERVAL_SECONDS", "0"))
 LOOP_MAX_SECONDS = int(os.environ.get("LOOP_MAX_SECONDS", "19800"))  # ~5h30
+# En boucle, on lance périodiquement un scan COMPLET (ignore lastmod) pour
+# rattraper les changements de prix qui ne mettent pas à jour le lastmod.
+FULL_SCAN_EVERY_HOURS = float(os.environ.get("FULL_SCAN_EVERY_HOURS", "6"))
 
 STATE_FILE = os.environ.get("STATE_FILE", "state/state.json")
 DEALS_LOG = os.environ.get("DEALS_LOG", "state/deals.log")
@@ -451,12 +454,12 @@ def send_alert(v: dict) -> None:
 # Main
 # --------------------------------------------------------------------------- #
 
-def run_once() -> int:
+def run_once(force_full: bool = False) -> int:
     state = load_state()
     now = datetime.now(timezone.utc)
 
     # Fenêtre de scan : depuis le dernier run, sinon fenêtre initiale.
-    if FULL_SCAN:
+    if FULL_SCAN or force_full:
         cutoff = None
     elif state.get("last_scan"):
         try:
@@ -546,14 +549,20 @@ def main() -> int:
 
     # Mode boucle : scans répétés jusqu'à LOOP_MAX_SECONDS.
     deadline = time.monotonic() + LOOP_MAX_SECONDS
+    full_every = FULL_SCAN_EVERY_HOURS * 3600
+    last_full = 0.0  # 0 => le 1er scan de la boucle est un scan complet
     print(
         f"Mode BOUCLE : scan toutes les {LOOP_INTERVAL_SECONDS}s "
-        f"pendant ~{LOOP_MAX_SECONDS // 60} min."
+        f"pendant ~{LOOP_MAX_SECONDS // 60} min "
+        f"(scan complet toutes les {FULL_SCAN_EVERY_HOURS}h)."
     )
     while True:
         start = time.monotonic()
+        force_full = (start - last_full) >= full_every
         try:
-            run_once()
+            run_once(force_full=force_full)
+            if force_full:
+                last_full = start
         except Exception as err:  # noqa: BLE001 - la boucle ne doit pas mourir
             print(f"[boucle] erreur de scan: {err}", file=sys.stderr)
         if time.monotonic() >= deadline:

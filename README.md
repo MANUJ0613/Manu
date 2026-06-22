@@ -66,8 +66,29 @@ Pour le `chat_id`, envoie un message au bot puis ouvre
 | `CONCURRENCY` | `8` | Téléchargements parallèles |
 | `INCLUDE_USED` | `false` | Inclure les produits d'occasion |
 | `INCLUDE_PRECOMMANDE` | `false` | Inclure les précommandes |
+| `INCLUDE_UNAVAILABLE` | `false` | Inclure les produits en rupture (« Créer une alerte ») |
 | `FULL_SCAN` | `false` | Scanner tout le catalogue (ignore `lastmod`) |
+| `FULL_SCAN_EVERY_HOURS` | `6` | En boucle : fréquence d'un scan complet de rattrapage |
+| `LOOP_INTERVAL_SECONDS` | `0` | >0 = mode boucle, intervalle entre 2 scans |
+| `ALERT_MIN_INTERVAL` | `0.4` | Espacement min. entre 2 alertes (anti rate-limit) |
 | `DRY_RUN` | `false` | N'envoie aucune alerte, affiche seulement |
+
+## Couverture & limites
+
+- ✅ **Tout produit ayant une fiche `/p/...`** est couvert : jeux, éditions
+  collector, accessoires, figurines… y compris les **nouveautés** (le sitemap
+  est re-téléchargé à chaque passage, les nouvelles fiches ont un `lastmod`
+  récent et sont donc scannées).
+- ✅ Les **erreurs de prix** sur un produit existant sont détectées : soit via
+  le `lastmod` mis à jour, soit via le **scan complet périodique**
+  (`FULL_SCAN_EVERY_HOURS`) qui balaie tout le catalogue sans dépendre du
+  `lastmod`.
+- ✅ On n'alerte que les produits **réellement disponibles** (`dispoweb=1`),
+  jamais ceux en rupture / « Créer une alerte ».
+- ❌ **Limite** : les **packs/bundles construits au panier** (ex. « Pack jeu +
+  réplique » à prix combiné) ne sont **pas** des fiches produit et n'existent
+  pas dans le sitemap — ils ne peuvent donc pas être détectés par cette
+  méthode.
 
 Pour rendre la détection plus stricte (uniquement les erreurs de prix
 évidentes), monte le seuil : `DISCOUNT_THRESHOLD=0.70`.
