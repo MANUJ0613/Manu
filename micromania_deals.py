@@ -26,6 +26,7 @@ import html
 import json
 import os
 import re
+import socket
 import sys
 import threading
 import time
@@ -108,6 +109,26 @@ FULL_SCAN = os.environ.get("FULL_SCAN", "false").lower() == "true"
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+
+
+# --------------------------------------------------------------------------- #
+# Watchdog systemd : heartbeat via sd_notify (sans dépendance). No-op si le
+# script ne tourne pas sous systemd (NOTIFY_SOCKET absent).
+# --------------------------------------------------------------------------- #
+
+def sd_notify(state: str) -> None:
+    addr = os.environ.get("NOTIFY_SOCKET")
+    if not addr:
+        return
+    try:
+        if addr.startswith("@"):  # socket abstrait
+            addr = "\0" + addr[1:]
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+        s.connect(addr)
+        s.sendall(state.encode())
+        s.close()
+    except Exception:  # noqa: BLE001
+        pass
 
 
 # --------------------------------------------------------------------------- #
@@ -743,6 +764,7 @@ def run_once(force_full: bool = False, extra_only: bool = False) -> int:
                 new_deals += 1
             if processed % 250 == 0:
                 print(f"  …{processed}/{len(candidates)} fiches")
+                sd_notify("WATCHDOG=1")  # heartbeat pendant les scans longs
 
     # 3. Sauvegarde de l'état (dont la frontière d'IDs de packs).
     state["seen"] = seen
@@ -772,6 +794,7 @@ def main() -> int:
         f"~{LOOP_INTERVAL_SECONDS}s, scan COMPLET toutes les "
         f"{FULL_CATALOG_EVERY_MINUTES} min, durée {duree}."
     )
+    sd_notify("READY=1")  # informe systemd que le service est prêt
     while True:
         start = time.monotonic()
         do_full = (start - last_full) >= full_every
@@ -781,6 +804,7 @@ def main() -> int:
                 last_full = start
         except Exception as err:  # noqa: BLE001 - la boucle ne doit pas mourir
             print(f"[boucle] erreur de scan: {err}", file=sys.stderr)
+        sd_notify("WATCHDOG=1")  # heartbeat : "je suis vivant"
         if deadline is not None and time.monotonic() >= deadline:
             print("Fin de la fenêtre de boucle.")
             return 0

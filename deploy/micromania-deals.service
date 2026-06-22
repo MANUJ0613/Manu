@@ -4,13 +4,15 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-Type=simple
+# notify => le script envoie un heartbeat (sd_notify) ; si systemd ne le reçoit
+# plus pendant WatchdogSec, il considère le process "figé" et le redémarre.
+Type=notify
+WatchdogSec=600
 WorkingDirectory=/opt/micromania-deals
 EnvironmentFile=/etc/micromania-deals.env
 ExecStart=/opt/micromania-deals/venv/bin/python /opt/micromania-deals/micromania_deals.py
 Restart=always
 RestartSec=10
-# Redémarre proprement si le process se fige
 TimeoutStopSec=20
 
 [Install]
