@@ -132,6 +132,10 @@ except Exception:  # noqa: BLE001
 _dd_cookies: dict[str, str] = {}
 _dd_lock = threading.Lock()
 _warmed = [False]
+_last_warm = [0.0]
+# Sous forte concurrence, un 403 ponctuel peut déclencher plein de re-warmups
+# simultanés : on n'en autorise qu'un toutes les WARM_MIN_INTERVAL secondes.
+WARM_MIN_INTERVAL = 30.0
 
 _BROWSER_HEADERS = {
     "User-Agent": (
@@ -148,7 +152,11 @@ def _warmup(force: bool = False) -> None:
     if not HAVE_CFFI:
         return
     with _dd_lock:
+        first = not _warmed[0]
         if _warmed[0] and not force:
+            return
+        # Anti-rafale : si un autre thread vient déjà de re-seed, on ne refait pas.
+        if force and (time.monotonic() - _last_warm[0]) < WARM_MIN_INTERVAL:
             return
         try:
             r = cffi.get(
@@ -160,7 +168,10 @@ def _warmup(force: bool = False) -> None:
             for k, v in r.cookies.items():
                 _dd_cookies[k] = v
             _warmed[0] = True
-            print(f"[warmup] cookies DataDome: {list(_dd_cookies)}")
+            _last_warm[0] = time.monotonic()
+            # On ne logge qu'au tout premier warmup, sinon c'est trop bruyant.
+            if first:
+                print(f"[warmup] DataDome contourné ({len(_dd_cookies)} cookies)")
         except Exception as err:  # noqa: BLE001
             print(f"[warmup] échec: {err}", file=sys.stderr)
 
