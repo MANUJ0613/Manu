@@ -170,14 +170,6 @@ try:
 except Exception:  # noqa: BLE001
     HAVE_CFFI = False
 
-_dd_cookies: dict[str, str] = {}
-_dd_lock = threading.Lock()
-_warmed = [False]
-_last_warm = [0.0]
-# Sous forte concurrence, un 403 ponctuel peut déclencher plein de re-warmups
-# simultanés : on n'en autorise qu'un toutes les WARM_MIN_INTERVAL secondes.
-WARM_MIN_INTERVAL = 30.0
-
 _BROWSER_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -187,58 +179,66 @@ _BROWSER_HEADERS = {
     "Accept-Language": "fr-FR,fr;q=0.9",
 }
 
+# Incapsula/Imperva exige une SESSION cohérente (mêmes connexion/cookies/TLS).
+# On garde donc une Session curl_cffi par thread, réchauffée par un GET "à
+# froid" de la home — sinon on reçoit une page-challenge de ~200 octets.
+_tls = threading.local()
+_warm_logged = [False]
+_warm_lock = threading.Lock()
 
-def _warmup(force: bool = False) -> None:
-    """GET la home avec impersonation pour (re)charger le cookie DataDome."""
-    if not HAVE_CFFI:
-        return
-    with _dd_lock:
-        first = not _warmed[0]
-        if _warmed[0] and not force:
-            return
-        # Anti-rafale : si un autre thread vient déjà de re-seed, on ne refait pas.
-        if force and (time.monotonic() - _last_warm[0]) < WARM_MIN_INTERVAL:
-            return
-        try:
-            r = cffi.get(
-                SITE_ROOT + "/",
-                impersonate=IMPERSONATE,
-                headers=_BROWSER_HEADERS,
-                timeout=REQUEST_TIMEOUT,
-            )
-            for k, v in r.cookies.items():
-                _dd_cookies[k] = v
-            _warmed[0] = True
-            _last_warm[0] = time.monotonic()
-            # On ne logge qu'au tout premier warmup, sinon c'est trop bruyant.
-            if first:
-                print(f"[warmup] DataDome contourné ({len(_dd_cookies)} cookies)")
-        except Exception as err:  # noqa: BLE001
-            print(f"[warmup] échec: {err}", file=sys.stderr)
+
+def _is_challenge(content: bytes) -> bool:
+    """Détecte la page-challenge anti-bot (Incapsula/DataDome)."""
+    if len(content) < 600:
+        return True
+    head = content[:3000].lower()
+    return (
+        b"_incapsula_resource" in head
+        or b"incident_id" in head
+        or b"/_incapsula" in head
+    )
+
+
+def _new_session():
+    s = cffi.Session(impersonate=IMPERSONATE)
+    try:
+        s.headers.update(_BROWSER_HEADERS)
+    except Exception:  # noqa: BLE001
+        pass
+    # Réchauffe : GET home à froid DANS cette session (pose les cookies anti-bot).
+    try:
+        s.get(SITE_ROOT + "/", timeout=REQUEST_TIMEOUT)
+    except Exception:  # noqa: BLE001
+        pass
+    with _warm_lock:
+        if not _warm_logged[0]:
+            _warm_logged[0] = True
+            print("[warmup] session curl_cffi réchauffée (home à froid)")
+    return s
+
+
+def _session():
+    s = getattr(_tls, "s", None)
+    if s is None:
+        s = _new_session()
+        _tls.s = s
+    return s
 
 
 def http_get(url: str, retries: int = 3) -> bytes:
-    """GET résistant à DataDome (curl_cffi) avec repli urllib."""
+    """GET résistant à Incapsula/DataDome (session curl_cffi réchauffée)."""
     last_err: Exception | None = None
 
     if HAVE_CFFI:
-        if not _warmed[0]:
-            _warmup()
         for attempt in range(retries):
             try:
-                r = cffi.get(
-                    url,
-                    impersonate=IMPERSONATE,
-                    headers=_BROWSER_HEADERS,
-                    cookies=_dd_cookies,
-                    timeout=REQUEST_TIMEOUT,
-                )
+                r = _session().get(url, timeout=REQUEST_TIMEOUT)
                 if r.status_code in (404, 410):
                     raise RuntimeError(f"GET {url}: HTTP {r.status_code}")
-                if r.status_code == 403:
-                    # Bloqué par DataDome : on re-seed le cookie et on retente.
-                    _warmup(force=True)
-                    last_err = RuntimeError("HTTP 403 (DataDome)")
+                if r.status_code == 403 or _is_challenge(r.content):
+                    # Bloqué : on jette la session et on en réchauffe une neuve.
+                    _tls.s = None
+                    last_err = RuntimeError("blocage anti-bot (challenge)")
                     time.sleep(1.0 * (attempt + 1))
                     continue
                 if r.status_code >= 400:
@@ -249,6 +249,7 @@ def http_get(url: str, retries: int = 3) -> bytes:
             except RuntimeError:
                 raise
             except Exception as err:  # noqa: BLE001
+                _tls.s = None  # la session peut être cassée
                 last_err = err
                 time.sleep(1.0 * (attempt + 1))
         raise RuntimeError(f"GET échoué pour {url}: {last_err}")
