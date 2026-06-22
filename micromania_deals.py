@@ -163,6 +163,12 @@ def sd_notify(state: str) -> None:
 
 IMPERSONATE = os.environ.get("IMPERSONATE", "chrome")
 
+# Proxy (idéalement RÉSIDENTIEL "sticky") pour contourner le bannissement
+# Incapsula des IP datacenter. Ex : http://user:pass@host:port
+# Avec un proxy résidentiel, on peut remonter la cadence sans se faire bannir.
+PROXY = os.environ.get("PROXY", "").strip()
+_PROXIES = {"http": PROXY, "https": PROXY} if PROXY else None
+
 try:
     from curl_cffi import requests as cffi  # type: ignore
 
@@ -200,7 +206,7 @@ def _is_challenge(content: bytes) -> bool:
 
 
 def _new_session():
-    s = cffi.Session(impersonate=IMPERSONATE)
+    s = cffi.Session(impersonate=IMPERSONATE, proxies=_PROXIES)
     try:
         s.headers.update(_BROWSER_HEADERS)
     except Exception:  # noqa: BLE001
