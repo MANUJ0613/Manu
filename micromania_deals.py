@@ -50,7 +50,7 @@ USER_AGENT = os.environ.get(
 
 DISCOUNT_THRESHOLD = float(os.environ.get("DISCOUNT_THRESHOLD", "0.50"))  # 50 %
 # Deals jusqu'aux accessoires à ~5 € de référence -> seuil très bas.
-MIN_REFERENCE_PRICE = float(os.environ.get("MIN_REFERENCE_PRICE", "5"))  # €
+MIN_REFERENCE_PRICE = float(os.environ.get("MIN_REFERENCE_PRICE", "3"))  # €
 INITIAL_WINDOW_HOURS = float(os.environ.get("INITIAL_WINDOW_HOURS", "24"))
 MAX_PRODUCTS = int(os.environ.get("MAX_PRODUCTS", "20000"))  # couvre tout le catalogue
 
