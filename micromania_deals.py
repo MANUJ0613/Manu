@@ -130,13 +130,22 @@ DRY_RUN = os.environ.get("DRY_RUN", "false").lower() == "true"
 FULL_SCAN = os.environ.get("FULL_SCAN", "false").lower() == "true"
 
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
-# Routage multi-salons : un webhook par catégorie et/ou un salon "pépites"
-# (deals chers). Non renseigné => retombe sur DISCORD_WEBHOOK_URL.
+# Routage par TRANCHES DE PRIX (sur le prix de référence).
+# PRICE_TIERS = bornes croissantes, ex "20,80" -> 3 tranches : <20 / 20-80 / >=80
+# DISCORD_WEBHOOK_TIERS = un webhook par tranche (séparés par des virgules),
+# dans le même ordre. Une tranche vide retombe sur DISCORD_WEBHOOK_URL.
+PRICE_TIERS = [
+    float(x) for x in os.environ.get("PRICE_TIERS", "").split(",") if x.strip()
+]
+TIER_WEBHOOKS = [
+    w.strip() for w in os.environ.get("DISCORD_WEBHOOK_TIERS", "").split(",")
+]
+
+# (optionnel) routage par catégorie + salon "pépites", si tu préfères.
 WEBHOOK_JEUX = os.environ.get("DISCORD_WEBHOOK_JEUX", "").strip()
 WEBHOOK_COLLECTOR = os.environ.get("DISCORD_WEBHOOK_COLLECTOR", "").strip()
 WEBHOOK_GOODIES = os.environ.get("DISCORD_WEBHOOK_GOODIES", "").strip()
 WEBHOOK_PEPITES = os.environ.get("DISCORD_WEBHOOK_PEPITES", "").strip()
-# Prix de référence à partir duquel un deal va dans le salon "pépites".
 PEPITE_MIN = float(os.environ.get("PEPITE_MIN", "80"))
 
 def _slug_type(slug: str) -> str:
@@ -157,9 +166,17 @@ def _slug_type(slug: str) -> str:
 
 
 def _webhook_for(v: dict) -> str:
-    """Choisit le salon Discord selon le prix (pépites) puis la catégorie."""
-    if WEBHOOK_PEPITES and v.get("reference", 0) >= PEPITE_MIN:
+    """Choisit le salon Discord : tranches de prix d'abord, sinon catégorie."""
+    ref = v.get("reference", 0)
+    # 1) Tranches de prix (si configurées).
+    if PRICE_TIERS and any(TIER_WEBHOOKS):
+        idx = sum(1 for b in PRICE_TIERS if ref >= b)
+        if idx < len(TIER_WEBHOOKS) and TIER_WEBHOOKS[idx]:
+            return TIER_WEBHOOKS[idx]
+    # 2) Salon "pépites" par prix.
+    if WEBHOOK_PEPITES and ref >= PEPITE_MIN:
         return WEBHOOK_PEPITES
+    # 3) Salon par catégorie.
     wh = {
         "jeux": WEBHOOK_JEUX,
         "collector": WEBHOOK_COLLECTOR,
@@ -170,6 +187,7 @@ def _webhook_for(v: dict) -> str:
 
 ANY_DISCORD = bool(
     DISCORD_WEBHOOK_URL
+    or any(TIER_WEBHOOKS)
     or WEBHOOK_JEUX
     or WEBHOOK_COLLECTOR
     or WEBHOOK_GOODIES
