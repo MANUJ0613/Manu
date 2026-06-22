@@ -75,6 +75,9 @@ Pour le `chat_id`, envoie un message au bot puis ouvre
 | `ALERT_MIN_INTERVAL` | `0.4` | Espacement min. entre 2 alertes (anti rate-limit) |
 | `EXTRA_CATEGORIES` | `tous-nos-packs` | Catégories en plus du sitemap (packs hors sitemap), slugs séparés par `,` |
 | `CATEGORY_SZ` | `1000` | Nombre de produits demandés par page catégorie |
+| `PACK_ID_ENUM` | `true` | Énumérer les packs par ID (`/mbN.html`) — capte les packs éphémères |
+| `PACK_ID_MAX` | `0` | ID de pack max à sonder (`0` = auto : max connu + buffer) |
+| `PACK_ID_BUFFER` | `40` | Marge d'IDs à sonder au-delà du max connu |
 | `DRY_RUN` | `false` | N'envoie aucune alerte, affiche seulement |
 
 ## Couverture & limites
@@ -89,10 +92,15 @@ Pour le `chat_id`, envoie un message au bot puis ouvre
   catalogue COMPLET à chaque passage** (`LOOP_INCREMENTAL=false`) : ~6-7 min par
   passage à `CONCURRENCY=24`. Tout produit est donc revérifié toutes les ~7 min,
   sans dépendre du `lastmod`.
-- ✅ **Packs hors sitemap** : certaines fiches (les **PACKS**, en
-  `/...-mbNNN.html`) existent mais ne sont **pas** dans le sitemap. On les
-  récupère en scannant en plus la/les catégorie(s) `EXTRA_CATEGORIES`
-  (`tous-nos-packs` par défaut). Ajoute d'autres catégories au besoin.
+- ✅ **Packs hors sitemap, y compris éphémères** : les **PACKS** (en
+  `/...-mbNNN.html`) ne sont pas dans le sitemap, et certains packs flash ne
+  sont **listés nulle part**. On les capte de deux façons :
+  1. en scannant la/les catégorie(s) `EXTRA_CATEGORIES` (`tous-nos-packs`) ;
+  2. surtout, par **énumération d'IDs** (`PACK_ID_ENUM`) : `/mbN.html` redirige
+     vers la fiche du pack, donc on sonde toute la plage `mb1..mbMAX` et on
+     découvre **tout pack ayant un ID**, même jamais listé / éphémère (c'était
+     le cas du « Pack Doom », `mb498`). En pratique cela trouve ~2× plus de
+     packs que la catégorie seule.
 - ❌ **Limite** : les pages « Bonnes Affaires » de Micromania sont **curées
   manuellement** et ne listent pas tous les produits réellement remisés — on ne
   peut donc pas s'en servir comme raccourci ; le scan des fiches reste nécessaire.

@@ -62,6 +62,13 @@ EXTRA_CATEGORIES = [
     if c.strip()
 ]
 CATEGORY_SZ = int(os.environ.get("CATEGORY_SZ", "1000"))
+
+# Énumération des packs par ID : /mbN.html redirige vers la fiche du pack
+# (même pour des packs éphémères jamais listés dans une catégorie). On sonde
+# toute la plage mb1..mbMAX pour ne rater aucun pack flash / erreur de prix.
+PACK_ID_ENUM = os.environ.get("PACK_ID_ENUM", "true").lower() == "true"
+PACK_ID_MAX = int(os.environ.get("PACK_ID_MAX", "0"))  # 0 = auto (max connu + buffer)
+PACK_ID_BUFFER = int(os.environ.get("PACK_ID_BUFFER", "40"))
 CONCURRENCY = int(os.environ.get("CONCURRENCY", "8"))
 REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "20"))
 INCLUDE_USED = os.environ.get("INCLUDE_USED", "false").lower() == "true"
@@ -114,6 +121,13 @@ def http_get(url: str, retries: int = 3) -> bytes:
                 if resp.headers.get("Content-Encoding") == "gzip":
                     raw = gzip.decompress(raw)
                 return raw
+        except urllib.error.HTTPError as err:
+            # 404/410 = ressource absente (ID de pack inexistant) : inutile de
+            # réessayer, on remonte tout de suite.
+            if err.code in (404, 410, 403):
+                raise RuntimeError(f"GET {url}: HTTP {err.code}") from err
+            last_err = err
+            time.sleep(1.5 * (attempt + 1))
         except Exception as err:  # noqa: BLE001 - on retente quoiqu'il arrive
             last_err = err
             time.sleep(1.5 * (attempt + 1))
@@ -533,21 +547,42 @@ def run_once(force_full: bool = False) -> int:
         print(f"Limitation à {MAX_PRODUCTS} fiches (sur {len(candidates)}).")
         candidates = candidates[:MAX_PRODUCTS]
 
-    # Produits hors sitemap (PACKS notamment), via les pages catégorie.
-    # Toujours ajoutés (pas de lastmod), donc non soumis au cutoff ni au cap.
+    # Produits hors sitemap (PACKS notamment). Toujours ajoutés (pas de
+    # lastmod), donc non soumis au cutoff ni au cap.
     known = {loc for loc, _ in candidates}
+
+    def add(u: str) -> int:
+        if u not in known:
+            known.add(u)
+            candidates.append((u, None))
+            return 1
+        return 0
+
     extra = 0
+    pack_ids: list[int] = []
+    # a) Pages catégorie (packs + éventuels /p/). On normalise les packs vers
+    #    leur permalien stable /mbN.html.
     for slug in EXTRA_CATEGORIES:
         try:
             for u in get_category_products(slug):
-                if u not in known:
-                    known.add(u)
-                    candidates.append((u, None))
-                    extra += 1
+                mm = PACK_SUFFIX_RE.search(u)
+                if mm:
+                    pid = int(re.search(r"-mb(\d+)\.html$", u).group(1))
+                    pack_ids.append(pid)
+                    u = f"{SITE_ROOT}/mb{pid}.html"
+                extra += add(u)
         except Exception as err:  # noqa: BLE001
             print(f"[catégorie] {slug}: {err}", file=sys.stderr)
+
+    # b) Énumération des IDs de packs (capte les packs éphémères / non listés).
+    if PACK_ID_ENUM:
+        mx = PACK_ID_MAX or ((max(pack_ids) if pack_ids else 700) + PACK_ID_BUFFER)
+        probed = sum(add(f"{SITE_ROOT}/mb{n}.html") for n in range(1, mx + 1))
+        extra += probed
+        print(f"Énumération packs: mb1..mb{mx} (+{probed} à sonder)")
+
     if extra:
-        print(f"Produits hors-sitemap (catégories {EXTRA_CATEGORIES}): +{extra}")
+        print(f"Produits hors-sitemap: +{extra}")
 
     print(f"Fiches à inspecter: {len(candidates)}")
     if not candidates:
