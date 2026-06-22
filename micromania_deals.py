@@ -94,7 +94,10 @@ SCAN_SITEMAP = os.environ.get("SCAN_SITEMAP", "false").lower() == "true"
 # Énumération des packs par ID : /mbN.html redirige vers la fiche du pack
 # (même pour des packs éphémères jamais listés dans une catégorie). On sonde
 # toute la plage mb1..mbMAX pour ne rater aucun pack flash / erreur de prix.
-PACK_ID_ENUM = os.environ.get("PACK_ID_ENUM", "true").lower() == "true"
+# Désactivé par défaut : 740 requêtes /mbN.html d'un coup font challenger
+# l'anti-bot (et risquent de flaguer l'IP). Les packs listés sont déjà couverts
+# par la catégorie tous-nos-packs. À n'activer qu'avec un proxy costaud.
+PACK_ID_ENUM = os.environ.get("PACK_ID_ENUM", "false").lower() == "true"
 PACK_ID_MAX = int(os.environ.get("PACK_ID_MAX", "0"))  # 0 = auto (max connu + buffer)
 PACK_ID_BUFFER = int(os.environ.get("PACK_ID_BUFFER", "40"))
 CONCURRENCY = int(os.environ.get("CONCURRENCY", "8"))
