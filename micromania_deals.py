@@ -156,15 +156,23 @@ TIER_WEBHOOKS = [
     w.strip() for w in os.environ.get("DISCORD_WEBHOOK_TIERS", "").split(",")
 ]
 
-# (optionnel) routage par catégorie + salon "pépites", si tu préfères.
+# Routage par CATÉGORIE. Un deal va aussi dans son salon de catégorie (en plus
+# de son salon de prix => il peut apparaître dans 2 salons : double envoi).
 WEBHOOK_JEUX = os.environ.get("DISCORD_WEBHOOK_JEUX", "").strip()
+WEBHOOK_FIGURINES = os.environ.get("DISCORD_WEBHOOK_FIGURINES", "").strip()
 WEBHOOK_COLLECTOR = os.environ.get("DISCORD_WEBHOOK_COLLECTOR", "").strip()
 WEBHOOK_GOODIES = os.environ.get("DISCORD_WEBHOOK_GOODIES", "").strip()
 WEBHOOK_PEPITES = os.environ.get("DISCORD_WEBHOOK_PEPITES", "").strip()
 PEPITE_MIN = float(os.environ.get("PEPITE_MIN", "80"))
+CATEGORY_WEBHOOKS = {
+    "jeux": WEBHOOK_JEUX,
+    "figurines": WEBHOOK_FIGURINES,
+    "collector": WEBHOOK_COLLECTOR,
+    "goodies": WEBHOOK_GOODIES,
+}
 
 def _slug_type(slug: str) -> str:
-    """Type de deal (jeux / collector / goodies) d'après le slug catégorie."""
+    """Type de deal (jeux / figurines / collector / goodies)."""
     s = slug.lower()
     # Collector/packs/exclus d'abord (avant le préfixe générique "jeux-").
     if (
@@ -177,44 +185,49 @@ def _slug_type(slug: str) -> str:
         return "collector"
     if s.startswith("jeux-") or s == "retrogaming":
         return "jeux"
+    if "figurine" in s:
+        return "figurines"
     return "goodies"
 
 
-def _webhook_for(v: dict) -> str:
-    """Choisit le salon Discord : % de réduction, puis prix, puis catégorie."""
+def _destinations(v: dict) -> list[str]:
+    """Tous les salons où envoyer ce deal (catégorie ET prix/% => double envoi).
+    Si rien ne matche, repli sur le salon par défaut."""
     ref = v.get("reference", 0)
     cur = v.get("current", 0)
-    # 0) Tranches de % de réduction (si configurées).
+    dests: list[str] = []
+
+    def add(w: str) -> None:
+        if w and w not in dests:
+            dests.append(w)
+
+    # a) Salon de catégorie.
+    add(CATEGORY_WEBHOOKS.get(v.get("type", ""), ""))
+    # b) Salon par % de réduction.
     if DISCOUNT_TIERS and any(DISCOUNT_TIER_WEBHOOKS) and ref > 0:
-        pct = (1 - cur / ref) * 100
-        idx = sum(1 for b in DISCOUNT_TIERS if pct >= b)
-        if idx < len(DISCOUNT_TIER_WEBHOOKS) and DISCOUNT_TIER_WEBHOOKS[idx]:
-            return DISCOUNT_TIER_WEBHOOKS[idx]
-    # 1) Tranches de prix (si configurées). Sur le prix de vente ou barré.
+        idx = sum(1 for b in DISCOUNT_TIERS if (1 - cur / ref) * 100 >= b)
+        if idx < len(DISCOUNT_TIER_WEBHOOKS):
+            add(DISCOUNT_TIER_WEBHOOKS[idx])
+    # c) Salon par tranche de prix (de vente ou barré).
     if PRICE_TIERS and any(TIER_WEBHOOKS):
         val = cur if ROUTE_PRICE_FIELD == "current" else ref
         idx = sum(1 for b in PRICE_TIERS if val >= b)
-        if idx < len(TIER_WEBHOOKS) and TIER_WEBHOOKS[idx]:
-            return TIER_WEBHOOKS[idx]
-    # 2) Salon "pépites" par prix.
+        if idx < len(TIER_WEBHOOKS):
+            add(TIER_WEBHOOKS[idx])
+    # d) Salon "pépites".
     if WEBHOOK_PEPITES and ref >= PEPITE_MIN:
-        return WEBHOOK_PEPITES
-    # 3) Salon par catégorie.
-    wh = {
-        "jeux": WEBHOOK_JEUX,
-        "collector": WEBHOOK_COLLECTOR,
-        "goodies": WEBHOOK_GOODIES,
-    }.get(v.get("type", ""), "")
-    return wh or DISCORD_WEBHOOK_URL
+        add(WEBHOOK_PEPITES)
+
+    if not dests:
+        add(DISCORD_WEBHOOK_URL)
+    return dests
 
 
 ANY_DISCORD = bool(
     DISCORD_WEBHOOK_URL
     or any(DISCOUNT_TIER_WEBHOOKS)
     or any(TIER_WEBHOOKS)
-    or WEBHOOK_JEUX
-    or WEBHOOK_COLLECTOR
-    or WEBHOOK_GOODIES
+    or any(CATEGORY_WEBHOOKS.values())
     or WEBHOOK_PEPITES
 )
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
@@ -803,8 +816,8 @@ def _enrich_image(v: dict) -> None:
 
 
 def _send_discord(v: dict) -> None:
-    webhook = _webhook_for(v)
-    if not webhook:
+    dests = _destinations(v)
+    if not dests:
         return
     if not v.get("image"):
         _enrich_image(v)
@@ -815,11 +828,14 @@ def _send_discord(v: dict) -> None:
             {"type": 2, "style": 5, "label": "🛒 Voir le deal", "url": v["url"]}
         ],
     }
-    # Essai avec bouton lien ; repli sur embed seul si le webhook le refuse.
-    try:
-        _http_post_json(webhook, {"embeds": [embed], "components": [button]})
-    except Exception:  # noqa: BLE001
-        _http_post_json(webhook, {"embeds": [embed]})
+    for webhook in dests:
+        try:
+            _http_post_json(webhook, {"embeds": [embed], "components": [button]})
+        except Exception:  # noqa: BLE001
+            try:
+                _http_post_json(webhook, {"embeds": [embed]})
+            except Exception as err:  # noqa: BLE001
+                print(f"[discord] échec {webhook[-12:]}: {err}", file=sys.stderr)
 
 
 def _send_telegram(v: dict) -> None:
