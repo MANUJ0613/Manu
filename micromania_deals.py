@@ -90,6 +90,7 @@ INCLUDE_UNAVAILABLE = os.environ.get("INCLUDE_UNAVAILABLE", "false").lower() == 
 # LOOP_INTERVAL_SECONDS = pause entre deux scans complets.
 LOOP_ENABLED = os.environ.get("LOOP_ENABLED", "false").lower() == "true"
 LOOP_INTERVAL_SECONDS = int(os.environ.get("LOOP_INTERVAL_SECONDS", "60"))
+# Durée max d'un run en boucle. 0 = illimité (idéal sur un VPS/systemd).
 LOOP_MAX_SECONDS = int(os.environ.get("LOOP_MAX_SECONDS", "19800"))  # ~5h30
 # Boucle à deux vitesses :
 #  - passage RAPIDE (chaque itération) : seulement les sources haute priorité
@@ -672,13 +673,14 @@ def main() -> int:
     # Mode boucle à deux vitesses :
     #  - chaque itération : passage RAPIDE (packs + collectors + énum. d'IDs) ;
     #  - toutes les FULL_CATALOG_EVERY_MINUTES : passage COMPLET (catalogue).
-    deadline = time.monotonic() + LOOP_MAX_SECONDS
+    deadline = (time.monotonic() + LOOP_MAX_SECONDS) if LOOP_MAX_SECONDS > 0 else None
     full_every = FULL_CATALOG_EVERY_MINUTES * 60
     last_full = 0.0  # 0 => le 1er passage est un scan complet
+    duree = "illimité" if deadline is None else f"~{LOOP_MAX_SECONDS // 60} min"
     print(
         f"Mode BOUCLE : passages rapides (packs/collectors) toutes les "
         f"~{LOOP_INTERVAL_SECONDS}s, scan COMPLET toutes les "
-        f"{FULL_CATALOG_EVERY_MINUTES} min, pendant ~{LOOP_MAX_SECONDS // 60} min."
+        f"{FULL_CATALOG_EVERY_MINUTES} min, durée {duree}."
     )
     while True:
         start = time.monotonic()
@@ -689,7 +691,7 @@ def main() -> int:
                 last_full = start
         except Exception as err:  # noqa: BLE001 - la boucle ne doit pas mourir
             print(f"[boucle] erreur de scan: {err}", file=sys.stderr)
-        if time.monotonic() >= deadline:
+        if deadline is not None and time.monotonic() >= deadline:
             print("Fin de la fenêtre de boucle.")
             return 0
         time.sleep(LOOP_INTERVAL_SECONDS)
