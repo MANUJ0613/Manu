@@ -50,7 +50,7 @@ USER_AGENT = os.environ.get(
 DISCOUNT_THRESHOLD = float(os.environ.get("DISCOUNT_THRESHOLD", "0.50"))  # 50 %
 MIN_REFERENCE_PRICE = float(os.environ.get("MIN_REFERENCE_PRICE", "50"))  # 50 €
 INITIAL_WINDOW_HOURS = float(os.environ.get("INITIAL_WINDOW_HOURS", "24"))
-MAX_PRODUCTS = int(os.environ.get("MAX_PRODUCTS", "5000"))  # garde-fou par run
+MAX_PRODUCTS = int(os.environ.get("MAX_PRODUCTS", "20000"))  # couvre tout le catalogue
 
 # Certains produits (notamment les PACKS) ont une fiche mais ne sont PAS dans
 # le sitemap (URL en /...-mbNNN.html). On scanne donc aussi ces pages catégorie
