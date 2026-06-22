@@ -55,6 +55,9 @@ CONCURRENCY = int(os.environ.get("CONCURRENCY", "8"))
 REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "20"))
 INCLUDE_USED = os.environ.get("INCLUDE_USED", "false").lower() == "true"
 INCLUDE_PRECOMMANDE = os.environ.get("INCLUDE_PRECOMMANDE", "false").lower() == "true"
+# Par défaut, on n'alerte que les produits réellement disponibles à l'achat
+# (pas ceux affichant « Créer une alerte » / en rupture).
+INCLUDE_UNAVAILABLE = os.environ.get("INCLUDE_UNAVAILABLE", "false").lower() == "true"
 
 # Mode boucle : si LOOP_INTERVAL_SECONDS > 0, le script reste actif et
 # relance un scan toutes les N secondes, pendant au plus LOOP_MAX_SECONDS.
@@ -149,6 +152,7 @@ COND_RE = re.compile(r'"condition":"([^"]*)"')
 PRECO_RE = re.compile(r'"precommande":(\d+)')
 EDITION_RE = re.compile(r'"edition":"([^"]*)"')
 PLATFORM_RE = re.compile(r'"platform":"([^"]*)"')
+DISPO_RE = re.compile(r'"dispoweb":(\d+)')
 IMAGE_RE = re.compile(r'"urlImage":"([^"]+)"')
 PEGI_RE = re.compile(r'"rating_pegi":"([^"]*)"')
 GENRE_RE = re.compile(r'"genre":"([^"]*)"')
@@ -217,6 +221,7 @@ def parse_product(url: str) -> list[dict]:
         img_m = IMAGE_RE.search(obj)
         pegi_m = PEGI_RE.search(obj)
         genre_m = GENRE_RE.search(obj)
+        dispo_m = DISPO_RE.search(obj)
         variants.append(
             {
                 "url": url,
@@ -230,6 +235,8 @@ def parse_product(url: str) -> list[dict]:
                 "image": (img_m.group(1) if img_m else "") or page_image,
                 "pegi": pegi_m.group(1) if pegi_m else "",
                 "genre": genre_m.group(1) if genre_m else "",
+                # dispoweb=1 -> disponible à l'achat sur le web.
+                "available": (int(dispo_m.group(1)) == 1) if dispo_m else True,
             }
         )
     return variants
@@ -240,6 +247,8 @@ def is_deal(v: dict) -> bool:
     if not INCLUDE_USED and v["condition"].lower() not in ("new", "neuf"):
         return False
     if not INCLUDE_PRECOMMANDE and v["precommande"]:
+        return False
+    if not INCLUDE_UNAVAILABLE and not v.get("available", True):
         return False
     if v["reference"] < MIN_REFERENCE_PRICE:
         return False
