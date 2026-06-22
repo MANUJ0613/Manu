@@ -86,10 +86,12 @@ Pour le `chat_id`, envoie un message au bot puis ouvre
   collector, accessoires, figurines… y compris les **nouveautés**.
 - ✅ On n'alerte que les produits **réellement disponibles** (`dispoweb=1`),
   jamais ceux en rupture / « Créer une alerte ».
-- ✅ **Éditions collector / limitées / exclusivités** : couvertes par le
-  catalogue (ce sont des `/p/`), et **revérifiées en priorité** à chaque passage
-  rapide via les catégories `jeux-video-edition-collector`,
-  `exclusivites-micromania`, `exclusivites-premium` (dans `EXTRA_CATEGORIES`).
+- ✅ **Collectors / éditions limitées / exclusivités / collectibles premium** :
+  **revérifiés en priorité** à chaque passage rapide via les catégories
+  `jeux-video-edition-collector`, `exclusivites-micromania`,
+  `exclusivites-premium` et `produits-derives-premium` (statues/figurines
+  chères) — `EXTRA_CATEGORIES`. Ce sont les produits qui s'arrachent à la
+  revente, donc ceux où une erreur de prix vaut le plus le coup.
 - ⚡ **Boucle à deux vitesses** : le `lastmod` du sitemap n'étant pas fiable
   (sitemap régénéré quelques fois/jour seulement), la boucle fait :
   - un **passage RAPIDE** très fréquent (~2 min) sur les sources sensibles —

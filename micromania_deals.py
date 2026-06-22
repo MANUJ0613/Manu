@@ -61,9 +61,11 @@ EXTRA_CATEGORIES = [
     for c in os.environ.get(
         "EXTRA_CATEGORIES",
         # Sources "haute priorité" scannées à chaque passage rapide :
-        # packs, éditions collector, éditions limitées, exclusivités.
+        # packs, éditions collector, exclusivités et collectibles premium
+        # (statues/figurines chères) — là où les erreurs de prix s'arrachent.
         "tous-nos-packs,jeux-video-edition-collector,"
-        "exclusivites-micromania,exclusivites-premium",
+        "exclusivites-micromania,exclusivites-premium,"
+        "produits-derives-premium",
     ).split(",")
     if c.strip()
 ]
