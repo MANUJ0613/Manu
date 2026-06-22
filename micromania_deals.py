@@ -981,10 +981,20 @@ _og_cache: dict[str, str] = {}
 _og_lock = threading.Lock()
 
 
+# Aller chercher l'image sur la FICHE produit (page très protégée) coûte une
+# requête lourde par deal. À seuil bas (beaucoup de deals) ça martèle les
+# proxies et Micromania les freine. ENRICH_IMAGES=false -> on n'utilise QUE
+# l'image déjà présente dans la page catégorie (aucune requête en plus), au prix
+# de quelques alertes sans image. Recommandé si tu scannes large (seuil bas).
+ENRICH_IMAGES = os.environ.get("ENRICH_IMAGES", "true").lower() in (
+    "1", "true", "yes", "on"
+)
+
+
 def _enrich_image(v: dict) -> None:
     """Récupère l'image officielle (og:image) de la fiche si manquante.
-    Appelé seulement pour les DEALS (peu nombreux) -> coût négligeable."""
-    if v.get("image") or not v.get("url"):
+    Désactivé si ENRICH_IMAGES=false (évite de marteler les fiches)."""
+    if not ENRICH_IMAGES or v.get("image") or not v.get("url"):
         return
     u = v["url"]
     with _og_lock:
