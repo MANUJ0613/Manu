@@ -73,6 +73,8 @@ Pour le `chat_id`, envoie un message au bot puis ouvre
 | `LOOP_INTERVAL_SECONDS` | `60` | Pause entre deux passages |
 | `LOOP_MAX_SECONDS` | `19800` | Durée max d'un run en boucle (~5h30) |
 | `ALERT_MIN_INTERVAL` | `0.4` | Espacement min. entre 2 alertes (anti rate-limit) |
+| `EXTRA_CATEGORIES` | `tous-nos-packs` | Catégories en plus du sitemap (packs hors sitemap), slugs séparés par `,` |
+| `CATEGORY_SZ` | `1000` | Nombre de produits demandés par page catégorie |
 | `DRY_RUN` | `false` | N'envoie aucune alerte, affiche seulement |
 
 ## Couverture & limites
@@ -87,12 +89,13 @@ Pour le `chat_id`, envoie un message au bot puis ouvre
   catalogue COMPLET à chaque passage** (`LOOP_INCREMENTAL=false`) : ~6-7 min par
   passage à `CONCURRENCY=24`. Tout produit est donc revérifié toutes les ~7 min,
   sans dépendre du `lastmod`.
-- ❌ **Limite 1** : les **packs/bundles construits au panier** (ex. « Pack jeu +
-  réplique » à prix combiné) ne sont pas des fiches produit → indétectables par
-  cette méthode.
-- ❌ **Limite 2** : les pages « Bonnes Affaires » de Micromania sont **curées
+- ✅ **Packs hors sitemap** : certaines fiches (les **PACKS**, en
+  `/...-mbNNN.html`) existent mais ne sont **pas** dans le sitemap. On les
+  récupère en scannant en plus la/les catégorie(s) `EXTRA_CATEGORIES`
+  (`tous-nos-packs` par défaut). Ajoute d'autres catégories au besoin.
+- ❌ **Limite** : les pages « Bonnes Affaires » de Micromania sont **curées
   manuellement** et ne listent pas tous les produits réellement remisés — on ne
-  peut donc pas s'en servir comme raccourci ; le scan complet reste nécessaire.
+  peut donc pas s'en servir comme raccourci ; le scan des fiches reste nécessaire.
 
 > ⚖️ **Compromis charge/vitesse** : scanner tout le catalogue en continu = ~20-25
 > requêtes/s en permanence vers Micromania. C'est le prix d'une détection rapide

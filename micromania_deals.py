@@ -51,6 +51,17 @@ DISCOUNT_THRESHOLD = float(os.environ.get("DISCOUNT_THRESHOLD", "0.50"))  # 50 %
 MIN_REFERENCE_PRICE = float(os.environ.get("MIN_REFERENCE_PRICE", "50"))  # 50 €
 INITIAL_WINDOW_HOURS = float(os.environ.get("INITIAL_WINDOW_HOURS", "24"))
 MAX_PRODUCTS = int(os.environ.get("MAX_PRODUCTS", "5000"))  # garde-fou par run
+
+# Certains produits (notamment les PACKS) ont une fiche mais ne sont PAS dans
+# le sitemap (URL en /...-mbNNN.html). On scanne donc aussi ces pages catégorie
+# pour en extraire les URLs produits manquantes. Toujours scannées (pas de
+# lastmod). Liste de slugs /c/<slug> séparés par des virgules.
+EXTRA_CATEGORIES = [
+    c.strip()
+    for c in os.environ.get("EXTRA_CATEGORIES", "tous-nos-packs").split(",")
+    if c.strip()
+]
+CATEGORY_SZ = int(os.environ.get("CATEGORY_SZ", "1000"))
 CONCURRENCY = int(os.environ.get("CONCURRENCY", "8"))
 REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "20"))
 INCLUDE_USED = os.environ.get("INCLUDE_USED", "false").lower() == "true"
@@ -124,6 +135,28 @@ def get_product_sitemaps() -> list[str]:
     locs = LOC_RE.findall(xml)
     product = [u for u in locs if "product" in u.lower()]
     return product or locs
+
+
+SITE_ROOT = "https://www.micromania.fr"
+# Liens d'une page catégorie. On ne garde que les fiches produits :
+#   - fiches classiques  /p/....html
+#   - packs              /....-mbNNN.html  (souvent hors sitemap)
+HREF_RE = re.compile(
+    r'href=["\'](?:https?://www\.micromania\.fr)?(/[^"\'#?]+\.html)["\']'
+)
+PACK_SUFFIX_RE = re.compile(r"-mb\d+\.html$")
+
+
+def get_category_products(slug: str) -> set[str]:
+    """Extrait les URLs produits d'une page catégorie (packs inclus)."""
+    url = slug if slug.startswith("http") else f"{SITE_ROOT}/c/{slug}?sz={CATEGORY_SZ}"
+    page = http_get(url).decode("utf-8", "replace")
+    found = set()
+    for m in HREF_RE.finditer(page):
+        href = m.group(1)
+        if href.startswith("/p/") or PACK_SUFFIX_RE.search(href):
+            found.add(SITE_ROOT + href)
+    return found
 
 
 def parse_sitemap(url: str) -> list[tuple[str, datetime | None]]:
@@ -499,6 +532,22 @@ def run_once(force_full: bool = False) -> int:
     if len(candidates) > MAX_PRODUCTS:
         print(f"Limitation à {MAX_PRODUCTS} fiches (sur {len(candidates)}).")
         candidates = candidates[:MAX_PRODUCTS]
+
+    # Produits hors sitemap (PACKS notamment), via les pages catégorie.
+    # Toujours ajoutés (pas de lastmod), donc non soumis au cutoff ni au cap.
+    known = {loc for loc, _ in candidates}
+    extra = 0
+    for slug in EXTRA_CATEGORIES:
+        try:
+            for u in get_category_products(slug):
+                if u not in known:
+                    known.add(u)
+                    candidates.append((u, None))
+                    extra += 1
+        except Exception as err:  # noqa: BLE001
+            print(f"[catégorie] {slug}: {err}", file=sys.stderr)
+    if extra:
+        print(f"Produits hors-sitemap (catégories {EXTRA_CATEGORIES}): +{extra}")
 
     print(f"Fiches à inspecter: {len(candidates)}")
     if not candidates:
