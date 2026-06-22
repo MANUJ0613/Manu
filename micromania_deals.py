@@ -343,15 +343,21 @@ _proxy_rr = [0]
 _proxy_rr_lock = threading.Lock()
 
 
-def _next_proxies():
-    """Renvoie le mapping proxies curl_cffi pour la prochaine session (round-robin
-    sur le pool), ou None si aucun proxy configuré."""
+def _next_proxy_url():
+    """Renvoie l'URL du prochain proxy (round-robin sur le pool), ou None si
+    aucun proxy configuré."""
     if not PROXY_POOL:
         return None
     with _proxy_rr_lock:
         url = PROXY_POOL[_proxy_rr[0] % len(PROXY_POOL)]
         _proxy_rr[0] += 1
-    return {"http": url, "https": url}
+    return url
+
+
+def _next_proxies():
+    """Mapping proxies curl_cffi pour la prochaine session (compat)."""
+    url = _next_proxy_url()
+    return {"http": url, "https": url} if url else None
 
 try:
     from curl_cffi import requests as cffi  # type: ignore
@@ -390,7 +396,9 @@ def _is_challenge(content: bytes) -> bool:
 
 
 def _new_session():
-    proxies = _next_proxies()
+    url = _next_proxy_url()
+    _tls.proxy_url = url or ""   # mémorise le proxy de cette session (clé débit)
+    proxies = {"http": url, "https": url} if url else None
     s = cffi.Session(impersonate=IMPERSONATE, proxies=proxies)
     try:
         s.headers.update(_BROWSER_HEADERS)
@@ -426,50 +434,57 @@ RATE_MIN = float(os.environ.get("RATE_MIN", "0.3"))   # intervalle plancher (rap
 RATE_MAX = float(os.environ.get("RATE_MAX", "4.0"))   # intervalle plafond (lent)
 RATE_START = float(os.environ.get("RATE_START", "0.5"))
 _rate_lock = threading.Lock()
-_last_req = [0.0]
-_interval = [RATE_START]   # intervalle courant (s entre 2 requêtes), adaptatif
-_ok_streak = [0]
-
-# Avec N proxies, la charge se répartit sur N IP : chaque IP garde l'espacement
-# adaptatif sûr (_interval), mais le DÉBIT TOTAL est multiplié par N. On divise
-# donc l'intervalle global par le nombre de proxies (mini 1). Résultat : 20 IP
-# = ~20× plus rapide, sans taper plus fort sur une IP donnée.
-_RATE_DIVISOR = max(1, len(PROXY_POOL))
+# Limiteur PAR PROXY : chaque IP a son propre intervalle adaptatif. Un proxy
+# bloqué ralentit SEULEMENT lui-même ; les 19 autres continuent à fond, en
+# parallèle. Le débit total = somme des débits de chaque IP saine.
+# clé = URL du proxy ("" si aucun proxy = mode IP unique).
+_rate_state: dict[str, dict] = {}
 
 
-def _rate_gate() -> None:
-    """Réserve un créneau espacé selon l'intervalle adaptatif courant, divisé
-    par le nombre de proxies (débit total ∝ nombre d'IP)."""
+def _rate_for(key: str) -> dict:
+    st = _rate_state.get(key)
+    if st is None:
+        st = {"interval": RATE_START, "last": 0.0, "streak": 0}
+        _rate_state[key] = st
+    return st
+
+
+def _rate_gate(key: str = "") -> None:
+    """Espace les requêtes d'UN proxy selon son intervalle adaptatif propre."""
     with _rate_lock:
+        st = _rate_for(key)
         now = time.monotonic()
-        target = max(now, _last_req[0] + _interval[0] / _RATE_DIVISOR)
-        _last_req[0] = target
+        target = max(now, st["last"] + st["interval"])
+        st["last"] = target
     delay = target - time.monotonic()
     if delay > 0:
         time.sleep(delay)
 
 
-def _note_block() -> None:
-    """Blocage détecté -> on ralentit (×1.6)."""
+def _note_block(key: str = "") -> None:
+    """Blocage sur ce proxy -> on ralentit CE proxy uniquement (×1.6)."""
     with _rate_lock:
-        _ok_streak[0] = 0
-        old = _interval[0]
-        _interval[0] = min(_interval[0] * 1.6, RATE_MAX)
-        if _interval[0] != old:
-            print(
-                f"[auto-débit] ralentissement → {_interval[0]:.2f}s/requête "
-                f"(anti-ban)",
-                file=sys.stderr,
-            )
+        st = _rate_for(key)
+        st["streak"] = 0
+        old = st["interval"]
+        st["interval"] = min(st["interval"] * 1.6, RATE_MAX)
+        newv = st["interval"]
+    if newv != old:
+        tag = key.rsplit("@", 1)[-1] if key else "ip"
+        print(
+            f"[auto-débit] {tag} ralenti → {newv:.2f}s/req (anti-ban)",
+            file=sys.stderr,
+        )
 
 
-def _note_ok() -> None:
-    """Succès -> on ré-accélère doucement après une bonne série."""
+def _note_ok(key: str = "") -> None:
+    """Succès sur ce proxy -> il ré-accélère doucement après une bonne série."""
     with _rate_lock:
-        _ok_streak[0] += 1
-        if _ok_streak[0] >= 40 and _interval[0] > RATE_MIN:
-            _ok_streak[0] = 0
-            _interval[0] = max(_interval[0] * 0.9, RATE_MIN)
+        st = _rate_for(key)
+        st["streak"] += 1
+        if st["streak"] >= 40 and st["interval"] > RATE_MIN:
+            st["streak"] = 0
+            st["interval"] = max(st["interval"] * 0.9, RATE_MIN)
 
 
 def http_get(url: str, retries: int = 3) -> bytes:
@@ -480,14 +495,17 @@ def http_get(url: str, retries: int = 3) -> bytes:
     if HAVE_CFFI:
         for attempt in range(retries):
             try:
-                _rate_gate()
-                r = _session().get(url, timeout=REQUEST_TIMEOUT)
+                sess = _session()  # crée/relance la session -> fixe _tls.proxy_url
+                key = getattr(_tls, "proxy_url", "")
+                _rate_gate(key)
+                r = sess.get(url, timeout=REQUEST_TIMEOUT)
                 if r.status_code in (404, 410):
                     raise RuntimeError(f"GET {url}: HTTP {r.status_code}")
                 if r.status_code == 403 or _is_challenge(r.content):
-                    # Bloqué : session neuve + on compte le blocage (disjoncteur).
+                    # Bloqué : session neuve (autre proxy en rotation) + on
+                    # ralentit CE proxy seulement.
                     _tls.s = None
-                    _note_block()
+                    _note_block(key)
                     last_err = RuntimeError("blocage anti-bot (challenge)")
                     time.sleep(1.0 * (attempt + 1))
                     continue
@@ -495,13 +513,14 @@ def http_get(url: str, retries: int = 3) -> bytes:
                     last_err = RuntimeError(f"HTTP {r.status_code}")
                     time.sleep(1.0 * (attempt + 1))
                     continue
-                _note_ok()  # succès -> on ré-accélère doucement
+                _note_ok(key)  # succès -> ce proxy ré-accélère doucement
                 return r.content
             except RuntimeError:
                 raise
             except Exception as err:  # noqa: BLE001
-                _tls.s = None  # la session peut être cassée
-                _note_block()  # curl(16) = blocage déguisé -> compte aussi
+                key = getattr(_tls, "proxy_url", "")
+                _tls.s = None  # session cassée -> on repart sur un autre proxy
+                _note_block(key)  # curl(16) = blocage déguisé -> compte aussi
                 last_err = err
                 time.sleep(1.0 * (attempt + 1))
         raise RuntimeError(f"GET échoué pour {url}: {last_err}")
