@@ -685,7 +685,36 @@ def _http_post_json(url: str, payload: dict) -> None:
         resp.read()
 
 
+_og_cache: dict[str, str] = {}
+_og_lock = threading.Lock()
+
+
+def _enrich_image(v: dict) -> None:
+    """Récupère l'image officielle (og:image) de la fiche si manquante.
+    Appelé seulement pour les DEALS (peu nombreux) -> coût négligeable."""
+    if v.get("image") or not v.get("url"):
+        return
+    u = v["url"]
+    with _og_lock:
+        if u in _og_cache:
+            v["image"] = _og_cache[u]
+            return
+    img = ""
+    try:
+        page = html.unescape(http_get(u).decode("utf-8", "replace"))
+        mm = IMAGE_RE.search(page) or OG_IMAGE_RE.search(page)
+        if mm:
+            img = mm.group(1).strip()
+    except Exception:  # noqa: BLE001
+        pass
+    with _og_lock:
+        _og_cache[u] = img
+    v["image"] = img
+
+
 def _send_discord(v: dict) -> None:
+    if not v.get("image"):
+        _enrich_image(v)
     embed = _discord_embed(v)
     button = {
         "type": 1,
