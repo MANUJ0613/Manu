@@ -49,8 +49,8 @@ USER_AGENT = os.environ.get(
 )
 
 DISCOUNT_THRESHOLD = float(os.environ.get("DISCOUNT_THRESHOLD", "0.50"))  # 50 %
-# Beaucoup de deals jeux/goodies sont à 39,99-49,99 € de référence -> seuil bas.
-MIN_REFERENCE_PRICE = float(os.environ.get("MIN_REFERENCE_PRICE", "15"))  # €
+# Deals jusqu'aux accessoires à ~5 € de référence -> seuil très bas.
+MIN_REFERENCE_PRICE = float(os.environ.get("MIN_REFERENCE_PRICE", "5"))  # €
 INITIAL_WINDOW_HOURS = float(os.environ.get("INITIAL_WINDOW_HOURS", "24"))
 MAX_PRODUCTS = int(os.environ.get("MAX_PRODUCTS", "20000"))  # couvre tout le catalogue
 
@@ -77,14 +77,19 @@ FAST_CATEGORIES = _csv_env(
 # supports de jeux + figurines (goodies).
 FULL_CATEGORIES = _csv_env(
     "FULL_CATEGORIES",
-    "jeux-ps5,jeux-xbox,jeux-switch,jeux-ps4,jeux-pc,figurines",
+    "jeux-ps5,jeux-xbox,jeux-switch,jeux-ps4,jeux-pc,"
+    "figurines,tous-les-produits-derives,mugs-et-verres,peluches,sacs",
 )
 # sz modéré + pagination (les pages à fort sz dépassent 20 Mo et timeout).
 CATEGORY_SZ = int(os.environ.get("CATEGORY_SZ", "120"))
 CATEGORY_MAX_PAGES = int(os.environ.get("CATEGORY_MAX_PAGES", "20"))
-# Scanner aussi les fiches /p/ du sitemap ? Inutile/contre-productif sur le VPS
-# (pages allégées par DataDome) ; utile seulement sur IP non bloquée.
-SCAN_SITEMAP = os.environ.get("SCAN_SITEMAP", "false").lower() == "true"
+# IMPORTANT : trop de requêtes catégorie en parallèle => curl_cffi/DataDome
+# renvoie des pages vides. On limite donc fortement la concurrence catégorie.
+CATEGORY_CONCURRENCY = int(os.environ.get("CATEGORY_CONCURRENCY", "3"))
+# Scanner les fiches /p/ du sitemap via parse_product (avec fallback prix
+# visible). Couvre TOUT le catalogue listé, y compris les deals retrait/rupture
+# cachés des listings catégorie. Lourd (~13k pages) mais complet.
+SCAN_SITEMAP = os.environ.get("SCAN_SITEMAP", "true").lower() == "true"
 
 # Énumération des packs par ID : /mbN.html redirige vers la fiche du pack
 # (même pour des packs éphémères jamais listés dans une catégorie). On sonde
@@ -409,6 +414,16 @@ def parse_sitemap(url: str) -> list[tuple[str, datetime | None]]:
 #   ...,"metric1":14.99,"metric2":79.99,...,"condition":"new",...,"precommande":0,...
 # où metric1 = prix actuel et metric2 = prix de référence (barré).
 METRIC_RE = re.compile(r'"metric1":(?P<cur>[\d.]+),"metric2":(?P<ref>[\d.]+)')
+# Prix VISIBLE (fallback quand l'analytics est strippé) : prix de vente +
+# prix barré, chacun dans un <span class="value" ... content="X.XX">.
+SALES_PRICE_RE = re.compile(
+    r'class="sales[^"]*"[^>]*>\s*<span class="value"[^>]*content="([\d.]+)"',
+    re.IGNORECASE,
+)
+STRIKE_PRICE_RE = re.compile(
+    r'class="strike-through[^"]*"[^>]*>\s*<span class="value"[^>]*content="([\d.]+)"',
+    re.IGNORECASE,
+)
 COND_RE = re.compile(r'"condition":"([^"]*)"')
 PRECO_RE = re.compile(r'"precommande":(\d+)')
 EDITION_RE = re.compile(r'"edition":"([^"]*)"')
@@ -500,6 +515,28 @@ def parse_product(url: str) -> list[dict]:
                 "available": (int(dispo_m.group(1)) == 1) if dispo_m else True,
             }
         )
+
+    # Fallback : si le bloc analytics est absent (page "allégée" par DataDome
+    # sur IP datacenter), on lit le PRIX VISIBLE affiché à l'acheteur, qui lui
+    # reste présent : <span class="sales ...">prix actuel</span> +
+    # <span class="strike-through ...">prix barré</span>.
+    if not variants:
+        cur_m = SALES_PRICE_RE.search(decoded)
+        ref_m = STRIKE_PRICE_RE.search(decoded)
+        if cur_m and ref_m:
+            cur = float(cur_m.group(1))
+            ref = float(ref_m.group(1))
+            # rupture web si "créer une alerte" et pas de bouton panier.
+            avail = ("ajouter au panier" in decoded.lower()
+                     or "retrait" in decoded.lower())
+            variants.append(
+                {
+                    "url": url, "title": title, "condition": "new",
+                    "current": cur, "reference": ref, "precommande": 0,
+                    "edition": "", "platform": "", "image": page_image,
+                    "pegi": "", "genre": "", "available": avail,
+                }
+            )
     return variants
 
 
@@ -764,7 +801,7 @@ def run_once(force_full: bool = False, extra_only: bool = False) -> int:
             print(f"[catégorie] {slug}: {err}", file=sys.stderr)
             return []
 
-    with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
+    with ThreadPoolExecutor(max_workers=CATEGORY_CONCURRENCY) as pool:
         for fut in as_completed([pool.submit(scan_cat, s) for s in cats]):
             for v in fut.result():
                 handle(v)
