@@ -27,6 +27,7 @@ import json
 import os
 import re
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -276,6 +277,20 @@ def save_state(state: dict) -> None:
 
 USER_AGENT_BOT = "MicromaniaDealsBot (https://github.com, 1.0)"
 
+# Espacement minimum entre deux notifications, pour éviter le rate-limit
+# (utile quand les alertes partent en rafale depuis plusieurs threads).
+ALERT_MIN_INTERVAL = float(os.environ.get("ALERT_MIN_INTERVAL", "0.4"))
+_alert_lock = threading.Lock()
+_last_alert_at = [0.0]
+
+
+def _throttle() -> None:
+    with _alert_lock:
+        wait = ALERT_MIN_INTERVAL - (time.monotonic() - _last_alert_at[0])
+        if wait > 0:
+            time.sleep(wait)
+        _last_alert_at[0] = time.monotonic()
+
 
 def _cond_label(v: dict) -> str:
     return "Neuf" if v["condition"].lower() in ("new", "neuf") else (
@@ -401,6 +416,7 @@ def send_alert(v: dict) -> None:
 
     if DISCORD_WEBHOOK_URL:
         try:
+            _throttle()
             _send_discord(v)
         except Exception as err:  # noqa: BLE001
             print(f"[discord] échec: {err}", file=sys.stderr)
