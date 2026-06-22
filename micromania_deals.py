@@ -59,13 +59,17 @@ INCLUDE_PRECOMMANDE = os.environ.get("INCLUDE_PRECOMMANDE", "false").lower() == 
 # (pas ceux affichant « Créer une alerte » / en rupture).
 INCLUDE_UNAVAILABLE = os.environ.get("INCLUDE_UNAVAILABLE", "false").lower() == "true"
 
-# Mode boucle : si LOOP_INTERVAL_SECONDS > 0, le script reste actif et
-# relance un scan toutes les N secondes, pendant au plus LOOP_MAX_SECONDS.
-LOOP_INTERVAL_SECONDS = int(os.environ.get("LOOP_INTERVAL_SECONDS", "0"))
+# Mode boucle : si LOOP_INTERVAL_SECONDS >= 0 et LOOP_MODE actif, le script
+# reste actif et relance un scan en continu, pendant au plus LOOP_MAX_SECONDS.
+# LOOP_INTERVAL_SECONDS = pause entre deux scans complets.
+LOOP_ENABLED = os.environ.get("LOOP_ENABLED", "false").lower() == "true"
+LOOP_INTERVAL_SECONDS = int(os.environ.get("LOOP_INTERVAL_SECONDS", "60"))
 LOOP_MAX_SECONDS = int(os.environ.get("LOOP_MAX_SECONDS", "19800"))  # ~5h30
-# En boucle, on lance périodiquement un scan COMPLET (ignore lastmod) pour
-# rattraper les changements de prix qui ne mettent pas à jour le lastmod.
-FULL_SCAN_EVERY_HOURS = float(os.environ.get("FULL_SCAN_EVERY_HOURS", "6"))
+# En boucle, chaque passage est un scan COMPLET du catalogue par défaut
+# (le lastmod n'étant pas fiable). Mettre LOOP_INCREMENTAL=true pour ne
+# rescanner que les fiches au lastmod récent (beaucoup plus léger, mais
+# peut rater des changements de prix non reflétés dans le lastmod).
+LOOP_INCREMENTAL = os.environ.get("LOOP_INCREMENTAL", "false").lower() == "true"
 
 STATE_FILE = os.environ.get("STATE_FILE", "state/state.json")
 DEALS_LOG = os.environ.get("DEALS_LOG", "state/deals.log")
@@ -544,32 +548,26 @@ def run_once(force_full: bool = False) -> int:
 
 
 def main() -> int:
-    if LOOP_INTERVAL_SECONDS <= 0:
+    if not LOOP_ENABLED:
         return run_once()
 
-    # Mode boucle : scans répétés jusqu'à LOOP_MAX_SECONDS.
+    # Mode boucle : scans complets répétés en continu jusqu'à LOOP_MAX_SECONDS.
     deadline = time.monotonic() + LOOP_MAX_SECONDS
-    full_every = FULL_SCAN_EVERY_HOURS * 3600
-    last_full = 0.0  # 0 => le 1er scan de la boucle est un scan complet
+    mode = "incrémental (lastmod)" if LOOP_INCREMENTAL else "COMPLET (catalogue entier)"
     print(
-        f"Mode BOUCLE : scan toutes les {LOOP_INTERVAL_SECONDS}s "
-        f"pendant ~{LOOP_MAX_SECONDS // 60} min "
-        f"(scan complet toutes les {FULL_SCAN_EVERY_HOURS}h)."
+        f"Mode BOUCLE : scan {mode} en continu, pause {LOOP_INTERVAL_SECONDS}s "
+        f"entre 2 passages, pendant ~{LOOP_MAX_SECONDS // 60} min."
     )
     while True:
         start = time.monotonic()
-        force_full = (start - last_full) >= full_every
         try:
-            run_once(force_full=force_full)
-            if force_full:
-                last_full = start
+            run_once(force_full=not LOOP_INCREMENTAL)
         except Exception as err:  # noqa: BLE001 - la boucle ne doit pas mourir
             print(f"[boucle] erreur de scan: {err}", file=sys.stderr)
         if time.monotonic() >= deadline:
             print("Fin de la fenêtre de boucle.")
             return 0
-        elapsed = time.monotonic() - start
-        time.sleep(max(0, LOOP_INTERVAL_SECONDS - elapsed))
+        time.sleep(LOOP_INTERVAL_SECONDS)
 
 
 if __name__ == "__main__":

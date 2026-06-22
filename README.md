@@ -67,28 +67,37 @@ Pour le `chat_id`, envoie un message au bot puis ouvre
 | `INCLUDE_USED` | `false` | Inclure les produits d'occasion |
 | `INCLUDE_PRECOMMANDE` | `false` | Inclure les précommandes |
 | `INCLUDE_UNAVAILABLE` | `false` | Inclure les produits en rupture (« Créer une alerte ») |
-| `FULL_SCAN` | `false` | Scanner tout le catalogue (ignore `lastmod`) |
-| `FULL_SCAN_EVERY_HOURS` | `6` | En boucle : fréquence d'un scan complet de rattrapage |
-| `LOOP_INTERVAL_SECONDS` | `0` | >0 = mode boucle, intervalle entre 2 scans |
+| `FULL_SCAN` | `false` | Forcer un scan complet (ignore `lastmod`) |
+| `LOOP_ENABLED` | `false` | `true` = boucle continue |
+| `LOOP_INCREMENTAL` | `false` | En boucle : `true` = scan léger lastmod, `false` = scan complet à chaque passage |
+| `LOOP_INTERVAL_SECONDS` | `60` | Pause entre deux passages |
+| `LOOP_MAX_SECONDS` | `19800` | Durée max d'un run en boucle (~5h30) |
 | `ALERT_MIN_INTERVAL` | `0.4` | Espacement min. entre 2 alertes (anti rate-limit) |
 | `DRY_RUN` | `false` | N'envoie aucune alerte, affiche seulement |
 
 ## Couverture & limites
 
 - ✅ **Tout produit ayant une fiche `/p/...`** est couvert : jeux, éditions
-  collector, accessoires, figurines… y compris les **nouveautés** (le sitemap
-  est re-téléchargé à chaque passage, les nouvelles fiches ont un `lastmod`
-  récent et sont donc scannées).
-- ✅ Les **erreurs de prix** sur un produit existant sont détectées : soit via
-  le `lastmod` mis à jour, soit via le **scan complet périodique**
-  (`FULL_SCAN_EVERY_HOURS`) qui balaie tout le catalogue sans dépendre du
-  `lastmod`.
+  collector, accessoires, figurines… y compris les **nouveautés**.
 - ✅ On n'alerte que les produits **réellement disponibles** (`dispoweb=1`),
   jamais ceux en rupture / « Créer une alerte ».
-- ❌ **Limite** : les **packs/bundles construits au panier** (ex. « Pack jeu +
-  réplique » à prix combiné) ne sont **pas** des fiches produit et n'existent
-  pas dans le sitemap — ils ne peuvent donc pas être détectés par cette
-  méthode.
+- ⚠️ **Le `lastmod` du sitemap n'est pas fiable** pour la réactivité : Micromania
+  ne régénère son sitemap que quelques fois par jour, donc un changement de prix
+  peut ne pas y apparaître tout de suite. C'est pourquoi la **boucle scanne le
+  catalogue COMPLET à chaque passage** (`LOOP_INCREMENTAL=false`) : ~6-7 min par
+  passage à `CONCURRENCY=24`. Tout produit est donc revérifié toutes les ~7 min,
+  sans dépendre du `lastmod`.
+- ❌ **Limite 1** : les **packs/bundles construits au panier** (ex. « Pack jeu +
+  réplique » à prix combiné) ne sont pas des fiches produit → indétectables par
+  cette méthode.
+- ❌ **Limite 2** : les pages « Bonnes Affaires » de Micromania sont **curées
+  manuellement** et ne listent pas tous les produits réellement remisés — on ne
+  peut donc pas s'en servir comme raccourci ; le scan complet reste nécessaire.
+
+> ⚖️ **Compromis charge/vitesse** : scanner tout le catalogue en continu = ~20-25
+> requêtes/s en permanence vers Micromania. C'est le prix d'une détection rapide
+> et exhaustive. Pour alléger, augmente `LOOP_INTERVAL_SECONDS` ou passe en
+> `LOOP_INCREMENTAL=true` (plus léger mais moins réactif).
 
 Pour rendre la détection plus stricte (uniquement les erreurs de prix
 évidentes), monte le seuil : `DISCOUNT_THRESHOLD=0.70`.

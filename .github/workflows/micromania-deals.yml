@@ -46,12 +46,13 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           DISCOUNT_THRESHOLD: "0.50"
           MIN_REFERENCE_PRICE: "50"
-          INITIAL_WINDOW_HOURS: "24"
           MAX_PRODUCTS: "15000"
-          CONCURRENCY: "16"
-          LOOP_INTERVAL_SECONDS: "120" # un scan toutes les 2 min
+          CONCURRENCY: "24" # ~6-7 min pour scanner tout le catalogue
+          LOOP_ENABLED: "true" # boucle continue
+          LOOP_INCREMENTAL: "false" # chaque passage = scan COMPLET (lastmod non fiable)
+          LOOP_INTERVAL_SECONDS: "30" # courte pause entre 2 scans complets
           LOOP_MAX_SECONDS: "19800" # ~5h30 puis on relance
-          FULL_SCAN: ${{ github.event.inputs.full_scan || 'false' }}
+          ALERT_MIN_INTERVAL: "0.5"
         run: python3 micromania_deals.py
 
       - name: Sauvegarder l'état (dédup)
