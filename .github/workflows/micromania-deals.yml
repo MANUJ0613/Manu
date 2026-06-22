@@ -1,0 +1,82 @@
+name: Micromania deals watcher
+
+# Surveille micromania.fr en quasi temps réel (boucle ~2 min) et envoie une
+# alerte Discord/Telegram sur les grosses réductions / erreurs de prix.
+#
+# Un run boucle pendant ~5h30 (sous la limite GitHub de 6h) puis se relance
+# automatiquement (étape "Relancer"). Une cron de secours toutes les 3h
+# garantit qu'un run repart même si le précédent a planté.
+
+on:
+  schedule:
+    - cron: "0 */3 * * *" # filet de sécurité : relance toutes les 3h
+  workflow_dispatch:
+    inputs:
+      full_scan:
+        description: "Scanner TOUT le catalogue au 1er passage"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write # committer l'état
+  actions: write # se relancer (workflow_dispatch)
+
+# Au plus un run actif + un en attente : pas d'empilement.
+concurrency:
+  group: micromania-deals
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350 # ~5h50, marge sous la limite de 6h
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Détecter les deals (boucle)
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          DISCOUNT_THRESHOLD: "0.50"
+          MIN_REFERENCE_PRICE: "50"
+          MAX_PRODUCTS: "15000"
+          CONCURRENCY: "24" # ~6-7 min pour scanner tout le catalogue
+          LOOP_ENABLED: "true" # boucle à deux vitesses
+          LOOP_INTERVAL_SECONDS: "30" # pause entre 2 passages rapides (packs/collectors)
+          FULL_CATALOG_EVERY_MINUTES: "30" # scan complet du catalogue toutes les 30 min
+          LOOP_MAX_SECONDS: "19800" # ~5h30 puis on relance
+          ALERT_MIN_INTERVAL: "0.5"
+        run: python3 micromania_deals.py
+
+      - name: Sauvegarder l'état (dédup)
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}" || true
+          git add state/
+          if git diff --cached --quiet; then
+            echo "Aucun changement d'état à committer."
+          else
+            git commit -m "chore: état du watcher Micromania [skip ci]"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+      - name: Relancer le watcher (boucle continue)
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -sf -X POST \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/micromania-deals.yml/dispatches" \
+            -d "{\"ref\":\"${GITHUB_REF_NAME}\"}" \
+            && echo "Relance demandée." || echo "Relance non déclenchée (la cron prendra le relais)."
