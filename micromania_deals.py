@@ -58,7 +58,13 @@ MAX_PRODUCTS = int(os.environ.get("MAX_PRODUCTS", "5000"))  # garde-fou par run
 # lastmod). Liste de slugs /c/<slug> séparés par des virgules.
 EXTRA_CATEGORIES = [
     c.strip()
-    for c in os.environ.get("EXTRA_CATEGORIES", "tous-nos-packs").split(",")
+    for c in os.environ.get(
+        "EXTRA_CATEGORIES",
+        # Sources "haute priorité" scannées à chaque passage rapide :
+        # packs, éditions collector, éditions limitées, exclusivités.
+        "tous-nos-packs,jeux-video-edition-collector,"
+        "exclusivites-micromania,exclusivites-premium",
+    ).split(",")
     if c.strip()
 ]
 CATEGORY_SZ = int(os.environ.get("CATEGORY_SZ", "1000"))
@@ -83,11 +89,13 @@ INCLUDE_UNAVAILABLE = os.environ.get("INCLUDE_UNAVAILABLE", "false").lower() == 
 LOOP_ENABLED = os.environ.get("LOOP_ENABLED", "false").lower() == "true"
 LOOP_INTERVAL_SECONDS = int(os.environ.get("LOOP_INTERVAL_SECONDS", "60"))
 LOOP_MAX_SECONDS = int(os.environ.get("LOOP_MAX_SECONDS", "19800"))  # ~5h30
-# En boucle, chaque passage est un scan COMPLET du catalogue par défaut
-# (le lastmod n'étant pas fiable). Mettre LOOP_INCREMENTAL=true pour ne
-# rescanner que les fiches au lastmod récent (beaucoup plus léger, mais
-# peut rater des changements de prix non reflétés dans le lastmod).
-LOOP_INCREMENTAL = os.environ.get("LOOP_INCREMENTAL", "false").lower() == "true"
+# Boucle à deux vitesses :
+#  - passage RAPIDE (chaque itération) : seulement les sources haute priorité
+#    (packs + collectors/exclus + énumération d'IDs de packs) — léger, ~1-2 min.
+#  - passage COMPLET (catalogue entier) : seulement toutes les
+#    FULL_CATALOG_EVERY_MINUTES, car lourd (~6-7 min) et le lastmod n'est pas
+#    fiable. Mettre 0 pour faire un scan complet à chaque passage.
+FULL_CATALOG_EVERY_MINUTES = float(os.environ.get("FULL_CATALOG_EVERY_MINUTES", "30"))
 
 STATE_FILE = os.environ.get("STATE_FILE", "state/state.json")
 DEALS_LOG = os.environ.get("DEALS_LOG", "state/deals.log")
@@ -505,7 +513,9 @@ def send_alert(v: dict) -> None:
 # Main
 # --------------------------------------------------------------------------- #
 
-def run_once(force_full: bool = False) -> int:
+def run_once(force_full: bool = False, extra_only: bool = False) -> int:
+    """Un scan. extra_only=True => seulement les sources haute priorité
+    (packs + collectors/exclus + énumération d'IDs), sans le catalogue."""
     state = load_state()
     now = datetime.now(timezone.utc)
 
@@ -520,32 +530,34 @@ def run_once(force_full: bool = False) -> int:
     else:
         cutoff = now - timedelta(hours=INITIAL_WINDOW_HOURS)
 
-    print(f"== Micromania deals == {now.isoformat()}")
+    kind = "RAPIDE (packs + collectors)" if extra_only else (
+        "COMPLET (catalogue)" if cutoff is None else "incrémental"
+    )
+    print(f"== Micromania deals == {now.isoformat()} — passage {kind}")
     print(f"Seuil: -{int(DISCOUNT_THRESHOLD*100)}% | prix réf. >= {MIN_REFERENCE_PRICE:.0f}€")
-    print(f"Cutoff lastmod: {cutoff.isoformat() if cutoff else 'FULL SCAN'}")
-
-    # 1. Collecte des URLs produits à inspecter.
-    sitemaps = get_product_sitemaps()
-    print(f"Sitemaps produits: {len(sitemaps)}")
 
     candidates: list[tuple[str, datetime | None]] = []
-    for sm in sitemaps:
-        try:
-            entries = parse_sitemap(sm)
-        except Exception as err:  # noqa: BLE001
-            print(f"[sitemap] {sm}: {err}", file=sys.stderr)
-            continue
-        for loc, lastmod in entries:
-            if cutoff is None:
-                candidates.append((loc, lastmod))
-            elif lastmod is None or lastmod >= cutoff:
-                candidates.append((loc, lastmod))
 
-    # Les plus récemment modifiés d'abord, puis garde-fou MAX_PRODUCTS.
-    candidates.sort(key=lambda t: (t[1] or now), reverse=True)
-    if len(candidates) > MAX_PRODUCTS:
-        print(f"Limitation à {MAX_PRODUCTS} fiches (sur {len(candidates)}).")
-        candidates = candidates[:MAX_PRODUCTS]
+    # 1. Catalogue (sitemap) — sauté lors d'un passage rapide.
+    if not extra_only:
+        sitemaps = get_product_sitemaps()
+        for sm in sitemaps:
+            try:
+                entries = parse_sitemap(sm)
+            except Exception as err:  # noqa: BLE001
+                print(f"[sitemap] {sm}: {err}", file=sys.stderr)
+                continue
+            for loc, lastmod in entries:
+                if cutoff is None:
+                    candidates.append((loc, lastmod))
+                elif lastmod is None or lastmod >= cutoff:
+                    candidates.append((loc, lastmod))
+
+        # Les plus récemment modifiés d'abord, puis garde-fou MAX_PRODUCTS.
+        candidates.sort(key=lambda t: (t[1] or now), reverse=True)
+        if len(candidates) > MAX_PRODUCTS:
+            print(f"Limitation à {MAX_PRODUCTS} fiches (sur {len(candidates)}).")
+            candidates = candidates[:MAX_PRODUCTS]
 
     # Produits hors sitemap (PACKS notamment). Toujours ajoutés (pas de
     # lastmod), donc non soumis au cutoff ni au cap.
@@ -586,8 +598,9 @@ def run_once(force_full: bool = False) -> int:
 
     print(f"Fiches à inspecter: {len(candidates)}")
     if not candidates:
-        state["last_scan"] = now.isoformat()
-        save_state(state)
+        if not extra_only:
+            state["last_scan"] = now.isoformat()
+            save_state(state)
         print("Rien de nouveau à scanner.")
         return 0
 
@@ -601,7 +614,10 @@ def run_once(force_full: bool = False) -> int:
         try:
             return parse_product(url)
         except Exception as err:  # noqa: BLE001
-            print(f"[produit] {url}: {err}", file=sys.stderr)
+            # 404/410/403 = ID de pack inexistant : attendu, on ne logge pas.
+            msg = str(err)
+            if not any(c in msg for c in ("HTTP 410", "HTTP 404", "HTTP 403")):
+                print(f"[produit] {url}: {err}", file=sys.stderr)
             return []
 
     with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
@@ -624,7 +640,8 @@ def run_once(force_full: bool = False) -> int:
 
     # 3. Sauvegarde de l'état.
     state["seen"] = seen
-    state["last_scan"] = now.isoformat()
+    if not extra_only:
+        state["last_scan"] = now.isoformat()
     save_state(state)
 
     print(f"Terminé: {processed} fiches inspectées, {new_deals} alerte(s).")
@@ -635,17 +652,24 @@ def main() -> int:
     if not LOOP_ENABLED:
         return run_once()
 
-    # Mode boucle : scans complets répétés en continu jusqu'à LOOP_MAX_SECONDS.
+    # Mode boucle à deux vitesses :
+    #  - chaque itération : passage RAPIDE (packs + collectors + énum. d'IDs) ;
+    #  - toutes les FULL_CATALOG_EVERY_MINUTES : passage COMPLET (catalogue).
     deadline = time.monotonic() + LOOP_MAX_SECONDS
-    mode = "incrémental (lastmod)" if LOOP_INCREMENTAL else "COMPLET (catalogue entier)"
+    full_every = FULL_CATALOG_EVERY_MINUTES * 60
+    last_full = 0.0  # 0 => le 1er passage est un scan complet
     print(
-        f"Mode BOUCLE : scan {mode} en continu, pause {LOOP_INTERVAL_SECONDS}s "
-        f"entre 2 passages, pendant ~{LOOP_MAX_SECONDS // 60} min."
+        f"Mode BOUCLE : passages rapides (packs/collectors) toutes les "
+        f"~{LOOP_INTERVAL_SECONDS}s, scan COMPLET toutes les "
+        f"{FULL_CATALOG_EVERY_MINUTES} min, pendant ~{LOOP_MAX_SECONDS // 60} min."
     )
     while True:
         start = time.monotonic()
+        do_full = (start - last_full) >= full_every
         try:
-            run_once(force_full=not LOOP_INCREMENTAL)
+            run_once(force_full=do_full, extra_only=not do_full)
+            if do_full:
+                last_full = start
         except Exception as err:  # noqa: BLE001 - la boucle ne doit pas mourir
             print(f"[boucle] erreur de scan: {err}", file=sys.stderr)
         if time.monotonic() >= deadline:

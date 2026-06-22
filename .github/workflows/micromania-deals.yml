@@ -48,9 +48,9 @@ jobs:
           MIN_REFERENCE_PRICE: "50"
           MAX_PRODUCTS: "15000"
           CONCURRENCY: "24" # ~6-7 min pour scanner tout le catalogue
-          LOOP_ENABLED: "true" # boucle continue
-          LOOP_INCREMENTAL: "false" # chaque passage = scan COMPLET (lastmod non fiable)
-          LOOP_INTERVAL_SECONDS: "30" # courte pause entre 2 scans complets
+          LOOP_ENABLED: "true" # boucle à deux vitesses
+          LOOP_INTERVAL_SECONDS: "30" # pause entre 2 passages rapides (packs/collectors)
+          FULL_CATALOG_EVERY_MINUTES: "30" # scan complet du catalogue toutes les 30 min
           LOOP_MAX_SECONDS: "19800" # ~5h30 puis on relance
           ALERT_MIN_INTERVAL: "0.5"
         run: python3 micromania_deals.py
