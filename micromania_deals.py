@@ -141,7 +141,11 @@ DISCOUNT_TIER_WEBHOOKS = [
     for w in os.environ.get("DISCORD_WEBHOOK_DISCOUNT_TIERS", "").split(",")
 ]
 
-# Routage par TRANCHES DE PRIX (sur le prix de référence).
+# Sur quel prix router les tranches : "current" = prix de VENTE (après remise),
+# "reference" = prix barré. Pour "tout ce qui est à ~2€", mettre "current".
+ROUTE_PRICE_FIELD = os.environ.get("ROUTE_PRICE_FIELD", "reference").lower()
+
+# Routage par TRANCHES DE PRIX.
 # PRICE_TIERS = bornes croissantes, ex "20,80" -> 3 tranches : <20 / 20-80 / >=80
 # DISCORD_WEBHOOK_TIERS = un webhook par tranche (séparés par des virgules),
 # dans le même ordre. Une tranche vide retombe sur DISCORD_WEBHOOK_URL.
@@ -186,9 +190,10 @@ def _webhook_for(v: dict) -> str:
         idx = sum(1 for b in DISCOUNT_TIERS if pct >= b)
         if idx < len(DISCOUNT_TIER_WEBHOOKS) and DISCOUNT_TIER_WEBHOOKS[idx]:
             return DISCOUNT_TIER_WEBHOOKS[idx]
-    # 1) Tranches de prix (si configurées).
+    # 1) Tranches de prix (si configurées). Sur le prix de vente ou barré.
     if PRICE_TIERS and any(TIER_WEBHOOKS):
-        idx = sum(1 for b in PRICE_TIERS if ref >= b)
+        val = cur if ROUTE_PRICE_FIELD == "current" else ref
+        idx = sum(1 for b in PRICE_TIERS if val >= b)
         if idx < len(TIER_WEBHOOKS) and TIER_WEBHOOKS[idx]:
             return TIER_WEBHOOKS[idx]
     # 2) Salon "pépites" par prix.
