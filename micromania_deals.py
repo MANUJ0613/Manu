@@ -89,7 +89,7 @@ CATEGORY_CONCURRENCY = int(os.environ.get("CATEGORY_CONCURRENCY", "3"))
 # Scanner les fiches /p/ du sitemap via parse_product (avec fallback prix
 # visible). Couvre TOUT le catalogue listé, y compris les deals retrait/rupture
 # cachés des listings catégorie. Lourd (~13k pages) mais complet.
-SCAN_SITEMAP = os.environ.get("SCAN_SITEMAP", "true").lower() == "true"
+SCAN_SITEMAP = os.environ.get("SCAN_SITEMAP", "false").lower() == "true"
 
 # Énumération des packs par ID : /mbN.html redirige vers la fiche du pack
 # (même pour des packs éphémères jamais listés dans une catégorie). On sonde
@@ -810,8 +810,10 @@ def run_once(force_full: bool = False, extra_only: bool = False) -> int:
     print(f"Catégories scannées: {len(cats)} | produits vus: {stats['products']}")
 
     # 2) URLs produits via parse_product : packs (par ID) + sitemap optionnel.
+    #    UNIQUEMENT au passage complet : ces sources sont volumineuses (740 IDs
+    #    de packs + 13k fiches) et martèleraient l'anti-bot à chaque passage.
     url_candidates: set[str] = set()
-    if PACK_ID_ENUM:
+    if PACK_ID_ENUM and not extra_only:
         floor = max(int(state.get("pack_id_max", 0)), 700)
         mx = PACK_ID_MAX or (floor + PACK_ID_BUFFER)
         url_candidates |= {f"{SITE_ROOT}/mb{n}.html" for n in range(1, mx + 1)}

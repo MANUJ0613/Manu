@@ -47,11 +47,12 @@ jobs:
           DISCOUNT_THRESHOLD: "0.50"
           MIN_REFERENCE_PRICE: "3"
           INCLUDE_UNAVAILABLE: "true"
-          SCAN_SITEMAP: "true"
-          CONCURRENCY: "24"
+          SCAN_SITEMAP: "false" # fiches sans prix + bannissement anti-bot
+          CONCURRENCY: "4" # faible : Incapsula bannit la forte concurrence
+          CATEGORY_CONCURRENCY: "2"
           LOOP_ENABLED: "true" # boucle à deux vitesses
-          LOOP_INTERVAL_SECONDS: "30" # pause entre 2 passages rapides (packs/collectors)
-          FULL_CATALOG_EVERY_MINUTES: "30" # scan complet du catalogue toutes les 30 min
+          LOOP_INTERVAL_SECONDS: "600" # passage rapide toutes les ~10 min (anti-ban)
+          FULL_CATALOG_EVERY_MINUTES: "60" # scan complet toutes les heures
           LOOP_MAX_SECONDS: "19800" # ~5h30 puis on relance
           ALERT_MIN_INTERVAL: "0.5"
         run: python3 micromania_deals.py
