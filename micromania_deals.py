@@ -97,9 +97,12 @@ SCAN_SITEMAP = os.environ.get("SCAN_SITEMAP", "false").lower() == "true"
 # Désactivé par défaut : 740 requêtes /mbN.html d'un coup font challenger
 # l'anti-bot (et risquent de flaguer l'IP). Les packs listés sont déjà couverts
 # par la catégorie tous-nos-packs. À n'activer qu'avec un proxy costaud.
-PACK_ID_ENUM = os.environ.get("PACK_ID_ENUM", "false").lower() == "true"
-PACK_ID_MAX = int(os.environ.get("PACK_ID_MAX", "0"))  # 0 = auto (max connu + buffer)
-PACK_ID_BUFFER = int(os.environ.get("PACK_ID_BUFFER", "40"))
+# Énumération DOUCE : on ne sonde que la fenêtre des IDs récents (là où
+# apparaissent les nouveaux packs éphémères), pas toute la plage -> pas de ban.
+PACK_ID_ENUM = os.environ.get("PACK_ID_ENUM", "true").lower() == "true"
+PACK_ID_MAX = int(os.environ.get("PACK_ID_MAX", "0"))  # 0 = auto (frontière)
+PACK_ID_BUFFER = int(os.environ.get("PACK_ID_BUFFER", "40"))  # IDs sondés au-dessus
+PACK_ID_LOOKBACK = int(os.environ.get("PACK_ID_LOOKBACK", "30"))  # et en-dessous
 CONCURRENCY = int(os.environ.get("CONCURRENCY", "8"))
 REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "20"))
 INCLUDE_USED = os.environ.get("INCLUDE_USED", "false").lower() == "true"
@@ -988,14 +991,18 @@ def run_once(force_full: bool = False, extra_only: bool = False) -> int:
     print(f"Catégories scannées: {len(cats)} | produits vus: {stats['products']}")
 
     # 2) URLs produits via parse_product : packs (par ID) + sitemap optionnel.
-    #    UNIQUEMENT au passage complet : ces sources sont volumineuses (740 IDs
-    #    de packs + 13k fiches) et martèleraient l'anti-bot à chaque passage.
+    #    UNIQUEMENT au passage complet. Énumération DOUCE : on ne sonde qu'une
+    #    petite fenêtre d'IDs récents (les packs éphémères ont un ID neuf, en
+    #    haut de la plage) -> ~70 requêtes au lieu de 740 -> pas de ban.
     url_candidates: set[str] = set()
     if PACK_ID_ENUM and not extra_only:
         floor = max(int(state.get("pack_id_max", 0)), 700)
-        mx = PACK_ID_MAX or (floor + PACK_ID_BUFFER)
-        url_candidates |= {f"{SITE_ROOT}/mb{n}.html" for n in range(1, mx + 1)}
-        print(f"Énumération packs: mb1..mb{mx}")
+        if PACK_ID_MAX:
+            lo, hi = 1, PACK_ID_MAX
+        else:
+            lo, hi = max(1, floor - PACK_ID_LOOKBACK), floor + PACK_ID_BUFFER
+        url_candidates |= {f"{SITE_ROOT}/mb{n}.html" for n in range(lo, hi + 1)}
+        print(f"Énumération packs (douce): mb{lo}..mb{hi}")
     if SCAN_SITEMAP and not extra_only:
         for sm in get_product_sitemaps():
             try:
@@ -1015,10 +1022,14 @@ def run_once(force_full: bool = False, extra_only: bool = False) -> int:
 
     if url_candidates:
         done = 0
-        with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
+        # Concurrence faible pour ne pas réveiller l'anti-bot sur les fiches.
+        with ThreadPoolExecutor(max_workers=CATEGORY_CONCURRENCY) as pool:
             for fut in as_completed([pool.submit(worker, u) for u in url_candidates]):
                 done += 1
                 for v in fut.result():
+                    # Un pack (URL /mbN.html) -> catégorie "collectors".
+                    if MB_URL_RE.search(v.get("url", "")):
+                        v["type"] = "collector"
                     handle(v)
                 if done % 250 == 0:
                     sd_notify("WATCHDOG=1")
