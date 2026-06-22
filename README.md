@@ -17,7 +17,12 @@ Dealabs (comme la réplique casque Doom à 39,99 € au lieu de 149,99 €).
 5. Mémorise les deals déjà signalés (`state/state.json`) pour ne pas spammer
    (ré-alerte uniquement si le prix baisse encore).
 
-Aucune dépendance : que de la bibliothèque standard Python 3.
+Bibliothèque standard Python 3, plus **`curl_cffi`** (optionnel mais recommandé) :
+Micromania est protégé par l'anti-bot **DataDome**, qui bloque en **403** les
+requêtes depuis une IP datacenter (VPS). `curl_cffi` imite l'empreinte TLS de
+Chrome et, combiné à un warm-up de la page d'accueil (cookie DataDome), permet
+de contourner ce blocage. Sans `curl_cffi`, le bot retombe sur `urllib`
+(suffisant seulement sur une IP non bloquée, ex. GitHub Actions).
 
 ## Lancer en local
 

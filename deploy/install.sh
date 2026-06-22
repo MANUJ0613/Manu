@@ -7,9 +7,9 @@ DIR=/opt/micromania-deals
 REPO="${REPO:-https://github.com/MANUJ0613/Manu.git}"
 BRANCH="${BRANCH:-main}"
 
-echo "==> Dépendances (python3, git)"
+echo "==> Dépendances (python3, venv, git)"
 apt-get update -y
-apt-get install -y python3 git
+apt-get install -y python3 python3-venv git
 
 echo "==> Récupération du code dans $DIR (branche $BRANCH)"
 if [ -d "$DIR/.git" ]; then
@@ -20,6 +20,11 @@ else
   git clone --branch "$BRANCH" "$REPO" "$DIR"
 fi
 mkdir -p "$DIR/state"
+
+echo "==> Environnement Python + curl_cffi (contournement DataDome)"
+python3 -m venv "$DIR/venv"
+"$DIR/venv/bin/pip" install --upgrade pip >/dev/null
+"$DIR/venv/bin/pip" install -r "$DIR/requirements.txt"
 
 echo "==> Fichier de config /etc/micromania-deals.env"
 if [ ! -f /etc/micromania-deals.env ]; then
