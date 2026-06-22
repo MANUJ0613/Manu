@@ -45,9 +45,9 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           DISCOUNT_THRESHOLD: "0.50"
-          MIN_REFERENCE_PRICE: "50"
-          MAX_PRODUCTS: "15000"
-          CONCURRENCY: "24" # ~6-7 min pour scanner tout le catalogue
+          MIN_REFERENCE_PRICE: "15"
+          INCLUDE_UNAVAILABLE: "true"
+          CONCURRENCY: "24"
           LOOP_ENABLED: "true" # boucle à deux vitesses
           LOOP_INTERVAL_SECONDS: "30" # pause entre 2 passages rapides (packs/collectors)
           FULL_CATALOG_EVERY_MINUTES: "30" # scan complet du catalogue toutes les 30 min

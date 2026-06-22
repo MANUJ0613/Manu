@@ -49,7 +49,8 @@ USER_AGENT = os.environ.get(
 )
 
 DISCOUNT_THRESHOLD = float(os.environ.get("DISCOUNT_THRESHOLD", "0.50"))  # 50 %
-MIN_REFERENCE_PRICE = float(os.environ.get("MIN_REFERENCE_PRICE", "50"))  # 50 €
+# Beaucoup de deals jeux/goodies sont à 39,99-49,99 € de référence -> seuil bas.
+MIN_REFERENCE_PRICE = float(os.environ.get("MIN_REFERENCE_PRICE", "15"))  # €
 INITIAL_WINDOW_HOURS = float(os.environ.get("INITIAL_WINDOW_HOURS", "24"))
 MAX_PRODUCTS = int(os.environ.get("MAX_PRODUCTS", "20000"))  # couvre tout le catalogue
 
@@ -57,20 +58,33 @@ MAX_PRODUCTS = int(os.environ.get("MAX_PRODUCTS", "20000"))  # couvre tout le ca
 # le sitemap (URL en /...-mbNNN.html). On scanne donc aussi ces pages catégorie
 # pour en extraire les URLs produits manquantes. Toujours scannées (pas de
 # lastmod). Liste de slugs /c/<slug> séparés par des virgules.
-EXTRA_CATEGORIES = [
-    c.strip()
-    for c in os.environ.get(
-        "EXTRA_CATEGORIES",
-        # Sources "haute priorité" scannées à chaque passage rapide :
-        # packs, éditions collector, exclusivités et collectibles premium
-        # (statues/figurines chères) — là où les erreurs de prix s'arrachent.
-        "tous-nos-packs,jeux-video-edition-collector,"
-        "exclusivites-micromania,exclusivites-premium,"
-        "produits-derives-premium",
-    ).split(",")
-    if c.strip()
-]
-CATEGORY_SZ = int(os.environ.get("CATEGORY_SZ", "1000"))
+def _csv_env(name: str, default: str) -> list[str]:
+    return [c.strip() for c in os.environ.get(name, default).split(",") if c.strip()]
+
+
+# Sur le VPS, DataDome sert des fiches produits "allégées" (sans prix). En
+# revanche les pages CATÉGORIE contiennent les prix dans les tuiles (data-gtm).
+# On détecte donc les prix depuis les catégories, pas depuis chaque fiche.
+#
+# Catégories "rapides" (petites) scannées à CHAQUE passage : packs, collectors,
+# exclusivités, premium.
+FAST_CATEGORIES = _csv_env(
+    "FAST_CATEGORIES",
+    "tous-nos-packs,jeux-video-edition-collector,"
+    "exclusivites-micromania,exclusivites-premium,produits-derives-premium",
+)
+# Catégories "complètes" (grosses) scannées au passage COMPLET : tous les
+# supports de jeux + figurines (goodies).
+FULL_CATEGORIES = _csv_env(
+    "FULL_CATEGORIES",
+    "jeux-ps5,jeux-xbox,jeux-switch,jeux-ps4,jeux-pc,figurines",
+)
+# sz modéré + pagination (les pages à fort sz dépassent 20 Mo et timeout).
+CATEGORY_SZ = int(os.environ.get("CATEGORY_SZ", "120"))
+CATEGORY_MAX_PAGES = int(os.environ.get("CATEGORY_MAX_PAGES", "20"))
+# Scanner aussi les fiches /p/ du sitemap ? Inutile/contre-productif sur le VPS
+# (pages allégées par DataDome) ; utile seulement sur IP non bloquée.
+SCAN_SITEMAP = os.environ.get("SCAN_SITEMAP", "false").lower() == "true"
 
 # Énumération des packs par ID : /mbN.html redirige vers la fiche du pack
 # (même pour des packs éphémères jamais listés dans une catégorie). On sonde
@@ -82,9 +96,10 @@ CONCURRENCY = int(os.environ.get("CONCURRENCY", "8"))
 REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "20"))
 INCLUDE_USED = os.environ.get("INCLUDE_USED", "false").lower() == "true"
 INCLUDE_PRECOMMANDE = os.environ.get("INCLUDE_PRECOMMANDE", "false").lower() == "true"
-# Par défaut, on n'alerte que les produits réellement disponibles à l'achat
-# (pas ceux affichant « Créer une alerte » / en rupture).
-INCLUDE_UNAVAILABLE = os.environ.get("INCLUDE_UNAVAILABLE", "false").lower() == "true"
+# On alerte sur TOUT vrai drop de prix, même rupture web / retrait magasin
+# (beaucoup de bons deals Dealabs sont en "retrait magasin"). La dispo est
+# indiquée dans l'alerte. Mettre "false" pour ne garder que le dispo web.
+INCLUDE_UNAVAILABLE = os.environ.get("INCLUDE_UNAVAILABLE", "true").lower() == "true"
 
 # Mode boucle : si LOOP_INTERVAL_SECONDS >= 0 et LOOP_MODE actif, le script
 # reste actif et relance un scan en continu, pendant au plus LOOP_MAX_SECONDS.
@@ -282,6 +297,75 @@ HREF_RE = re.compile(
 )
 PACK_SUFFIX_RE = re.compile(r"-mb\d+\.html$")
 MB_URL_RE = re.compile(r"/mb(\d+)\.html")
+
+
+NAME_RE = re.compile(r'"name":"([^"]*)"')
+GID_RE = re.compile(r'"id":"(\d+)"')
+TOTAL_RE = re.compile(r"(\d+)\s*produits", re.IGNORECASE)
+
+
+def _extract_tiles(page: str, out: dict) -> None:
+    """Ajoute à `out` (clé = id produit) les tuiles priced d'une page."""
+    page = html.unescape(page)
+    urls: dict[str, str] = {}
+    for u in set(re.findall(r"/p/[a-z0-9\-]+\.html", page)):
+        m = re.search(r"-(\d+)\.html$", u)
+        if m:
+            urls[m.group(1)] = SITE_ROOT + u
+    for mt in METRIC_RE.finditer(page):
+        obj = _enclosing_object(page, mt.start())
+        gid = GID_RE.search(obj)
+        if not gid:
+            continue
+        pid = gid.group(1)
+        if pid in out or pid not in urls:
+            continue
+        dispo_m = DISPO_RE.search(obj)
+        name_m = NAME_RE.search(obj)
+        cond_m = COND_RE.search(obj)
+        out[pid] = {
+            "url": urls[pid],
+            "title": name_m.group(1) if name_m else "",
+            "condition": cond_m.group(1) if cond_m else "new",
+            "current": float(mt.group("cur")),
+            "reference": float(mt.group("ref")),
+            "precommande": int(pr.group(1)) if (pr := PRECO_RE.search(obj)) else 0,
+            "edition": e.group(1) if (e := EDITION_RE.search(obj)) else "",
+            "platform": p.group(1) if (p := PLATFORM_RE.search(obj)) else "",
+            "image": i.group(1) if (i := IMAGE_RE.search(obj)) else "",
+            "pegi": pe.group(1) if (pe := PEGI_RE.search(obj)) else "",
+            "genre": g.group(1) if (g := GENRE_RE.search(obj)) else "",
+            "available": (int(dispo_m.group(1)) == 1) if dispo_m else True,
+        }
+
+
+def parse_category_tiles(slug: str) -> list[dict]:
+    """Lit produits + PRIX depuis une page catégorie, avec pagination.
+
+    Les tuiles embarquent un bloc analytics (data-gtm) avec name, metric1
+    (prix actuel), metric2 (prix de référence), condition, dispoweb, image…
+    joint à l'URL produit via l'id. Méthode fiable sur le VPS (les fiches /p/
+    y sont servies sans prix par DataDome) et couvre aussi les goodies qui ne
+    sont PAS dans le sitemap.
+    """
+    base = slug if slug.startswith("http") else f"{SITE_ROOT}/c/{slug}"
+    out: dict[str, dict] = {}
+    total: int | None = None
+    start = 0
+    for _ in range(CATEGORY_MAX_PAGES):
+        sep = "&" if "?" in base else "?"
+        page = http_get(f"{base}{sep}sz={CATEGORY_SZ}&start={start}").decode(
+            "utf-8", "replace"
+        )
+        if total is None:
+            tm = TOTAL_RE.search(html.unescape(page))
+            total = int(tm.group(1)) if tm else CATEGORY_SZ
+        before = len(out)
+        _extract_tiles(page, out)
+        start += CATEGORY_SZ
+        if start >= total or len(out) == before:
+            break
+    return list(out.values())
 
 
 def get_category_products(slug: str) -> set[str]:
@@ -488,6 +572,10 @@ def _euro(x: float) -> str:
     return f"{x:.2f}".replace(".", ",") + " €"
 
 
+def _dispo_label(v: dict) -> str:
+    return "✅ Dispo web" if v.get("available", True) else "🏬 Retrait magasin / rupture web"
+
+
 def format_text(v: dict) -> str:
     """Version texte (Telegram / logs / fallback)."""
     pct = discount_pct(v)
@@ -497,6 +585,7 @@ def format_text(v: dict) -> str:
         f"🔥 DEAL Micromania -{pct}%\n"
         f"🏷 {v['title']}{extra}\n"
         f"💰 {_euro(v['current'])} (au lieu de {_euro(v['reference'])}) — {_cond_label(v)}\n"
+        f"{_dispo_label(v)}\n"
         f"🔗 {v['url']}"
     )
 
@@ -517,6 +606,7 @@ def _discord_embed(v: dict) -> dict:
         fields.append({"name": "✨ Édition", "value": v["edition"], "inline": True})
     if v.get("pegi"):
         fields.append({"name": "🔞 PEGI", "value": v["pegi"], "inline": True})
+    fields.append({"name": "📦 Dispo", "value": _dispo_label(v), "inline": True})
 
     economy = v["reference"] - v["current"]
     embed = {
@@ -629,144 +719,93 @@ def send_alert(v: dict) -> None:
 # --------------------------------------------------------------------------- #
 
 def run_once(force_full: bool = False, extra_only: bool = False) -> int:
-    """Un scan. extra_only=True => seulement les sources haute priorité
-    (packs + collectors/exclus + énumération d'IDs), sans le catalogue."""
+    """Un scan.
+
+    Source des prix = les TUILES des pages catégorie (fiables sur le VPS).
+      - extra_only=True  : seulement FAST_CATEGORIES (packs/collectors/premium).
+      - sinon            : FAST_CATEGORIES + FULL_CATEGORIES (tous supports).
+    Plus l'énumération des packs par ID (/mbN.html), et le sitemap si activé.
+    """
     state = load_state()
     now = datetime.now(timezone.utc)
+    seen: dict = state.get("seen", {})
+    mb_seen: list[int] = []
+    stats = {"products": 0, "deals": 0}
 
-    # Fenêtre de scan : depuis le dernier run, sinon fenêtre initiale.
-    if FULL_SCAN or force_full:
-        cutoff = None
-    elif state.get("last_scan"):
-        try:
-            cutoff = datetime.fromisoformat(state["last_scan"])
-        except ValueError:
-            cutoff = now - timedelta(hours=INITIAL_WINDOW_HOURS)
-    else:
-        cutoff = now - timedelta(hours=INITIAL_WINDOW_HOURS)
-
-    kind = "RAPIDE (packs + collectors)" if extra_only else (
-        "COMPLET (catalogue)" if cutoff is None else "incrémental"
-    )
+    kind = "RAPIDE (packs/collectors)" if extra_only else "COMPLET (tous supports)"
     print(f"== Micromania deals == {now.isoformat()} — passage {kind}")
     print(f"Seuil: -{int(DISCOUNT_THRESHOLD*100)}% | prix réf. >= {MIN_REFERENCE_PRICE:.0f}€")
 
-    candidates: list[tuple[str, datetime | None]] = []
+    def handle(v: dict) -> None:
+        """Détection + dédup + alerte pour un produit."""
+        stats["products"] += 1
+        mm = MB_URL_RE.search(v["url"])
+        if mm and v.get("reference", 0) > 0:
+            mb_seen.append(int(mm.group(1)))
+        if not is_deal(v):
+            return
+        key = v["url"] + "#" + v.get("condition", "")
+        prev = seen.get(key)
+        if prev is not None and v["current"] >= float(prev):
+            return  # déjà alerté à ce prix (ou plus bas)
+        send_alert(v)
+        seen[key] = v["current"]
+        stats["deals"] += 1
 
-    # 1. Catalogue (sitemap) — sauté lors d'un passage rapide.
+    # 1) Détection des prix via les TUILES des pages catégorie.
+    cats = list(FAST_CATEGORIES)
     if not extra_only:
-        sitemaps = get_product_sitemaps()
-        for sm in sitemaps:
-            try:
-                entries = parse_sitemap(sm)
-            except Exception as err:  # noqa: BLE001
-                print(f"[sitemap] {sm}: {err}", file=sys.stderr)
-                continue
-            for loc, lastmod in entries:
-                if cutoff is None:
-                    candidates.append((loc, lastmod))
-                elif lastmod is None or lastmod >= cutoff:
-                    candidates.append((loc, lastmod))
+        cats += [c for c in FULL_CATEGORIES if c not in cats]
 
-        # Les plus récemment modifiés d'abord, puis garde-fou MAX_PRODUCTS.
-        candidates.sort(key=lambda t: (t[1] or now), reverse=True)
-        if len(candidates) > MAX_PRODUCTS:
-            print(f"Limitation à {MAX_PRODUCTS} fiches (sur {len(candidates)}).")
-            candidates = candidates[:MAX_PRODUCTS]
-
-    # Produits hors sitemap (PACKS notamment). Toujours ajoutés (pas de
-    # lastmod), donc non soumis au cutoff ni au cap.
-    known = {loc for loc, _ in candidates}
-
-    def add(u: str) -> int:
-        if u not in known:
-            known.add(u)
-            candidates.append((u, None))
-            return 1
-        return 0
-
-    extra = 0
-    pack_ids: list[int] = []
-    # a) Pages catégorie (packs + éventuels /p/). On normalise les packs vers
-    #    leur permalien stable /mbN.html.
-    for slug in EXTRA_CATEGORIES:
+    def scan_cat(slug: str) -> list[dict]:
         try:
-            for u in get_category_products(slug):
-                mm = PACK_SUFFIX_RE.search(u)
-                if mm:
-                    pid = int(re.search(r"-mb(\d+)\.html$", u).group(1))
-                    pack_ids.append(pid)
-                    u = f"{SITE_ROOT}/mb{pid}.html"
-                extra += add(u)
+            return parse_category_tiles(slug)
         except Exception as err:  # noqa: BLE001
             print(f"[catégorie] {slug}: {err}", file=sys.stderr)
-
-    # b) Énumération des IDs de packs (capte les packs éphémères / non listés).
-    #    On sonde toujours au-delà de la "frontière" connue (plus haut ID de
-    #    pack vivant déjà vu), pour attraper les nouveaux packs même non listés.
-    if PACK_ID_ENUM:
-        if PACK_ID_MAX:
-            mx = PACK_ID_MAX
-        else:
-            floor = max(
-                [*pack_ids, int(state.get("pack_id_max", 0)), 700]
-            )
-            mx = floor + PACK_ID_BUFFER
-        probed = sum(add(f"{SITE_ROOT}/mb{n}.html") for n in range(1, mx + 1))
-        extra += probed
-        print(f"Énumération packs: mb1..mb{mx} (+{probed} à sonder)")
-
-    if extra:
-        print(f"Produits hors-sitemap: +{extra}")
-
-    print(f"Fiches à inspecter: {len(candidates)}")
-    if not candidates:
-        if not extra_only:
-            state["last_scan"] = now.isoformat()
-            save_state(state)
-        print("Rien de nouveau à scanner.")
-        return 0
-
-    # 2. Scrape concurrent + détection.
-    seen: dict = state.get("seen", {})
-    new_deals = 0
-    processed = 0
-
-    def worker(item: tuple[str, datetime | None]) -> list[dict]:
-        url, _ = item
-        try:
-            return parse_product(url)
-        except Exception as err:  # noqa: BLE001
-            # 404/410/403 = ID de pack inexistant : attendu, on ne logge pas.
-            msg = str(err)
-            if not any(c in msg for c in ("HTTP 410", "HTTP 404", "HTTP 403")):
-                print(f"[produit] {url}: {err}", file=sys.stderr)
             return []
 
-    mb_seen: list[int] = []  # IDs de packs vivants vus (suivi de frontière)
     with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
-        futures = {pool.submit(worker, c): c for c in candidates}
-        for fut in as_completed(futures):
-            processed += 1
+        for fut in as_completed([pool.submit(scan_cat, s) for s in cats]):
             for v in fut.result():
-                mm = MB_URL_RE.search(v["url"])
-                if mm and v["reference"] > 0:
-                    mb_seen.append(int(mm.group(1)))
-                if not is_deal(v):
-                    continue
-                # Dédup : on ré-alerte si le prix a encore baissé.
-                key = v["url"] + "#" + v["condition"]
-                prev = seen.get(key)
-                if prev is not None and v["current"] >= float(prev):
-                    continue
-                send_alert(v)
-                seen[key] = v["current"]
-                new_deals += 1
-            if processed % 250 == 0:
-                print(f"  …{processed}/{len(candidates)} fiches")
-                sd_notify("WATCHDOG=1")  # heartbeat pendant les scans longs
+                handle(v)
+            sd_notify("WATCHDOG=1")
+    print(f"Catégories scannées: {len(cats)} | produits vus: {stats['products']}")
 
-    # 3. Sauvegarde de l'état (dont la frontière d'IDs de packs).
+    # 2) URLs produits via parse_product : packs (par ID) + sitemap optionnel.
+    url_candidates: set[str] = set()
+    if PACK_ID_ENUM:
+        floor = max(int(state.get("pack_id_max", 0)), 700)
+        mx = PACK_ID_MAX or (floor + PACK_ID_BUFFER)
+        url_candidates |= {f"{SITE_ROOT}/mb{n}.html" for n in range(1, mx + 1)}
+        print(f"Énumération packs: mb1..mb{mx}")
+    if SCAN_SITEMAP and not extra_only:
+        for sm in get_product_sitemaps():
+            try:
+                for loc, _ in parse_sitemap(sm):
+                    url_candidates.add(loc)
+            except Exception as err:  # noqa: BLE001
+                print(f"[sitemap] {sm}: {err}", file=sys.stderr)
+
+    def worker(u: str) -> list[dict]:
+        try:
+            return parse_product(u)
+        except Exception as err:  # noqa: BLE001
+            msg = str(err)
+            if not any(c in msg for c in ("HTTP 410", "HTTP 404", "HTTP 403")):
+                print(f"[produit] {u}: {err}", file=sys.stderr)
+            return []
+
+    if url_candidates:
+        done = 0
+        with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
+            for fut in as_completed([pool.submit(worker, u) for u in url_candidates]):
+                done += 1
+                for v in fut.result():
+                    handle(v)
+                if done % 250 == 0:
+                    sd_notify("WATCHDOG=1")
+
+    # 3) Sauvegarde de l'état (dont la frontière d'IDs de packs).
     state["seen"] = seen
     if mb_seen:
         state["pack_id_max"] = max(int(state.get("pack_id_max", 0)), max(mb_seen))
@@ -774,7 +813,7 @@ def run_once(force_full: bool = False, extra_only: bool = False) -> int:
         state["last_scan"] = now.isoformat()
     save_state(state)
 
-    print(f"Terminé: {processed} fiches inspectées, {new_deals} alerte(s).")
+    print(f"Terminé: {stats['products']} produits inspectés, {stats['deals']} alerte(s).")
     return 0
 
 
