@@ -178,24 +178,40 @@ CATEGORY_WEBHOOKS = {
     "goodies": _wh("DISCORD_WEBHOOK_GOODIES"),
 }
 
-def _slug_type(slug: str) -> str:
-    """Type de deal (jeux / figurines / collector / goodies)."""
+def _deal_type(v: dict, slug: str = "") -> str:
+    """Type de deal d'après les infos PRODUIT (plateforme/titre/édition),
+    plus fiable que la seule catégorie source.
+    -> ps5 / ps4 / xbox / switch / pc / collector / figurines / goodies."""
     s = slug.lower()
-    # Collector/packs/exclus d'abord (avant le préfixe générique "jeux-").
+    title = (v.get("title") or "").lower()
+    edition = (v.get("edition") or "").lower()
+    # 1) Collector explicite (édition collector/limitée, packs, catégorie dédiée).
     if (
-        "collector" in s
-        or "edition-limitee" in s
-        or s.startswith("exclusivites")
-        or s.startswith("tous-nos-packs")
-        or s == "produits-derives-premium"
+        "collector" in edition
+        or "collector" in title
+        or "edition limitee" in title
+        or s == "jeux-video-edition-collector"
+        or "tous-nos-packs" in s
     ):
         return "collector"
-    if s.startswith("jeux-"):
-        plat = s.replace("jeux-", "", 1)
-        return plat if plat in ("ps5", "ps4", "xbox", "switch", "pc") else "jeux"
-    if s == "retrogaming":
-        return "jeux"
-    if "figurine" in s:
+    # 2) Jeu sur console -> par plateforme.
+    plat = (v.get("platform") or "").lower()
+    if "ps5" in plat:
+        return "ps5"
+    if "ps4" in plat:
+        return "ps4"
+    if "xbox" in plat:
+        return "xbox"
+    if "switch" in plat:
+        return "switch"
+    if plat == "pc":
+        return "pc"
+    if s.startswith("jeux-"):  # jeu sans plateforme nette
+        return s.replace("jeux-", "", 1) if s.replace("jeux-", "", 1) in (
+            "ps5", "ps4", "xbox", "switch", "pc"
+        ) else "goodies"
+    # 3) Figurine / goodie.
+    if "figurine" in title or "figurine" in s:
         return "figurines"
     return "goodies"
 
@@ -957,9 +973,8 @@ def run_once(force_full: bool = False, extra_only: bool = False) -> int:
     def scan_cat(slug: str) -> list[dict]:
         try:
             tiles = parse_category_tiles(slug)
-            t = _slug_type(slug)
             for v in tiles:
-                v["type"] = t
+                v["type"] = _deal_type(v, slug)
             return tiles
         except Exception as err:  # noqa: BLE001
             print(f"[catégorie] {slug}: {err}", file=sys.stderr)
