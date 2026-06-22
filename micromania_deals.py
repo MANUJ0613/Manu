@@ -371,19 +371,57 @@ def _session():
     return s
 
 
+# Auto-régulation : limiteur de débit global (jamais de rafale) + disjoncteur
+# (si l'anti-bot bloque, on se met en pause tout seul puis on reprend).
+MIN_REQUEST_INTERVAL = float(os.environ.get("MIN_REQUEST_INTERVAL", "0.4"))
+BLOCK_COOLDOWN = float(os.environ.get("BLOCK_COOLDOWN", "300"))  # pause si bloqué (s)
+BLOCK_THRESHOLD = int(os.environ.get("BLOCK_THRESHOLD", "5"))  # blocages d'affilée
+_rate_lock = threading.Lock()
+_last_req = [0.0]
+_blocked_until = [0.0]
+_consec_blocks = [0]
+
+
+def _rate_gate() -> None:
+    """Réserve un créneau espacé (anti-rafale) et respecte la pause anti-bot."""
+    with _rate_lock:
+        now = time.monotonic()
+        target = max(now, _last_req[0] + MIN_REQUEST_INTERVAL, _blocked_until[0])
+        _last_req[0] = target
+    delay = target - time.monotonic()
+    if delay > 0:
+        time.sleep(delay)
+
+
+def _note_block() -> None:
+    with _rate_lock:
+        _consec_blocks[0] += 1
+        if _consec_blocks[0] >= BLOCK_THRESHOLD and time.monotonic() >= _blocked_until[0]:
+            _blocked_until[0] = time.monotonic() + BLOCK_COOLDOWN
+            _consec_blocks[0] = 0
+            print(
+                f"[anti-bot] IP bloquée → pause auto {BLOCK_COOLDOWN / 60:.0f} min "
+                f"puis reprise automatique.",
+                file=sys.stderr,
+            )
+
+
 def http_get(url: str, retries: int = 3) -> bytes:
-    """GET résistant à Incapsula/DataDome (session curl_cffi réchauffée)."""
+    """GET résistant à Incapsula : session réchauffée + auto-régulation
+    (limiteur de débit + pause automatique en cas de blocage)."""
     last_err: Exception | None = None
 
     if HAVE_CFFI:
         for attempt in range(retries):
             try:
+                _rate_gate()
                 r = _session().get(url, timeout=REQUEST_TIMEOUT)
                 if r.status_code in (404, 410):
                     raise RuntimeError(f"GET {url}: HTTP {r.status_code}")
                 if r.status_code == 403 or _is_challenge(r.content):
-                    # Bloqué : on jette la session et on en réchauffe une neuve.
+                    # Bloqué : session neuve + on compte le blocage (disjoncteur).
                     _tls.s = None
+                    _note_block()
                     last_err = RuntimeError("blocage anti-bot (challenge)")
                     time.sleep(1.0 * (attempt + 1))
                     continue
@@ -391,11 +429,14 @@ def http_get(url: str, retries: int = 3) -> bytes:
                     last_err = RuntimeError(f"HTTP {r.status_code}")
                     time.sleep(1.0 * (attempt + 1))
                     continue
+                if _consec_blocks[0]:
+                    _consec_blocks[0] = 0  # succès -> on remet le compteur à zéro
                 return r.content
             except RuntimeError:
                 raise
             except Exception as err:  # noqa: BLE001
                 _tls.s = None  # la session peut être cassée
+                _note_block()  # curl(16) = blocage déguisé -> compte aussi
                 last_err = err
                 time.sleep(1.0 * (attempt + 1))
         raise RuntimeError(f"GET échoué pour {url}: {last_err}")
