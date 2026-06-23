@@ -818,9 +818,13 @@ def parse_product(url: str) -> list[dict]:
         out: dict = {}
         _extract_tiles(page, out)
         items = list(out.values())
-        for v in items:
-            v["type"] = _deal_type(v, "")
-        return items
+        if items:                       # listing AVEC données -> produits + vrai /p/
+            for v in items:
+                v["type"] = _deal_type(v, "")
+            return items
+        # Sinon : page « collection » en JavaScript (aucune tuile lisible, ex
+        # /c/tmnt). On NE perd PAS la détection : on continue en parsing normal
+        # (prix visible) ci-dessous, et _resolve_link retrouvera le vrai /p/.
     # Lien CANONIQUE : un /mbN.html valide redirige vers la vraie fiche du pack
     # (/...-mbN.html). On garde cette URL finale -> lien propre et durable vers
     # le pack éphémère, plutôt que le /mbN.html brut.
@@ -1176,10 +1180,62 @@ def _store_stock(v: dict) -> list[str]:
     return dispo
 
 
+# Mots trop communs pour identifier un produit (on ne cherche pas dessus).
+_STOP_WORDS = {
+    "edition", "collector", "collectors", "exclusivite", "exclusivites",
+    "micromania", "pack", "deluxe", "standard", "limitee", "limited", "jeu",
+    "game", "the", "and", "pour", "nintendo", "switch", "playstation", "xbox",
+    "hot", "vol", "box", "set", "premium", "ultimate", "special",
+}
+_SEARCH_URL = (
+    SITE_ROOT + "/on/demandware.store/Sites-Micromania-Site/fr_FR/Search-Show"
+)
+_resolve_cache: dict[str, str] = {}
+_resolve_lock = threading.Lock()
+
+
+def _resolve_link(v: dict) -> None:
+    """Si le lien n'est PAS une fiche /p/ propre (ex page collection /c/...),
+    retrouve le vrai /p/ via la recherche : on cherche le MOT le plus distinctif
+    du titre, puis on garde le lien qui partage le plus de mots avec le titre
+    (méthode prouvée : « splintered » -> bon /p/). Sinon on garde le lien actuel
+    (qui ouvre quand même le deal)."""
+    url = v.get("url", "")
+    if "/p/" in url:
+        return  # déjà une fiche propre
+    title = v.get("title") or ""
+    words = [w for w in re.findall(r"[a-z0-9]+", title.lower()) if len(w) > 3]
+    distinctive = [w for w in words if w not in _STOP_WORDS]
+    if not distinctive:
+        return
+    q = max(distinctive, key=len)  # le mot le plus distinctif
+    with _resolve_lock:
+        if q in _resolve_cache:
+            _best_from(v, words, _resolve_cache[q])
+            return
+    try:
+        page = http_get(f"{_SEARCH_URL}?q={q}").decode("utf-8", "replace")
+    except Exception:  # noqa: BLE001
+        return
+    with _resolve_lock:
+        _resolve_cache[q] = page
+    _best_from(v, words, page)
+
+
+def _best_from(v: dict, words: list[str], page: str) -> None:
+    links = set(re.findall(r"/p/[a-z0-9\-]+\.html", page))
+    if not links:
+        return
+    best = max(links, key=lambda l: sum(1 for w in words if w in l))
+    if sum(1 for w in words if w in best) >= 3:  # match solide
+        v["url"] = SITE_ROOT + best
+
+
 def _send_discord(v: dict) -> None:
     dests = _destinations(v)
     if not dests:
         return
+    _resolve_link(v)            # /c/... -> vrai /p/ via recherche (lien propre)
     if not v.get("image"):
         _enrich_image(v)
     v["store_stock"] = _store_stock(v)
