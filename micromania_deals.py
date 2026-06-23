@@ -632,26 +632,43 @@ TOTAL_RE = re.compile(r"(\d+)\s*produits", re.IGNORECASE)
 
 
 def _extract_tiles(page: str, out: dict) -> None:
-    """Ajoute à `out` (clé = id produit) les tuiles priced d'une page."""
+    """Ajoute à `out` (clé = id produit) les tuiles priced d'une page.
+
+    Liaison prix<->fiche : d'abord par ID (gtm == ID du lien), sinon par
+    PROXIMITÉ (lien /p/ le plus proche du bloc prix). Le fallback proximité
+    capte les produits à variantes dont l'ID interne diffère de l'ID du lien
+    (sinon ils étaient PERDUS -> deals ratés)."""
     page = html.unescape(page)
     urls: dict[str, str] = {}
-    for u in set(re.findall(r"/p/[a-z0-9\-]+\.html", page)):
-        m = re.search(r"-(\d+)\.html$", u)
-        if m:
-            urls[m.group(1)] = SITE_ROOT + u
+    link_pos: list[tuple[int, str]] = []
+    for m in re.finditer(r"/p/[a-z0-9\-]+\.html", page):
+        u = m.group(0)
+        link_pos.append((m.start(), u))
+        idm = re.search(r"-(\d+)\.html$", u)
+        if idm:
+            urls.setdefault(idm.group(1), SITE_ROOT + u)
     for mt in METRIC_RE.finditer(page):
         obj = _enclosing_object(page, mt.start())
         gid = GID_RE.search(obj)
-        if not gid:
-            continue
-        pid = gid.group(1)
-        if pid in out or pid not in urls:
+        url = None
+        pid = None
+        if gid and gid.group(1) in urls:           # 1) match précis par ID
+            pid = gid.group(1)
+            url = urls[pid]
+        elif link_pos:                              # 2) fallback PROXIMITÉ
+            pos = mt.start()
+            near = min(link_pos, key=lambda lp: abs(lp[0] - pos))
+            if abs(near[0] - pos) <= 3000:
+                url = SITE_ROOT + near[1]
+                idm = re.search(r"-(\d+)\.html$", near[1])
+                pid = idm.group(1) if idm else near[1]
+        if not url or pid in out:
             continue
         dispo_m = DISPO_RE.search(obj)
         name_m = NAME_RE.search(obj)
         cond_m = COND_RE.search(obj)
         out[pid] = {
-            "url": urls[pid],
+            "url": url,
             "title": name_m.group(1) if name_m else "",
             "condition": cond_m.group(1) if cond_m else "new",
             "current": float(mt.group("cur")),
