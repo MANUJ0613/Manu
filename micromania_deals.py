@@ -85,7 +85,11 @@ FULL_CATEGORIES = _csv_env(
     # ici. Slugs confirmés avec produits + prix :
     #   accessories-pc (≈630), steelseries-2 (≈130, casques/souris),
     #   nacon (manettes consoles), setup-gaming (matériel gaming).
-    "accessories-pc,steelseries-2,nacon,setup-gaming",
+    "accessories-pc,steelseries-2,nacon,setup-gaming,"
+    # Cartes à collectionner (Pokémon / Lorcana) + jeux de société : les cartes
+    # rares s'arrachent, une erreur de prix vaut le coup.
+    "cartes,cartespokemon,packs-rares-pokemon-cartes-authentiques,"
+    "cartes-disneylorcana,jeux-de-societe",
 )
 # sz modéré + pagination (les pages à fort sz dépassent 20 Mo et timeout).
 CATEGORY_SZ = int(os.environ.get("CATEGORY_SZ", "120"))
