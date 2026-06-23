@@ -808,7 +808,9 @@ def parse_product(url: str) -> list[dict]:
     final_url = getattr(_tls, "last_url", "") or url
     if "/c/" in final_url and "/c/" not in url:
         return []
-    if len(set(GID_RE.findall(decoded))) > 6:  # page-listing, pas une fiche
+    # >30 ids distincts = vraie page-listing/catégorie (une fiche + son cross-sell
+    # en a <20). Seuil haut pour NE PAS casser les packs légitimes (Doom & co).
+    if len(set(GID_RE.findall(decoded))) > 30:
         return []
 
     # Titre propre : og:title de préférence, sinon <title> nettoyé.
