@@ -946,11 +946,19 @@ def format_text(v: dict) -> str:
     pct = discount_pct(v)
     extra = " ".join(filter(None, [v.get("platform"), v.get("edition")])).strip()
     extra = f" ({extra})" if extra else ""
+    stores = v.get("store_stock") or []
+    store_line = ""
+    if CHECK_STORE_STOCK:
+        store_line = (
+            f"🏪 En magasin : ✅ {', '.join(stores)}\n" if stores
+            else "🏪 En magasin : ❌ pas en stock près de chez toi\n"
+        )
     return (
         f"🔥 DEAL Micromania -{pct}%\n"
         f"🏷 {v['title']}{extra}\n"
         f"💰 {_euro(v['current'])} (au lieu de {_euro(v['reference'])}) — {_cond_label(v)}\n"
         f"{_dispo_label(v)}\n"
+        f"{store_line}"
         f"🔗 {v['url']}"
     )
 
@@ -972,6 +980,14 @@ def _discord_embed(v: dict) -> dict:
     if v.get("pegi"):
         fields.append({"name": "🔞 PEGI", "value": v["pegi"], "inline": True})
     fields.append({"name": "📦 Dispo", "value": _dispo_label(v), "inline": True})
+    if CHECK_STORE_STOCK:
+        stores = v.get("store_stock") or []
+        fields.append({
+            "name": "🏪 En magasin",
+            "value": ("✅ " + ", ".join(stores)) if stores
+                     else "❌ Pas en stock près de chez toi",
+            "inline": False,
+        })
 
     economy = v["reference"] - v["current"]
     embed = {
@@ -1053,12 +1069,90 @@ def _enrich_image(v: dict) -> None:
     v["image"] = img
 
 
+# --------------------------------------------------------------------------- #
+# Stock EN MAGASIN (dispo près de chez toi)
+# API Micromania : Stores-getAtsValue?pid=<ID>&storeId=<ID magasin> -> JSON
+#   {"atsValue": N, "product": {"available": true/false, ...}}
+# On interroge chaque magasin surveillé (STORE_IDS) et on liste ceux qui ont le
+# produit en stock. Seulement pour les DEALS (peu nombreux) si CHECK_STORE_STOCK.
+# --------------------------------------------------------------------------- #
+CHECK_STORE_STOCK = os.environ.get("CHECK_STORE_STOCK", "false").lower() in (
+    "1", "true", "yes", "on"
+)
+# Magasins surveillés : "ID:Nom" séparés par virgule.
+# Ex (Nice) : NJ:Nice Médecin,ET:Nice Étoile,NT:Nice TNL,NL:Lingostière
+STORE_MAP: dict[str, str] = {}
+for _part in os.environ.get("STORE_IDS", "").split(","):
+    _part = _part.strip()
+    if not _part:
+        continue
+    if ":" in _part:
+        _i, _n = _part.split(":", 1)
+        STORE_MAP[_i.strip().upper()] = _n.strip()
+    else:
+        STORE_MAP[_part.upper()] = _part.upper()
+_ATS_BASE = (
+    SITE_ROOT + "/on/demandware.store/Sites-Micromania-Site/fr_FR/Stores-getAtsValue"
+)
+_PID_RE = re.compile(r"-(\d+)\.html")
+_store_cache: dict[str, list[str]] = {}
+_store_lock = threading.Lock()
+
+
+def _store_fetch(url: str) -> bytes:
+    """GET léger pour l'API stock : réponses JSON COURTES (~300 o), donc on NE
+    rejette PAS sur la taille (contrairement à http_get) ; on rejette seulement
+    une page-challenge Incapsula explicite."""
+    sess = _session()
+    key = getattr(_tls, "proxy_url", "")
+    _rate_gate(key)
+    r = sess.get(url, timeout=REQUEST_TIMEOUT)
+    c = r.content
+    if r.status_code != 200 or b"_Incapsula_Resource" in c[:500]:
+        _tls.s = None
+        _note_block(key)
+        raise RuntimeError("stock: bloqué/erreur")
+    _note_ok(key)
+    return c
+
+
+def _store_stock(v: dict) -> list[str]:
+    """Liste des magasins surveillés où le produit est EN STOCK."""
+    if not CHECK_STORE_STOCK or not STORE_MAP:
+        return []
+    m = _PID_RE.search(v.get("url") or "")
+    if not m:
+        return []
+    pid = m.group(1)
+    with _store_lock:
+        if pid in _store_cache:
+            return _store_cache[pid]
+    dispo: list[str] = []
+    for sid, name in STORE_MAP.items():
+        try:
+            d = json.loads(
+                _store_fetch(f"{_ATS_BASE}?pid={pid}&storeId={sid}").decode(
+                    "utf-8", "replace"
+                )
+            )
+            ats = d.get("atsValue") or 0
+            avail = bool((d.get("product") or {}).get("available"))
+            if ats > 0 or avail:
+                dispo.append(name)
+        except Exception:  # noqa: BLE001
+            pass
+    with _store_lock:
+        _store_cache[pid] = dispo
+    return dispo
+
+
 def _send_discord(v: dict) -> None:
     dests = _destinations(v)
     if not dests:
         return
     if not v.get("image"):
         _enrich_image(v)
+    v["store_stock"] = _store_stock(v)
     embed = _discord_embed(v)
     button = {
         "type": 1,
