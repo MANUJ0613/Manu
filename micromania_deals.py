@@ -77,7 +77,7 @@ FAST_CATEGORIES = _csv_env(
 # supports de jeux + figurines (goodies).
 FULL_CATEGORIES = _csv_env(
     "FULL_CATEGORIES",
-    "jeux-ps5,jeux-xbox,jeux-switch,jeux-ps4,jeux-pc,"
+    "jeux-ps5,jeux-xbox,jeux-switch,jeux-switch2,jeux-ps4,jeux-pc,"
     "figurines,tous-les-produits-derives,mugs-et-verres,peluches,sacs,"
     # Accessoires / périphériques (slug Micromania en ANGLAIS "accessories") :
     # tapis de souris, claviers, casques, manettes, écouteurs, chargeurs…
