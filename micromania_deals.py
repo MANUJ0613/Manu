@@ -219,6 +219,15 @@ def _deal_type(v: dict, slug: str = "") -> str:
         return "switch"
     if plat == "pc":
         return "pc"
+    # 2b) Accessoire SANS champ platform (Micromania ne tague pas la console sur
+    # les accessoires) : on déduit la console depuis le TITRE. Ex : "Manette
+    # PS5 Nacon", "Casque Xbox", "Étui Switch", "Tapis de souris PC".
+    for kw, typ in (
+        (r"\bps5\b", "ps5"), (r"\bps4\b", "ps4"), (r"\bxbox\b", "xbox"),
+        (r"\bswitch\b", "switch"), (r"\bpc\b", "pc"),
+    ):
+        if re.search(kw, title):
+            return typ
     if s.startswith("jeux-"):  # jeu sans plateforme nette
         return s.replace("jeux-", "", 1) if s.replace("jeux-", "", 1) in (
             "ps5", "ps4", "xbox", "switch", "pc"
