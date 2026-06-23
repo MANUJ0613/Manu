@@ -78,7 +78,13 @@ FAST_CATEGORIES = _csv_env(
 FULL_CATEGORIES = _csv_env(
     "FULL_CATEGORIES",
     "jeux-ps5,jeux-xbox,jeux-switch,jeux-ps4,jeux-pc,"
-    "figurines,tous-les-produits-derives,mugs-et-verres,peluches,sacs",
+    "figurines,tous-les-produits-derives,mugs-et-verres,peluches,sacs,"
+    # Accessoires / périphériques (slug Micromania en ANGLAIS "accessories") :
+    # tapis de souris, claviers, casques, manettes, écouteurs, chargeurs…
+    # accessories-pc = la grosse catégorie (≈600 produits). On ajoute aussi les
+    # variantes console (ignorées automatiquement si vides).
+    "accessories-pc,accessories-ps5,accessories-xbox,accessories-switch,"
+    "accessoires-gaming",
 )
 # sz modéré + pagination (les pages à fort sz dépassent 20 Mo et timeout).
 CATEGORY_SZ = int(os.environ.get("CATEGORY_SZ", "120"))
