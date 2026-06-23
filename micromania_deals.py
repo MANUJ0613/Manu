@@ -612,7 +612,9 @@ HREF_RE = re.compile(
     r'href=["\'](?:https?://www\.micromania\.fr)?(/[^"\'#?]+\.html)["\']'
 )
 PACK_SUFFIX_RE = re.compile(r"-mb\d+\.html$")
-MB_URL_RE = re.compile(r"/mb(\d+)\.html")
+# Capte l'ID de pack dans les 2 formes : /mbN.html (brut) ET /...-mbN.html
+# (URL canonique après redirection).
+MB_URL_RE = re.compile(r"[/-]mb(\d+)\.html")
 
 
 NAME_RE = re.compile(r'"name":"([^"]*)"')
@@ -812,6 +814,10 @@ def parse_product(url: str) -> list[dict]:
     # en a <20). Seuil haut pour NE PAS casser les packs légitimes (Doom & co).
     if len(set(GID_RE.findall(decoded))) > 30:
         return []
+    # Lien CANONIQUE : un /mbN.html valide redirige vers la vraie fiche du pack
+    # (/...-mbN.html). On garde cette URL finale -> lien propre et durable vers
+    # le pack éphémère, plutôt que le /mbN.html brut.
+    link = final_url if final_url.endswith(".html") else url
 
     # Titre propre : og:title de préférence, sinon <title> nettoyé.
     title = ""
@@ -845,7 +851,7 @@ def parse_product(url: str) -> list[dict]:
         dispo_m = DISPO_RE.search(obj)
         variants.append(
             {
-                "url": url,
+                "url": link,
                 "title": title,
                 "condition": cond_m.group(1) if cond_m else "",
                 "current": cur,
@@ -876,7 +882,7 @@ def parse_product(url: str) -> list[dict]:
                      or "retrait" in decoded.lower())
             variants.append(
                 {
-                    "url": url, "title": title, "condition": "new",
+                    "url": link, "title": title, "condition": "new",
                     "current": cur, "reference": ref, "precommande": 0,
                     "edition": "", "platform": "", "image": page_image,
                     "pegi": "", "genre": "", "available": avail,
