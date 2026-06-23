@@ -547,6 +547,7 @@ def http_get(url: str, retries: int = 3, direct: bool = False) -> bytes:
                     time.sleep(1.0 * (attempt + 1))
                     continue
                 _note_ok(key)  # succès -> ce proxy/IP ré-accélère doucement
+                _tls.last_url = str(getattr(r, "url", "") or url)  # URL finale (redirections)
                 return r.content
             except RuntimeError:
                 raise
@@ -798,6 +799,17 @@ def parse_product(url: str) -> list[dict]:
     """Extrait les variantes (prix actuel/ref) d'une fiche produit."""
     page = http_get(url).decode("utf-8", "replace")
     decoded = html.unescape(page)
+
+    # GARDE-FOU : un pack/fiche peut REDIRIGER vers une page CATÉGORIE (ex pack
+    # éphémère expiré -> /c/jeux-switch). Il ne faut PAS lire tous les produits
+    # de cette page en leur collant l'URL du pack (liens cassés). On détecte la
+    # redirection vers une catégorie OU une page-listing (beaucoup de produits)
+    # et on abandonne : ces produits sont déjà couverts par le scan catégorie.
+    final_url = getattr(_tls, "last_url", "") or url
+    if "/c/" in final_url and "/c/" not in url:
+        return []
+    if len(set(GID_RE.findall(decoded))) > 6:  # page-listing, pas une fiche
+        return []
 
     # Titre propre : og:title de préférence, sinon <title> nettoyé.
     title = ""
