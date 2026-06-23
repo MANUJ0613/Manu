@@ -101,6 +101,15 @@ CATEGORY_CONCURRENCY = int(os.environ.get("CATEGORY_CONCURRENCY", "3"))
 # cachés des listings catégorie. Lourd (~13k pages) mais complet.
 SCAN_SITEMAP = os.environ.get("SCAN_SITEMAP", "false").lower() == "true"
 
+# SITEMAP INCRÉMENTAL (capte les ÉPHÉMÈRES/EXCLUS absents des listings) : à
+# chaque passage on compare les fiches du sitemap à celles déjà vues ; les
+# NOUVELLES (nouveaux IDs) sont vérifiées via la recherche (prix + lien /p/).
+# 1er passage = on mémorise tout sans scanner (sinon 13k recherches). Ensuite
+# seules les vraies nouveautés (quelques-unes/jour) sont vérifiées -> léger.
+SCAN_SITEMAP_NEW = os.environ.get("SCAN_SITEMAP_NEW", "true").lower() == "true"
+SITEMAP_NEW_MAX = int(os.environ.get("SITEMAP_NEW_MAX", "150"))  # garde-fou/passage
+SITEMAP_INTERVAL_MIN = int(os.environ.get("SITEMAP_INTERVAL_MIN", "30"))  # cadence
+
 # Énumération des packs par ID : /mbN.html redirige vers la fiche du pack
 # (même pour des packs éphémères jamais listés dans une catégorie). On sonde
 # toute la plage mb1..mbMAX pour ne rater aucun pack flash / erreur de prix.
@@ -1314,6 +1323,76 @@ def send_alert(v: dict) -> None:
         pass
 
 
+def _slug_word(url: str) -> str:
+    """Mot le plus distinctif du slug d'une fiche (pour la recherche)."""
+    slug = url.rsplit("/", 1)[-1]
+    words = [
+        w for w in re.findall(r"[a-z]+", slug.lower())
+        if len(w) > 3 and w not in _STOP_WORDS
+    ]
+    return max(words, key=len) if words else ""
+
+
+def scan_sitemap_new(state: dict, handle) -> None:
+    """Capte les fiches NOUVELLES du sitemap (éphémères/exclus hors listings).
+    1er passage : mémorise tout (aucun scan). Ensuite : pour chaque nouvel ID,
+    récupère prix + lien /p/ via la recherche, et déclenche `handle`."""
+    if not SCAN_SITEMAP_NEW:
+        return
+    # Throttle : le sitemap fait ~18 Mo, on ne le retélécharge pas à chaque
+    # passage (économie data proxy). Au plus toutes les SITEMAP_INTERVAL_MIN.
+    nowt = time.time()
+    if state.get("sitemap_ids") and nowt - float(state.get("sitemap_last", 0)) < SITEMAP_INTERVAL_MIN * 60:
+        return
+    state["sitemap_last"] = nowt
+    seen_ids = set(state.get("sitemap_ids", []))
+    cur: dict[str, str] = {}
+    try:
+        for sm in get_product_sitemaps():
+            try:
+                for loc, _ in parse_sitemap(sm):
+                    m = re.search(r"-(\d+)\.html$", loc)
+                    if m and "/p/" in loc:
+                        cur[m.group(1)] = loc
+            except Exception:  # noqa: BLE001
+                continue
+    except Exception as err:  # noqa: BLE001
+        print(f"[sitemap] index illisible: {err}", file=sys.stderr)
+        return
+    if not cur:
+        return
+    if not seen_ids:  # 1er passage : on mémorise sans scanner
+        state["sitemap_ids"] = list(cur)
+        print(f"[sitemap] 1er passage : {len(cur)} fiches mémorisées (pas de scan)")
+        return
+    new_ids = [i for i in cur if i not in seen_ids][:SITEMAP_NEW_MAX]
+    if new_ids:
+        print(f"[sitemap] {len(new_ids)} nouvelle(s) fiche(s) -> vérif via recherche")
+
+        def work(pid: str) -> list[dict]:
+            q = _slug_word(cur[pid])
+            if not q:
+                return []
+            try:
+                grid = http_get(f"{_SEARCH_URL}?q={q}").decode("utf-8", "replace")
+            except Exception:  # noqa: BLE001
+                return []
+            out: dict = {}
+            _extract_tiles(grid, out)
+            v = out.get(pid)
+            if not v:
+                return []
+            v["type"] = _deal_type(v, "")
+            return [v]
+
+        with ThreadPoolExecutor(max_workers=CATEGORY_CONCURRENCY) as pool:
+            for fut in as_completed([pool.submit(work, i) for i in new_ids]):
+                for v in fut.result():
+                    handle(v)
+    # Mémorise l'état courant (les nouveaux deviennent "vus").
+    state["sitemap_ids"] = list(cur)
+
+
 # --------------------------------------------------------------------------- #
 # Main
 # --------------------------------------------------------------------------- #
@@ -1432,6 +1511,16 @@ def run_once(force_full: bool = False, extra_only: bool = False) -> int:
                     handle(v)
                 if done % 250 == 0:
                     sd_notify("WATCHDOG=1")
+
+    # 2bis) SITEMAP INCRÉMENTAL : capte les éphémères/exclus absents des listings
+    #       (nouvelles fiches du sitemap -> prix+lien via recherche). Au passage
+    #       COMPLET seulement (lourd au 1er coup, léger ensuite).
+    if not extra_only:
+        try:
+            scan_sitemap_new(state, handle)
+        except Exception as err:  # noqa: BLE001
+            print(f"[sitemap] {err}", file=sys.stderr)
+        sd_notify("WATCHDOG=1")
 
     # 3) Sauvegarde de l'état (dont la frontière d'IDs de packs).
     state["seen"] = seen
