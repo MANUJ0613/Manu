@@ -1323,6 +1323,42 @@ def send_alert(v: dict) -> None:
         pass
 
 
+def _product_near_link(grid: str, pid: str, url: str) -> dict | None:
+    """Sur une grille (recherche/catégorie), construit le produit en prenant le
+    bloc prix (metric1/metric2) le PLUS PROCHE du lien de la fiche (l'ID interne
+    du bloc gtm diffère parfois de l'ID du lien -> on matche par proximité)."""
+    grid = html.unescape(grid)
+    j = grid.find("-" + pid + ".html")
+    if j < 0:
+        return None
+    best = None
+    bestd = 10**9
+    for mt in METRIC_RE.finditer(grid):
+        d = abs(mt.start() - j)
+        if d < bestd:
+            bestd, best = d, mt
+    if best is None or bestd > 4000:  # trop loin = pas la même tuile
+        return None
+    obj = _enclosing_object(grid, best.start())
+    name_m = NAME_RE.search(obj)
+    cond_m = COND_RE.search(obj)
+    dispo_m = DISPO_RE.search(obj)
+    return {
+        "url": url,
+        "title": name_m.group(1) if name_m else "",
+        "condition": cond_m.group(1) if cond_m else "new",
+        "current": float(best.group("cur")),
+        "reference": float(best.group("ref")),
+        "precommande": int(pr.group(1)) if (pr := PRECO_RE.search(obj)) else 0,
+        "edition": e.group(1) if (e := EDITION_RE.search(obj)) else "",
+        "platform": p.group(1) if (p := PLATFORM_RE.search(obj)) else "",
+        "image": _clean_img(i.group(1)) if (i := IMAGE_RE.search(obj)) else "",
+        "pegi": pe.group(1) if (pe := PEGI_RE.search(obj)) else "",
+        "genre": g.group(1) if (g := GENRE_RE.search(obj)) else "",
+        "available": (int(dispo_m.group(1)) == 1) if dispo_m else True,
+    }
+
+
 def _slug_word(url: str) -> str:
     """Mot le plus distinctif du slug d'une fiche (pour la recherche)."""
     slug = url.rsplit("/", 1)[-1]
@@ -1377,9 +1413,7 @@ def scan_sitemap_new(state: dict, handle) -> None:
                 grid = http_get(f"{_SEARCH_URL}?q={q}").decode("utf-8", "replace")
             except Exception:  # noqa: BLE001
                 return []
-            out: dict = {}
-            _extract_tiles(grid, out)
-            v = out.get(pid)
+            v = _product_near_link(grid, pid, cur[pid])
             if not v:
                 return []
             v["type"] = _deal_type(v, "")
