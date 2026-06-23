@@ -81,10 +81,11 @@ FULL_CATEGORIES = _csv_env(
     "figurines,tous-les-produits-derives,mugs-et-verres,peluches,sacs,"
     # Accessoires / périphériques (slug Micromania en ANGLAIS "accessories") :
     # tapis de souris, claviers, casques, manettes, écouteurs, chargeurs…
-    # accessories-pc = la grosse catégorie (≈600 produits). On ajoute aussi les
-    # variantes console (ignorées automatiquement si vides).
-    "accessories-pc,accessories-ps5,accessories-xbox,accessories-switch,"
-    "accessoires-gaming",
+    # Micromania n'a PAS de catégorie accessoires par console ; tout est groupé
+    # ici. Slugs confirmés avec produits + prix :
+    #   accessories-pc (≈630), steelseries-2 (≈130, casques/souris),
+    #   nacon (manettes consoles), setup-gaming (matériel gaming).
+    "accessories-pc,steelseries-2,nacon,setup-gaming",
 )
 # sz modéré + pagination (les pages à fort sz dépassent 20 Mo et timeout).
 CATEGORY_SZ = int(os.environ.get("CATEGORY_SZ", "120"))
