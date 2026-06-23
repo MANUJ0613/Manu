@@ -808,12 +808,19 @@ def parse_product(url: str) -> list[dict]:
     # redirection vers une catégorie OU une page-listing (beaucoup de produits)
     # et on abandonne : ces produits sont déjà couverts par le scan catégorie.
     final_url = getattr(_tls, "last_url", "") or url
-    if "/c/" in final_url and "/c/" not in url:
-        return []
-    # >30 ids distincts = vraie page-listing/catégorie (une fiche + son cross-sell
-    # en a <20). Seuil haut pour NE PAS casser les packs légitimes (Doom & co).
-    if len(set(GID_RE.findall(decoded))) > 30:
-        return []
+    # Si la requête a ATTERRI sur une page CATÉGORIE/listing (ex : un pack
+    # éphémère dont le /mbN.html redirige vers /c/jeux-switch, ou un listing avec
+    # beaucoup de produits), on NE colle PAS l'URL du pack à tous (liens cassés).
+    # On extrait chaque produit avec SON vrai lien /p/ via les tuiles -> on GARDE
+    # la détection (utile : ces produits ne sont pas toujours dans les pages
+    # scannées) ET on a le BON lien.
+    if ("/c/" in final_url and "/c/" not in url) or len(set(GID_RE.findall(decoded))) > 30:
+        out: dict = {}
+        _extract_tiles(page, out)
+        items = list(out.values())
+        for v in items:
+            v["type"] = _deal_type(v, "")
+        return items
     # Lien CANONIQUE : un /mbN.html valide redirige vers la vraie fiche du pack
     # (/...-mbN.html). On garde cette URL finale -> lien propre et durable vers
     # le pack éphémère, plutôt que le /mbN.html brut.
