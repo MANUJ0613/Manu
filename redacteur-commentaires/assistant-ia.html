@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>🐊 Assistant commentaires — IA Claude</title>
+<style>
+  :root{--bg:#0f1226;--card:#1a1f3a;--card2:#222a4d;--ink:#eef1ff;--muted:#9aa3c7;--accent:#ffce3a;--accent2:#4ade80;--line:#2c3458;--err:#f87171;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:radial-gradient(1200px 600px at 50% -10%,#232a55 0%,var(--bg) 60%);color:var(--ink);min-height:100vh}
+  header{text-align:center;padding:24px 16px 6px}
+  header h1{margin:0;font-size:1.4rem}
+  .tagline{color:var(--muted);max-width:620px;margin:6px auto 0;font-size:.9rem;line-height:1.4}
+  .wrap{max-width:720px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .card h2{margin:0 0 12px;font-size:1rem}
+  label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:6px}
+  textarea,input,select{width:100%;background:var(--card2);border:1px solid var(--line);border-radius:10px;color:var(--ink);padding:12px;font-size:1rem;font-family:inherit;resize:vertical}
+  textarea:focus,input:focus,select:focus{outline:2px solid var(--accent)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  .btn{border:1px solid var(--line);background:var(--card2);color:var(--ink);padding:11px 16px;border-radius:10px;font-size:.95rem;font-weight:600;cursor:pointer}
+  .btn:hover{filter:brightness(1.1)}
+  .btn-primary{background:var(--accent);color:#1a1330;border-color:transparent}
+  .btn-sm{padding:8px 12px;font-size:.85rem}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  .field{margin-top:12px}
+  .tones{display:flex;gap:8px;flex-wrap:wrap}
+  .tone{border:1px solid var(--line);background:transparent;color:var(--muted);padding:8px 14px;border-radius:999px;cursor:pointer;font-size:.85rem;font-weight:600}
+  .tone.on{background:var(--accent);color:#1a1330;border-color:transparent}
+  .comments{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:12px}
+  .comment{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .comment .meta{font-size:.78rem;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between}
+  .badge{background:var(--line);padding:3px 9px;border-radius:999px;font-weight:600}
+  .ctext{line-height:1.45}
+  .cact{margin-top:10px}
+  .small{font-size:.8rem;color:var(--muted);line-height:1.4}
+  details summary{cursor:pointer;font-weight:600}
+  .err{color:var(--err);font-size:.9rem;margin-top:10px}
+  .ok{color:var(--accent2)}
+  .spin{display:inline-block;width:14px;height:14px;border:2px solid #1a1330;border-top-color:transparent;border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:6px}
+  @keyframes s{to{transform:rotate(360deg)}}
+  footer{text-align:center;color:var(--muted);font-size:.78rem;padding:18px 16px 36px}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--accent2);color:#06310f;padding:12px 18px;border-radius:999px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  .toast[hidden]{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>🐊 Assistant commentaires — IA Claude</h1>
+  <p class="tagline">Colle un deal, l'IA Claude rédige 3 commentaires naturels. Tu copies, tu colles toi-même. Aucune publication automatique.</p>
+</header>
+
+<main class="wrap">
+  <details class="card" id="cfg">
+    <summary>⚙️ Réglages (clé API Claude) <span id="cfgState" class="small"></span></summary>
+    <div class="field">
+      <label for="key">Ta clé API Claude (commence par <code>sk-ant-</code>)</label>
+      <input id="key" type="password" placeholder="sk-ant-..." autocomplete="off" />
+    </div>
+    <div class="field">
+      <label for="model">Modèle</label>
+      <select id="model">
+        <option value="claude-opus-4-8">Claude Opus 4.8 — meilleure qualité</option>
+        <option value="claude-haiku-4-5">Claude Haiku 4.5 — économique &amp; rapide</option>
+      </select>
+    </div>
+    <div class="row">
+      <button class="btn btn-primary btn-sm" id="saveKey" type="button">Enregistrer</button>
+      <button class="btn btn-sm" id="clearKey" type="button">Oublier la clé</button>
+    </div>
+    <p class="small" style="margin-top:12px">
+      🔒 Ta clé reste <b>dans ton navigateur</b> (localStorage) et n'est envoyée qu'à l'API Claude.
+      Crée-la sur <b>console.anthropic.com → API Keys</b>, et mets-y une petite limite de dépense.
+      Ne partage pas ce fichier une fois la clé saisie.
+    </p>
+  </details>
+
+  <section class="card">
+    <h2>Le post du deal</h2>
+    <textarea id="post" rows="7" placeholder="Colle ici tout le texte du post Facebook (titre, prix, boutique, lien…)"></textarea>
+
+    <div class="field">
+      <label>Ton souhaité</label>
+      <div class="tones" id="tones">
+        <button class="tone on" data-t="varié" type="button">Mélange (3 angles)</button>
+        <button class="tone" data-t="utile" type="button">Utile</button>
+        <button class="tone" data-t="question" type="button">Question</button>
+        <button class="tone" data-t="enthousiaste" type="button">Enthousiaste</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="perso">Ta touche perso (optionnel) — un détail vrai à glisser</label>
+      <input id="perso" type="text" placeholder="ex. j'ai le même chez moi, nickel / je l'ai pris la semaine dernière" />
+    </div>
+
+    <div class="row">
+      <button class="btn btn-primary" id="go" type="button">✨ Générer avec l'IA</button>
+      <button class="btn btn-sm" id="clearPost" type="button">Effacer</button>
+    </div>
+    <div id="err" class="err" hidden></div>
+  </section>
+
+  <section class="card" id="resCard" hidden>
+    <h2>Commentaires proposés</h2>
+    <ul class="comments" id="comments"></ul>
+  </section>
+</main>
+
+<footer>Propulsé par l'API Claude · ta clé et ton historique restent sur ton appareil.</footer>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+(function(){
+  "use strict";
+  var $=function(s){return document.querySelector(s)};
+  var KEY_LS="claude_key_v1", MODEL_LS="claude_model_v1";
+  var tone="varié";
+
+  // ---- réglages ----
+  function loadCfg(){
+    var k=localStorage.getItem(KEY_LS)||"";
+    var m=localStorage.getItem(MODEL_LS)||"claude-opus-4-8";
+    $("#key").value=k; $("#model").value=m;
+    $("#cfgState").textContent = k ? "· clé enregistrée ✓" : "· aucune clé";
+    if(!k){ $("#cfg").open=true; }
+  }
+  $("#saveKey").addEventListener("click",function(){
+    localStorage.setItem(KEY_LS,$("#key").value.trim());
+    localStorage.setItem(MODEL_LS,$("#model").value);
+    loadCfg(); toast("Réglages enregistrés");
+  });
+  $("#clearKey").addEventListener("click",function(){
+    localStorage.removeItem(KEY_LS); $("#key").value=""; loadCfg(); toast("Clé oubliée");
+  });
+
+  // ---- ton ----
+  $("#tones").addEventListener("click",function(e){
+    var b=e.target.closest(".tone"); if(!b) return;
+    document.querySelectorAll(".tone").forEach(function(x){x.classList.remove("on")});
+    b.classList.add("on"); tone=b.dataset.t;
+  });
+
+  $("#clearPost").addEventListener("click",function(){
+    $("#post").value=""; $("#resCard").hidden=true; $("#err").hidden=true;
+  });
+
+  // ---- toast ----
+  var tt;
+  function toast(m){var t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(function(){t.hidden=true},1600)}
+
+  function showErr(m){var e=$("#err");e.textContent=m;e.hidden=false}
+
+  function copy(txt){
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){toast("Copié !")}).catch(fb)}
+    else fb();
+    function fb(){var ta=document.createElement("textarea");ta.value=txt;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();try{document.execCommand("copy");toast("Copié !")}catch(_){}document.body.removeChild(ta)}
+  }
+
+  // ---- prompt ----
+  function buildSystem(){
+    return [
+      "Tu es un membre actif et sympa d'un groupe Facebook francophone de bons plans / erreurs de prix.",
+      "Tu rédiges de courts commentaires à poster sous un deal, pour participer de façon authentique (et devenir VIP du groupe).",
+      "RÈGLES :",
+      "- Écris en français naturel, parlé, comme un vrai humain — jamais robotique ni générique.",
+      "- Appuie-toi sur les détails RÉELS du post (produit, prix, boutique, réduction). Ne jamais inventer un prix.",
+      "- 1 à 2 phrases max par commentaire. Varie les tournures, la longueur et l'usage des emojis (souvent AUCUN emoji = plus crédible).",
+      "- Évite les formules creuses répétées (« super deal », « top »). Apporte un angle concret à chaque fois.",
+      "- N'invente pas d'expérience produit détaillée sauf si l'utilisateur fournit une touche perso ; dans ce cas, intègre-la naturellement.",
+      "- Reste honnête et bienveillant. Pas de spam, pas de fausses urgences."
+    ].join("\n");
+  }
+  function buildUser(post, perso){
+    var t = {
+      "varié":"Donne 3 commentaires DIFFÉRENTS : un utile/informatif, un sous forme de question pour lancer la discussion, un enthousiaste.",
+      "utile":"Donne 3 commentaires sur le ton UTILE / informatif (apporte une info, une comparaison, un conseil).",
+      "question":"Donne 3 commentaires sous forme de QUESTION pour engager la discussion.",
+      "enthousiaste":"Donne 3 commentaires ENTHOUSIASTES mais crédibles."
+    }[tone];
+    var p = perso ? ("\n\nTouche perso à intégrer naturellement dans au moins un commentaire : « "+perso+" »") : "";
+    return "Voici le post du deal :\n\"\"\"\n"+post+"\n\"\"\"\n\n"+t+p+"\n\nRéponds UNIQUEMENT avec le JSON demandé.";
+  }
+
+  var SCHEMA={type:"object",additionalProperties:false,required:["commentaires"],properties:{
+    commentaires:{type:"array",items:{type:"object",additionalProperties:false,required:["ton","texte"],properties:{
+      ton:{type:"string"}, texte:{type:"string"}
+    }}}
+  }};
+
+  function render(list){
+    var ul=$("#comments"); ul.innerHTML="";
+    list.forEach(function(c){
+      var li=document.createElement("li"); li.className="comment";
+      var meta=document.createElement("div"); meta.className="meta";
+      meta.innerHTML='<span class="badge">'+(c.ton||"")+'</span><span>'+c.texte.length+' caractères</span>';
+      var tx=document.createElement("div"); tx.className="ctext"; tx.textContent=c.texte;
+      var act=document.createElement("div"); act.className="cact";
+      var b=document.createElement("button"); b.className="btn btn-sm"; b.type="button"; b.textContent="📋 Copier";
+      b.addEventListener("click",function(){copy(c.texte)});
+      act.appendChild(b);
+      li.appendChild(meta); li.appendChild(tx); li.appendChild(act); ul.appendChild(li);
+    });
+    $("#resCard").hidden=false;
+  }
+
+  // ---- appel API Claude (accès navigateur direct) ----
+  function generate(){
+    $("#err").hidden=true;
+    var key=(localStorage.getItem(KEY_LS)||"").trim();
+    var model=localStorage.getItem(MODEL_LS)||"claude-opus-4-8";
+    var post=$("#post").value.trim();
+    if(!key){ $("#cfg").open=true; showErr("Ajoute d'abord ta clé API dans les Réglages."); return; }
+    if(!post){ showErr("Colle d'abord le texte d'un deal."); return; }
+
+    var go=$("#go"); go.disabled=true; var old=go.innerHTML; go.innerHTML='<span class="spin"></span>L\'IA rédige…';
+
+    fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{
+        "content-type":"application/json",
+        "x-api-key":key,
+        "anthropic-version":"2023-06-01",
+        "anthropic-dangerous-direct-browser-access":"true"
+      },
+      body:JSON.stringify({
+        model:model,
+        max_tokens:1024,
+        system:buildSystem(),
+        messages:[{role:"user",content:buildUser(post,$("#perso").value.trim())}],
+        output_config:{format:{type:"json_schema",schema:SCHEMA}}
+      })
+    }).then(function(r){
+      return r.json().then(function(data){return {status:r.status,data:data}});
+    }).then(function(res){
+      if(res.status!==200){
+        var msg=(res.data&&res.data.error&&res.data.error.message)||("Erreur "+res.status);
+        if(res.status===401) msg="Clé API invalide. Vérifie-la dans les Réglages.";
+        else if(res.status===429) msg="Trop de requêtes ou quota atteint. Réessaie dans un instant.";
+        else if(res.status===400) msg="Requête refusée : "+msg;
+        showErr(msg); return;
+      }
+      var txt="";
+      (res.data.content||[]).forEach(function(b){ if(b.type==="text") txt+=b.text; });
+      var parsed;
+      try{ parsed=JSON.parse(txt); }catch(e){ showErr("Réponse inattendue de l'IA. Réessaie."); return; }
+      var list=(parsed&&parsed.commentaires)||[];
+      if(!list.length){ showErr("Aucun commentaire généré. Réessaie."); return; }
+      render(list);
+    }).catch(function(){
+      showErr("Connexion impossible à l'API Claude. Vérifie ta connexion et réessaie.");
+    }).then(function(){
+      go.disabled=false; go.innerHTML=old;
+    });
+  }
+  $("#go").addEventListener("click",generate);
+
+  loadCfg();
+})();
+</script>
+</body>
+</html>
