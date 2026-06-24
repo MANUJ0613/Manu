@@ -165,13 +165,7 @@
   // -------------------------------------------------------------------------
   function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 
-  function subjectPhrase(d) {
-    if (d.subject) {
-      return chance(0.5) ? d.subject.toLowerCase() : 'ce ' + (looksPlural(d.subject) ? 'lot' : 'truc');
-    }
-    return 'ce deal';
-  }
-  function looksPlural(s) { return /s\b/.test(s.split(' ').slice(-1)[0] || ''); }
+  function looksPlural(s) { return /s\b/.test((s || '').split(' ').slice(-1)[0] || ''); }
 
   function priceBit(d) {
     if (d.price && d.oldPrice) return `${d.price} au lieu de ${d.oldPrice}`;
@@ -179,93 +173,159 @@
     return '';
   }
 
+  // Nom court du produit pour un commentaire (~5 mots), tirets aplatis,
+  // sans connecteur orphelin en fin.
+  function subjShort(d) {
+    if (!d.subject) return '';
+    let s = d.subject.replace(/\s*[-–]\s*/g, ' ').replace(/[•·]/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    let words = s.split(/\s+/).filter(Boolean).slice(0, 5);
+    while (words.length > 1 && /^(de|du|des|à|au|aux|pour|le|la|les|en|et|un|une|d'|d’)$/i.test(words[words.length - 1])) {
+      words.pop();
+    }
+    return words.join(' ');
+  }
+  function subjOrThing(d) {
+    if (d.subject) return subjShort(d).toLowerCase();
+    return chance(0.5) ? 'ce produit' : (chance(0.5) ? 'cet article' : 'ce truc');
+  }
+
+  // % de réduction : calculé depuis prix/prix barré, ou lu dans "info".
+  function discountPct(d) {
+    const num = (s) => parseFloat(String(s || '').replace(/[^0-9,.]/g, '').replace(',', '.'));
+    const p = num(d.price), o = num(d.oldPrice);
+    if (p > 0 && o > p) return Math.round((1 - p / o) * 100);
+    const m = String(d.info || '').match(/-?\s*(\d{1,3})\s*%/);
+    return m ? parseInt(m[1], 10) : 0;
+  }
+
+  // Détection de catégorie → vocabulaire adapté au type de produit.
+  const CATEGORIES = [
+    { key: 'cuisine', re: /\b(plat|four|po[eê]le|casserole|pyrex|verre|cuisine|vaisselle|ustensile|mug|couteau|assiette|cocotte|moule|saladier|tasse|bol)\b/i,
+      usage: ['en cuisine', 'pour les bons petits plats', 'pour cuisiner', 'pour les repas de famille'],
+      plus: ['la qualité tient dans le temps', "ça passe au four sans souci", "c'est du solide", 'on en a pour des années'] },
+    { key: 'gaming', re: /\b(console|manette|jeu\s*vid|ps5|ps4|xbox|switch|nintendo|gaming|micromania|amiibo|casque\s*gam)\b/i,
+      usage: ['pour les gamers', 'pour la collec', 'côté jeu'],
+      plus: ['les joueurs vont apprécier', 'parfait pour la collec', "à ce prix on hésite pas", 'rare de le voir aussi bas'] },
+    { key: 'tech', re: /\b(casque|[ée]couteurs?|tv|t[ée]l[ée]|smartphone|t[ée]l[ée]phone|tablette|pc|ordinateur|ssd|disque|souris|clavier|montre\s*connect|enceinte|bluetooth|chargeur|webcam|[ée]cran)\b/i,
+      usage: ['au quotidien', 'pour le boulot comme pour les loisirs', 'tous les jours'],
+      plus: ['le rapport qualité/prix est imbattable', 'la marque est fiable', 'autant en profiter à ce tarif', 'difficile de trouver mieux'] },
+    { key: 'jouet', re: /\b(lego|jouet|poup[ée]e|playmobil|peluche|circuit|figurine|jeu\s*de\s*soci[ée]t[ée]|puzzle)\b/i,
+      usage: ['pour les enfants', 'pour offrir', 'pour un cadeau'],
+      plus: ['parfait pour un anniversaire', 'les petits vont adorer', 'idéal en cadeau', 'à mettre de côté pour Noël'] },
+    { key: 'maison', re: /\b(aspirateur|robot|cafeti[èe]re|friteuse|airfryer|air\s*fryer|micro-?ondes|d[ée]coration|meuble|lampe|drap|couette|outil|perceuse|aspi)\b/i,
+      usage: ['à la maison', 'au quotidien'],
+      plus: ['ça sert tout le temps', 'un basique bien utile', 'toujours pratique à avoir', "j'en cherchais justement un"] },
+    { key: 'mode', re: /\b(chaussures|baskets|sneakers?|veste|manteau|pull|jean|montre|sac|parfum|sweat|t-?shirt)\b/i,
+      usage: ['pour la garde-robe', 'pour cet hiver', 'au quotidien'],
+      plus: ['à ce prix on craque', 'difficile de résister', 'ça part vite ce genre de modèle'] },
+  ];
+  function categoryOf(d) {
+    const hay = ((d.subject || '') + ' ' + (d.store || '')).toLowerCase();
+    for (const c of CATEGORIES) if (c.re.test(hay)) return c;
+    return null;
+  }
+
   const EMOJI_RE = /\p{Extended_Pictographic}/u;
-  // N'ajoute un emoji que si la phrase n'en contient pas déjà (évite les doublons).
   function withEmoji(txt, pool) {
     if (EMOJI_RE.test(txt)) return txt;
-    return chance(0.45) ? txt + ' ' + pick(pool) : txt;
+    return chance(0.4) ? txt + ' ' + pick(pool) : txt;
   }
+  // Fragment optionnel (apparaît avec proba p).
+  function opt(p, s) { return chance(p) ? s : ''; }
 
-  // --- Bank: UTILE (apporte une info, factuel, posé) ---
+  // --- UTILE : factuel, apporte un angle, varié selon la catégorie ---
   function genUtile(d) {
-    const subj = d.subject ? d.subject.toLowerCase() : 'le produit';
+    const subj = subjOrThing(d);
+    const subjCap = capitalize(subj);
     const price = priceBit(d);
     const store = d.store ? `chez ${d.store}` : '';
-    const openers = [
-      `Bon plan confirmé`,
-      `Repéré aussi de mon côté`,
-      `Pour ceux qui hésitent`,
-      `Petit rappel`,
-      `Effectivement`,
+    const pct = discountPct(d);
+    const cat = categoryOf(d);
+    const usage = cat ? pick(cat.usage) : '';
+    const plus = cat ? pick(cat.plus) : pick([
+      'difficile de trouver mieux en ce moment', 'le prix est vraiment bien placé',
+      'ça vaut le coup', 'rare à ce tarif',
+    ]);
+    const judge = pick([
+      'belle baisse', 'vrai bon prix', 'super affaire', 'prix vraiment correct',
+      'c\'est cadeau', 'excellent rapport qualité/prix',
+    ]);
+    const pctTxt = pct >= 40 ? pick([`-${pct} % quand même`, `${pct} % de moins`, `presque ${Math.round(pct / 10) * 10} % de remise`]) : '';
+
+    const skeletons = [
+      () => `${pick(['Bon plan confirmé', 'Repéré aussi', 'Effectivement', 'Validé'])} : ${subjCap} ${price}${store ? ' ' + store : ''}, ${judge}.${opt(0.6, ' ' + capitalize(plus) + '.')}`,
+      () => `${price ? capitalize(price) : 'À ce prix'} pour ${subj}, ${plus}.`,
+      () => `${pctTxt ? capitalize(pctTxt) + ' sur ' + subj : capitalize(subj) + ' ' + price}, ${judge}.${opt(0.5, ` Et ${store ? store + ' ' : ''}c'est dispo, ${pick(['foncez', 'à voir vite', 'pensez au stock'])}.`)}`,
+      () => `J'ai comparé vite fait : ${price || 'ce prix'}${store ? ' ' + store : ''}, c'est bien le meilleur du moment.${opt(0.5, ' ' + capitalize(plus) + '.')}`,
+      () => `${subjCap}${usage ? ' ' + usage : ''}, ${price}, ${plus}.${opt(0.4, ' Merci pour le partage.')}`,
     ];
-    const bodies = [
-      price ? `${capitalize(subj)} ${price}${store ? ' ' + store : ''}, c'est une vraie baisse.`
-            : `${capitalize(subj)} à ce prix${store ? ' ' + store : ''}, ça vaut le coup.`,
-      d.info ? `${capitalize(subj)} ${price || ''} — et en plus ${d.info.toLowerCase()}.`.replace('  ', ' ')
-             : `${capitalize(subj)} ${price || 'à ce tarif'}, difficile de trouver mieux en ce moment.`,
-      `J'ai comparé vite fait, ${price || 'ce prix'} c'est bien le meilleur ${store ? store + ' ' : ''}actuellement.`,
-    ];
-    const closers = [
-      `Merci pour le partage.`,
-      `À prendre si le besoin est là.`,
-      `Pensez à vérifier le stock avant.`,
-      `Foncez tant que c'est dispo.`,
-      ``,
-    ];
-    let txt = `${pick(openers)} : ${pick(bodies)}`;
-    const c = pick(closers);
-    if (c) txt += ' ' + c;
-    txt = withEmoji(txt, ['👍', '✅', '💪']);
+    let txt = pick(skeletons)();
+    txt = withEmoji(txt, ['👍', '✅', '💪', '👌']);
     return tidy(txt);
   }
 
-  // --- Bank: QUESTION (engage une discussion, donc actif sans spammer) ---
+  // --- QUESTION : engage la discussion, contextualisé ---
   function genQuestion(d) {
-    const subj = subjectPhrase(d);
-    const price = priceBit(d);
-    const store = d.store ? d.store : 'la boutique';
+    const subj = subjOrThing(d);
+    const price = d.price ? d.price : 'ce prix';
+    const store = d.store || 'la boutique';
+    const cat = categoryOf(d);
+    const catQ = {
+      cuisine: ['ça passe bien au lave-vaisselle ?', 'la prise en main est bonne ?', 'c\'est résistant à l\'usage ?'],
+      gaming: ['c\'est la version FR ?', 'ça tourne bien ?', 'l\'état est nickel pour ce prix ?'],
+      tech: ['l\'autonomie est correcte ?', 'le son est bon pour le prix ?', 'c\'est compatible partout ?'],
+      jouet: ['c\'est à partir de quel âge ?', 'la boîte est complète ?', 'ça vaut le coup pour offrir ?'],
+      maison: ['c\'est pas trop bruyant ?', 'l\'entretien est simple ?', 'ça consomme beaucoup ?'],
+      mode: ['ça taille normal ou il faut prendre au-dessus ?', 'la qualité est au rendez-vous ?', 'le coloris est fidèle ?'],
+    };
+    const catQuestion = cat && catQ[cat.key] ? pick(catQ[cat.key]) : '';
     const qs = [
-      `Quelqu'un l'a déjà pris${looksPlural(d.subject) ? 's' : ''} ? ${price ? `${capitalize(price)},` : ''} ça tient la route niveau qualité ?`,
-      `${d.subject ? capitalize(d.subject) + ' :' : ''} la livraison est rapide chez ${store} en ce moment ?`,
-      `Ça vaut vraiment le coup à ${d.price || 'ce prix'} ou il y a mieux ailleurs ?`,
-      `Vous savez si l'offre tient jusqu'à quand ? J'hésite à craquer.`,
-      `Y'a un code promo à ajouter ou le prix affiché est déjà le bon ?`,
-      `${price ? capitalize(price) + ', ' : ''}c'est vraiment le prix plancher ou ça baisse encore parfois ?`,
+      catQuestion ? `Quelqu'un a déjà pris ${subj} ? ${capitalize(catQuestion)}` : `Quelqu'un l'a déjà testé ? Ça tient la route niveau qualité ?`,
+      `La livraison est rapide chez ${store} en ce moment ?`,
+      `Ça vaut vraiment le coup à ${price} ou on trouve mieux ailleurs ?`,
+      `Vous savez jusqu'à quand l'offre tient ? J'hésite à craquer.`,
+      `Faut ajouter un code promo ou le prix affiché est déjà le bon ?`,
+      `${price === 'ce prix' ? 'Ce prix' : price}, c'est le plancher ou ça redescend parfois ?`,
+      `${capitalize(subj)} à ${price}, bonne affaire d'après vous ou on attend ?`,
     ];
     let txt = pick(qs);
-    txt = withEmoji(txt, ['🤔', '🙏', '😅']);
+    txt = withEmoji(txt, ['🤔', '🙏', '😅', '👀']);
     return tidy(txt);
   }
 
-  // --- Bank: ENTHOUSIASTE (réaction vivante, variée, pas robotique) ---
+  // --- ENTHOUSIASTE : réaction vivante, jamais deux fois pareille ---
   function genEnthousiaste(d) {
-    const subj = subjectPhrase(d);
-    const price = priceBit(d);
+    const subj = subjOrThing(d);
+    const price = d.price || '';
+    const priceP = priceBit(d);
+    const pct = discountPct(d);
+    const cat = categoryOf(d);
     const reacts = [
-      `Ah là c'est cadeau`,
-      `Belle prise`,
-      `Excellent ça`,
-      `Énorme`,
-      `Imbattable`,
-      `Ça pique (dans le bon sens)`,
+      'Ah là c\'est cadeau', 'Belle prise', 'Excellent', 'Énorme', 'Imbattable',
+      'Ça pique (dans le bon sens)', 'Oh le prix', 'Canon', 'Grosse affaire', 'Là je dis oui',
     ];
+    const catHook = {
+      cuisine: ['direct adopté en cuisine', 'parfait pour les petits plats'],
+      gaming: ['ni une ni deux pour la collec', 'les manettes vont chauffer'],
+      tech: ['adopté direct', 'mon panier dit merci'],
+      jouet: ['cadeau trouvé', 'les enfants vont kiffer'],
+      maison: ['j\'en avais justement besoin', 'adopté à la maison'],
+      mode: ['hop dans le panier', 'je craque clairement'],
+    };
+    const hook = cat && catHook[cat.key] ? pick(catHook[cat.key]) : pick([
+      'direct dans le panier', 'je file regarder avant que ça parte', 'fallait le voir passer', 'je dis pas non',
+    ]);
     const middles = [
-      price ? `${price}, je dis pas non.` : `je dis pas non.`,
-      d.subject ? `${capitalize(d.subject.toLowerCase())} à ce tarif, fallait le voir passer.` : `fallait le voir passer.`,
-      price ? `${capitalize(price)} c'est du vol… mais dans l'autre sens 😄` : `franchement rien à redire.`,
-      `merci, je file regarder avant que ça parte.`,
-      `direct dans le panier celui-là.`,
-    ];
-    const enders = [
-      `Top ce groupe pour ça`,
-      `Continuez comme ça`,
-      `Vous gérez`,
-      ``,
-    ];
+      priceP ? `${priceP}, ${hook}.` : `${hook}.`,
+      price && pct >= 50 ? `${price} avec -${pct} %, c'est du vol… mais dans l'autre sens 😄` : '',
+      price ? `À ${price}, ${hook}.` : `${capitalize(hook)}.`,
+      `${capitalize(subj)} à ce tarif, ${hook}.`,
+    ].filter(Boolean);
+    const enders = ['Top ce groupe', 'Continuez comme ça', 'Vous gérez', 'Merci pour le bon plan', ''];
     let txt = `${pick(reacts)} ! ${capitalize(pick(middles))}`;
     const e = pick(enders);
-    if (e && chance(0.5)) txt += ' ' + e + '.';
-    txt = withEmoji(txt, ['🔥', '😍', '🤑', '🙌']);
+    if (e && chance(0.45)) txt += ' ' + e + '.';
+    txt = withEmoji(txt, ['🔥', '😍', '🤑', '🙌', '😮']);
     return tidy(txt);
   }
 
