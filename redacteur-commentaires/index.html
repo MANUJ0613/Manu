@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rédacteur de commentaires — Bons plans</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>🐊 Rédacteur de commentaires</h1>
+    <p class="tagline">Colle un post, récupère 3 brouillons naturels. Tu copies, tu colles toi-même. Aucune publication automatique.</p>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <label class="field-label" for="postText">Texte complet du post</label>
+      <textarea id="postText" rows="8"
+        placeholder="Colle ici tout le texte du post Facebook (titre, prix, boutique, lien…)"></textarea>
+
+      <div class="row">
+        <button id="prepareBtn" class="btn btn-primary" type="button">✨ Préparer mon commentaire</button>
+        <button id="clearBtn" class="btn btn-ghost" type="button">Effacer</button>
+      </div>
+    </section>
+
+    <section class="card" id="extractCard" hidden>
+      <h2 class="card-title">Infos détectées <span class="hint">(modifie si besoin)</span></h2>
+      <div class="grid">
+        <div class="field">
+          <label for="fSubject">Sujet du deal</label>
+          <input id="fSubject" type="text" placeholder="ex. Casque Doom" />
+        </div>
+        <div class="field">
+          <label for="fPrice">Prix</label>
+          <input id="fPrice" type="text" placeholder="ex. 39,99 €" />
+        </div>
+        <div class="field">
+          <label for="fOldPrice">Prix barré</label>
+          <input id="fOldPrice" type="text" placeholder="ex. 149,99 €" />
+        </div>
+        <div class="field">
+          <label for="fStore">Boutique</label>
+          <input id="fStore" type="text" placeholder="ex. Micromania" />
+        </div>
+        <div class="field field-wide">
+          <label for="fLink">Lien</label>
+          <input id="fLink" type="text" placeholder="https://…" />
+        </div>
+        <div class="field field-wide">
+          <label for="fInfo">Infos utiles</label>
+          <input id="fInfo" type="text" placeholder="ex. -73 %, stock limité…" />
+        </div>
+      </div>
+
+      <div class="tone-row">
+        <span class="field-label">Ton :</span>
+        <div class="tones" id="tones">
+          <button class="tone is-active" data-tone="utile" type="button">Utile</button>
+          <button class="tone" data-tone="question" type="button">Question</button>
+          <button class="tone" data-tone="enthousiaste" type="button">Enthousiaste</button>
+          <button class="tone" data-tone="mix" type="button">Mélange</button>
+        </div>
+        <button id="regenBtn" class="btn btn-ghost btn-sm" type="button">🔁 Régénérer</button>
+      </div>
+    </section>
+
+    <section class="card" id="resultCard" hidden>
+      <div class="result-head">
+        <h2 class="card-title">3 commentaires prêts</h2>
+        <button id="copyBestBtn" class="btn btn-primary btn-sm" type="button">📋 Copier le meilleur</button>
+      </div>
+      <ul id="comments" class="comments"></ul>
+
+      <div class="mark-row">
+        <button id="markLiked" class="btn btn-ghost" type="button">👍 Marquer liké</button>
+        <button id="markCommented" class="btn btn-ghost" type="button">💬 Marquer commenté</button>
+      </div>
+    </section>
+
+    <section class="card stats-card">
+      <h2 class="card-title">Historique local</h2>
+      <div class="stats">
+        <div class="stat"><span class="stat-num" id="statPosts">0</span><span class="stat-lbl">posts suivis</span></div>
+        <div class="stat"><span class="stat-num" id="statLikes">0</span><span class="stat-lbl">likes marqués</span></div>
+        <div class="stat"><span class="stat-num" id="statComments">0</span><span class="stat-lbl">commentaires marqués</span></div>
+      </div>
+      <button id="resetStats" class="btn btn-ghost btn-sm" type="button">Réinitialiser l'historique</button>
+    </section>
+  </main>
+
+  <footer class="footnote">
+    Tout reste dans ton navigateur. Rien n'est envoyé ni publié automatiquement.
+  </footer>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
