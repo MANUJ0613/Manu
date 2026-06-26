@@ -1310,7 +1310,45 @@ def _send_telegram(v: dict) -> None:
         )
 
 
+# Noms d'AFFICHAGE de catégories : un produit dont le "titre" vaut l'un d'eux
+# est en fait une page catégorie mal mappée -> on jette l'alerte (inexploitable).
+CATEGORY_NAMES = {
+    "accessoires pc", "accessoires", "jeux video", "jeux vidéo",
+    "figurines", "produits derives", "produits dérivés", "produits derives premium",
+    "cartes", "cartes pokemon", "cartes pokémon", "packs", "tous nos packs",
+    "peluches", "mugs et verres", "sacs", "setup gaming", "nacon", "steelseries",
+    "exclusivites micromania", "exclusivités micromania", "exclusivites premium",
+}
+
+
+def _alert_ok(v: dict) -> bool:
+    """Garde-fou : une alerte DOIT pointer vers une vraie fiche (.html, jamais
+    une page catégorie /c/) avec un vrai nom de produit.
+
+    Diagnostic (vérifié en live) : une fiche retirée garde son /p/ vivant ; donc
+    une alerte au lien /c/... + titre = nom de catégorie ("Accessoires PC") est
+    un BUG de mapping tuile->produit, pas une vraie offre. On la JETTE plutôt que
+    d'envoyer un lien cassé vers une liste de 900 produits. NB : on valide sur
+    ".html" + absence de "/c/" (pas sur "/p/") pour NE PAS casser les packs dont
+    le lien canonique est en ...-mbN.html.
+    """
+    url = (v.get("url") or "").strip()
+    if not url.endswith(".html") or "/c/" in url:
+        return False
+    title = re.sub(r"\s+", " ", (v.get("title") or "").lower()).strip()
+    if not title or title in CATEGORY_NAMES:
+        return False
+    return True
+
+
 def send_alert(v: dict) -> None:
+    if not _alert_ok(v):
+        print(
+            f"[alerte ignorée] lien/titre non-produit: "
+            f"{(v.get('title') or '?')!r} -> {v.get('url') or '?'}",
+            file=sys.stderr,
+        )
+        return
     text = format_text(v)
     if DRY_RUN:
         print("[DRY_RUN] " + text.replace("\n", " | "))
