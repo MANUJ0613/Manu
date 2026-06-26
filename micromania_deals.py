@@ -370,15 +370,38 @@ PROXY = PROXY_POOL[0] if PROXY_POOL else ""
 _proxy_rr = [0]
 _proxy_rr_lock = threading.Lock()
 
+# --- AUTO-CONTRÔLE DES PROXIES ----------------------------------------------
+# Beaucoup de proxies résidentiels finissent flaggés par Incapsula (ils
+# renvoient une page-challenge de ~200 o au lieu de la vraie page). Si le bot
+# continue de taper dessus en rotation, une requête sur deux est perdue et il
+# devient à moitié aveugle (rate des deals). Solution : au démarrage et toutes
+# les PROXY_HEALTH_INTERVAL_MIN, on teste chaque IP et on ne garde en rotation
+# que les SAINES. Les mortes sont retestées au tour suivant et réintégrées dès
+# qu'elles « se délavent ». -> on peut laisser les 20 proxies, le bot gère seul.
+PROXY_HEALTH_CHECK = os.environ.get("PROXY_HEALTH_CHECK", "true").lower() == "true"
+PROXY_HEALTH_INTERVAL_MIN = float(os.environ.get("PROXY_HEALTH_INTERVAL_MIN", "60"))
+PROXY_HEALTH_URL = os.environ.get(
+    "PROXY_HEALTH_URL", "https://www.micromania.fr/c/accessories-pc?sz=120"
+)
+PROXY_HEALTH_MIN_BYTES = int(os.environ.get("PROXY_HEALTH_MIN_BYTES", "2000"))
+# Sous-ensemble SAIN du pool, utilisé par la rotation. Au départ = tout le pool.
+ACTIVE_PROXIES = list(PROXY_POOL)
+_active_lock = threading.Lock()
+_health_last = [0.0]  # time.monotonic() du dernier contrôle (0 = jamais fait)
+
 
 def _next_proxy_url():
-    """Renvoie l'URL du prochain proxy (round-robin sur le pool), ou None si
-    aucun proxy configuré."""
+    """Renvoie l'URL du prochain proxy (round-robin sur les proxies SAINS), ou
+    None si aucun proxy configuré. On tourne sur ACTIVE_PROXIES (sous-ensemble
+    sain) ; s'il est vide (tous testés morts / pas encore testé), on retombe sur
+    tout le pool pour ne jamais devenir aveugle."""
     if not PROXY_POOL:
         return None
-    with _proxy_rr_lock:
-        url = PROXY_POOL[_proxy_rr[0] % len(PROXY_POOL)]
-        _proxy_rr[0] += 1
+    with _active_lock:
+        pool = ACTIVE_PROXIES or PROXY_POOL
+        with _proxy_rr_lock:
+            url = pool[_proxy_rr[0] % len(pool)]
+            _proxy_rr[0] += 1
     return url
 
 
@@ -460,6 +483,49 @@ def _session(direct: bool = False):
         s = _new_session(direct=direct)
         setattr(_tls, attr, s)
     return s
+
+
+def _proxy_alive(proxy_url: str) -> bool:
+    """Teste UNE IP : un GET de la page-test doit renvoyer la vraie page (pas
+    une page-challenge de ~200 o). Requête « à froid » : une IP flaggée renvoie
+    le challenge quoi qu'il arrive, une IP saine renvoie la page complète."""
+    try:
+        r = cffi.Session(
+            impersonate=IMPERSONATE, proxies={"http": proxy_url, "https": proxy_url}
+        ).get(PROXY_HEALTH_URL, headers=_BROWSER_HEADERS, timeout=REQUEST_TIMEOUT)
+        return len(r.content) >= PROXY_HEALTH_MIN_BYTES and not _is_challenge(r.content)
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _refresh_proxies(force: bool = False) -> None:
+    """Met à jour ACTIVE_PROXIES = proxies sains. Auto-throttlé : ne re-teste que
+    toutes les PROXY_HEALTH_INTERVAL_MIN (sauf force=True au démarrage). Teste
+    TOUT le pool en parallèle, garde les saines. Si aucune saine (site KO / test
+    cassé), on garde tout le pool (fail-safe : mieux vaut tout essayer qu'être
+    aveugle)."""
+    if not (PROXY_HEALTH_CHECK and HAVE_CFFI and len(PROXY_POOL) > 1):
+        return
+    now = time.monotonic()
+    if not force and (now - _health_last[0]) < PROXY_HEALTH_INTERVAL_MIN * 60:
+        return
+    _health_last[0] = now
+    workers = min(len(PROXY_POOL), 20)
+    alive: list[str] = []
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futs = {pool.submit(_proxy_alive, p): p for p in PROXY_POOL}
+        for fut in as_completed(futs):
+            if fut.result():
+                alive.append(futs[fut])
+    with _active_lock:
+        ACTIVE_PROXIES[:] = alive if alive else list(PROXY_POOL)
+    dead = len(PROXY_POOL) - len(alive)
+    tag = "" if alive else " (aucune saine -> on garde tout le pool, fail-safe)"
+    print(
+        f"[proxy-santé] {len(alive)}/{len(PROXY_POOL)} proxies sains, "
+        f"{dead} flaggé(s) mis de côté{tag}",
+        file=sys.stderr,
+    )
 
 
 # Limiteur de débit ADAPTATIF : le bot trouve tout seul la vitesse max que
@@ -1624,6 +1690,9 @@ def run_once(force_full: bool = False, extra_only: bool = False) -> int:
 
 
 def main() -> int:
+    # Contrôle de santé des proxies AVANT le 1er scan : on ne tourne d'emblée que
+    # sur les IP saines (sinon le 1er passage est à moitié aveugle).
+    _refresh_proxies(force=True)
     if not LOOP_ENABLED:
         return run_once()
 
@@ -1642,6 +1711,9 @@ def main() -> int:
     sd_notify("READY=1")  # informe systemd que le service est prêt
     while True:
         start = time.monotonic()
+        # Re-teste les proxies périodiquement (auto-throttlé) : réintègre ceux qui
+        # se sont délavés, écarte ceux qui viennent d'être flaggés.
+        _refresh_proxies()
         do_full = (start - last_full) >= full_every
         try:
             run_once(force_full=do_full, extra_only=not do_full)
