@@ -1701,7 +1701,7 @@ def main() -> int:
     #  - toutes les FULL_CATALOG_EVERY_MINUTES : passage COMPLET (catalogue).
     deadline = (time.monotonic() + LOOP_MAX_SECONDS) if LOOP_MAX_SECONDS > 0 else None
     full_every = FULL_CATALOG_EVERY_MINUTES * 60
-    last_full = 0.0  # 0 => le 1er passage est un scan complet
+    last_full = None  # None => 1er passage TOUJOURS complet (indép. de l'horloge)
     duree = "illimité" if deadline is None else f"~{LOOP_MAX_SECONDS // 60} min"
     print(
         f"Mode BOUCLE : passages rapides (packs/collectors) toutes les "
@@ -1714,7 +1714,7 @@ def main() -> int:
         # Re-teste les proxies périodiquement (auto-throttlé) : réintègre ceux qui
         # se sont délavés, écarte ceux qui viennent d'être flaggés.
         _refresh_proxies()
-        do_full = (start - last_full) >= full_every
+        do_full = (last_full is None) or (start - last_full) >= full_every
         try:
             run_once(force_full=do_full, extra_only=not do_full)
             if do_full:
