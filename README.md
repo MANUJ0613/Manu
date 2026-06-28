@@ -1,3 +1,147 @@
+# Outils de veille e-commerce
+
+Ce dépôt contient deux outils indépendants :
+
+1. **[Analyseur de demande Vinted](#analyseur-de-demande-vinted-)** 🛍️ — savoir
+   ce qui est le plus recherché sur Vinted (favoris/vues) et à quel prix ça se
+   revend.
+2. **[Micromania deals watcher](#micromania-deals-watcher-)** 🔥 — alerte sur les
+   grosses réductions / erreurs de prix sur micromania.fr.
+
+---
+
+# Analyseur de demande Vinted 🛍️
+
+Deux modes :
+
+- **`categories` (par défaut)** — scanne **toutes les catégories Vinted sauf les
+  vêtements** et liste les **produits récents (postés ≤ 7 jours) qui ont le plus
+  de favoris**. C'est *le* mode pour repérer ce qui buzz en ce moment, par
+  catégorie, sans rien présupposer.
+- **`watchlist`** — pour une liste de recherches précises (produits/marques),
+  classe ce qui est le plus recherché et donne le **prix médian** de revente.
+
+Mesure de demande = nombre de **favoris (likes)** ; les **vues** ne sont
+récupérables qu'avec une session connectée (voir plus bas).
+
+## Mode `categories` — ce que ça donne
+
+Un classement **par catégorie › sous-catégorie**, avec les **15 produits** de
+chaque sous-catégorie qui **montent le plus vite** (favoris/jour), postés sur la
+fenêtre :
+
+```
+15 PRODUITS / CATÉGORIE — postés ≤ 7j, classés par favoris/jour, hors vêtements
+
+▸ Électronique › Jeux vidéo et consoles
+    1.  302/j  ❤163   12h   95,00 €  Nintendo switch 1
+    2.  108/j  ❤54     4h  210,00 €  Nintendo switch 2
+    ...
+▸ Loisirs et collections › Cartes à collectionner
+    1.   62/j  ❤31     9h    1,00 €  Lot de cartes Pokémon
+    ...
+```
+
+- **`/jour` (favoris/jour)** = vitesse à laquelle l'article accumule des likes →
+  repère les **tendances fraîches** mieux que le total brut.
+- **`âge`** = depuis quand l'article est en ligne (heure de référence = horloge
+  du **serveur Vinted**, donc fiable même si l'horloge locale est décalée).
+- Sur Discord : **un message par sous-catégorie** (liens cliquables). Détail
+  complet aussi en **JSON** + **CSV** pour analyse dans un tableur.
+
+## Comment ça marche
+
+1. Récupère l'arbre des catégories Vinted (depuis la home) et retire les
+   catégories de **vêtements** (`EXCLUDE_PATTERNS`). Reste : chaussures, sacs,
+   accessoires, **électronique**, maison, **collections/cartes**, jeux/jouets,
+   sport, beauté…
+2. Pour chaque catégorie, lit le catalogue en tri `relevance` (qui remonte les
+   articles **récents les plus engageants**) et ne garde que ceux postés depuis
+   ≤ `DAYS_WINDOW` jours (date = timestamp de la photo).
+3. Déduplique, filtre le bruit (`MIN_FAVOURITES`), classe par **favoris** et
+   sort le top global + les tendances qui montent vite + JSON/CSV + digest.
+
+> 📌 **Vues indisponibles en anonyme.** Vinted renvoie `0` vue dans le catalogue
+> et `404` sur la fiche sans être connecté. Le classement se base donc sur les
+> **favoris** (excellent proxy de demande). Pour débloquer les vues : colle ta
+> session via `VINTED_COOKIE` et mets `FETCH_VIEWS=true` (mode watchlist).
+>
+> ⚠️ Vinted **plafonne ~960 résultats** par requête : sur les très grosses
+> catégories on échantillonne les plus pertinents récents, pas l'exhaustivité.
+
+## Détection de tendances dans le temps 📈
+
+À chaque run, le bot enregistre un **instantané** (favoris cumulés par mot-clé,
+par sous-catégorie et par annonce) dans `state/vinted_history.json`, puis le
+compare au run précédent pour repérer **ce qui MONTE** — avant que ça explose :
+
+```
+📈 TENDANCES QUI MONTENT (vs run précédent, il y a 6h)
+• Mots-clés en hausse :      +150 (+300%) pokemon → 200 favoris
+• Mots-clés ÉMERGENTS :      ✦ sonny (80 favoris)   ← absent avant
+• Sous-catégories en hausse : +300 (+150%) Électronique › Téléphones
+• Annonces qui décollent :   +85 ❤95  40€  Pokemon Charizard …
+```
+
+Un **embed Discord/Telegram dédié** est aussi envoyé. Comme le workflow tourne
+toutes les 6 h et committe l'historique, les comparaisons s'enrichissent toutes
+seules. Le **premier run** ne fait qu'enregistrer la base (rien à comparer).
+
+## Lancer en local
+
+```bash
+pip install -r requirements.txt
+
+# Mode catégories (défaut), à blanc :
+DRY_RUN=true python3 vinted_analyzer.py
+
+# Restreindre à quelques catégories (IDs) et élargir la fenêtre :
+DRY_RUN=true VINTED_CATEGORIES="2994,4824" DAYS_WINDOW=14 python3 vinted_analyzer.py
+
+# Mode watchlist (recherches précises) :
+DRY_RUN=true MODE=watchlist VINTED_QUERIES="jordan 1,stanley cup" python3 vinted_analyzer.py
+```
+
+## Automatisation (GitHub Actions)
+
+Le workflow [`.github/workflows/vinted-demand.yml`](.github/workflows/vinted-demand.yml)
+lance le scan catégories **toutes les 6 heures**, écrit le rapport dans `state/`
+et envoie le digest. Ajoute tes secrets dans **Settings → Secrets and variables
+→ Actions** : `DISCORD_WEBHOOK_URL` (ou `TELEGRAM_*`).
+
+## Réglages (variables d'environnement)
+
+| Variable | Défaut | Rôle |
+|----------|--------|------|
+| `MODE` | `categories` | `categories` (scan hors vêtements) ou `watchlist` |
+| `DAYS_WINDOW` | `7` | Fenêtre de fraîcheur : articles postés depuis N jours |
+| `RANK_BY` | `hotness` | `hotness` (favoris/jour, le + frais) ou `favourites` (favoris totaux) |
+| `TOP_PER_CATEGORY` | `15` | Nombre d'articles listés par sous-catégorie |
+| `CATEGORY_MAX_PAGES` | `3` | Pages de 96 articles lues par catégorie |
+| `MIN_FAVOURITES` | `3` | Ignore les articles sous ce nombre de favoris |
+| `TRACK_TRENDS` | `true` | Suivi des tendances dans le temps (instantané + comparaison) |
+| `HISTORY_FILE` | `state/vinted_history.json` | Historique des instantanés |
+| `HISTORY_MAX_RUNS` | `60` | Nombre de runs conservés dans l'historique |
+| `TOP_TRENDS` | `12` | Nombre de tendances montantes affichées |
+| `EXCLUDE_PATTERNS` | `vêtement,…,créateur` | Catégories exclues par titre |
+| `VINTED_CATEGORIES` | *(auto)* | Forcer des IDs de catégories (sépar. virgules) |
+| `TOP_ITEMS` | `30` | Taille du top produits affiché |
+| `VINTED_DOMAIN` | `www.vinted.fr` | Domaine Vinted ciblé |
+| `VINTED_QUERIES` / `WATCHLIST_FILE` | *(vide)* / `watchlist.txt` | Recherches (mode watchlist) |
+| `FETCH_VIEWS` + `VINTED_COOKIE` | `false` | Récupérer les vues (session requise) |
+| `PRICE_FROM` / `PRICE_TO` | *(vide)* | Filtre de prix |
+| `CONCURRENCY` | `4` | Requêtes parallèles |
+| `PROXY` | *(vide)* | Proxy (idéalement résidentiel) pour DataDome sur VPS |
+| `LOOP_ENABLED` / `LOOP_INTERVAL_SECONDS` | `false` / `3600` | Boucle continue (systemd) |
+| `REPORT_JSON` / `REPORT_CSV` | `state/vinted_report.*` | Chemins des rapports |
+| `DRY_RUN` | `false` | N'envoie aucun digest |
+
+> ⚠️ Comme Micromania, Vinted est derrière **DataDome**. Sur une IP datacenter
+> (VPS), installe `curl_cffi` (déjà dans `requirements.txt`) et/ou utilise un
+> **proxy résidentiel** (`PROXY=...`). Sur GitHub Actions, l'IP passe sans proxy.
+
+---
+
 # Micromania deals watcher 🔥
 
 Détecteur automatique de **grosses réductions et erreurs de prix** sur

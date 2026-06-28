@@ -1,0 +1,16 @@
+# Watchlist Vinted — une recherche par ligne (# = commentaire).
+# Mets ici ce que tu veux jauger : produits, marques, modèles précis…
+# L'analyseur classe ces recherches par DEMANDE (favoris + vues) et donne
+# le prix médian de revente sur Vinted.
+
+# --- Exemples (à remplacer par les tiens) ---
+nike air max
+jordan 1
+the north face veste
+stanley cup
+labubu
+lego star wars
+zara robe
+ralph lauren pull
+sac longchamp
+nintendo switch

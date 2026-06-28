@@ -1,0 +1,17 @@
+[Unit]
+Description=Vinted demand analyzer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+WatchdogSec=600
+WorkingDirectory=/opt/vinted-demand
+EnvironmentFile=/etc/vinted-demand.env
+ExecStart=/opt/vinted-demand/venv/bin/python /opt/vinted-demand/vinted_analyzer.py
+Restart=always
+RestartSec=30
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

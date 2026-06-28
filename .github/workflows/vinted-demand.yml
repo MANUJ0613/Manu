@@ -1,0 +1,66 @@
+name: Vinted demand analyzer
+
+# Scanne toutes les catégories Vinted SAUF les vêtements, et publie le top des
+# produits RÉCENTS (postés ≤ 7 jours) ayant le PLUS DE FAVORIS. Tourne toutes
+# les 6 heures, écrit le rapport dans state/ et (option) envoie un digest
+# Discord/Telegram.
+
+on:
+  schedule:
+    - cron: "0 */6 * * *" # toutes les 6 heures
+  workflow_dispatch:
+    inputs:
+      days_window:
+        description: "Fenêtre de fraîcheur en jours"
+        type: string
+        default: "7"
+
+permissions:
+  contents: write # committer le rapport dans state/
+
+concurrency:
+  group: vinted-demand
+  cancel-in-progress: false
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer les dépendances
+        run: pip install -r requirements.txt
+
+      - name: Scanner les catégories Vinted (hors vêtements)
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          MODE: "categories"
+          DAYS_WINDOW: ${{ github.event.inputs.days_window || '7' }}
+          RANK_BY: "hotness"
+          TOP_PER_CATEGORY: "15"
+          CATEGORY_MAX_PAGES: "3"
+          CONCURRENCY: "4"
+        run: python3 vinted_analyzer.py
+
+      - name: Sauvegarder le rapport
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}" || true
+          git add state/vinted_report.json state/vinted_report.csv state/vinted_history.json
+          if git diff --cached --quiet; then
+            echo "Aucun changement de rapport à committer."
+          else
+            git commit -m "chore: rapport + historique tendances Vinted [skip ci]"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
