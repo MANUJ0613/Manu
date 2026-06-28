@@ -1,3 +1,116 @@
+# Outils de veille e-commerce
+
+Ce dépôt contient deux outils indépendants :
+
+1. **[Analyseur de demande Vinted](#analyseur-de-demande-vinted-)** 🛍️ — savoir
+   ce qui est le plus recherché sur Vinted (favoris/vues) et à quel prix ça se
+   revend.
+2. **[Micromania deals watcher](#micromania-deals-watcher-)** 🔥 — alerte sur les
+   grosses réductions / erreurs de prix sur micromania.fr.
+
+---
+
+# Analyseur de demande Vinted 🛍️
+
+Pour une liste de recherches (produits, marques, modèles…), interroge le
+catalogue Vinted et **classe ce qui est le plus recherché** — mesuré par le
+nombre de **favoris (likes)** et, si tu fournis ta session connectée, de
+**vues**. Tu vois d'un coup d'œil ce qui s'arrache, à quel **prix médian** ça se
+revend, et combien il y a de concurrence (nombre d'annonces).
+
+## Ce que ça donne
+
+```
+CLASSEMENT DE LA DEMANDE VINTED (le plus recherché en premier)
+ #  recherche                   demande  fav.moy vues.moy annonces   prix méd
+ 1  stanley cup                    35.3     35.3        —      192    30,50 €
+ 2  jordan 1                       17.1     17.1        —      192    45,00 €
+ 3  labubu                         10.4     10.4        —      192     5,00 €
+
+TOP ARTICLES LES PLUS CONVOITÉS (favoris / vues)
+ 1. ❤241  👁  —   28,00 €  Stanley Cup rosa            https://www.vinted.fr/items/...
+```
+
+Le détail complet est aussi écrit en **JSON** (`state/vinted_report.json`) et en
+**CSV** (`state/vinted_report.csv`) pour analyse dans un tableur.
+
+## Comment ça marche
+
+1. Pour chaque recherche, lit le catalogue via l'API JSON de Vinted
+   (`/api/v2/catalog/items`) — chaque annonce expose son nombre de **favoris**.
+2. Agrège par recherche : favoris moyens, **prix médian** (= prix de revente
+   réaliste), nombre d'annonces, et un **indice de demande**
+   `= favoris + 0,05·vues`.
+3. Sort le classement dans la console + JSON + CSV, et (option) un digest
+   Discord/Telegram.
+
+> 📌 **À propos des vues.** Vinted n'expose plus les vues en accès anonyme
+> (catalogue et fiche renvoient 0 / 404). Le classement se base donc sur les
+> **favoris**, qui sont un excellent indicateur de demande. Pour récupérer aussi
+> les vues, fournis ta **session connectée** via `VINTED_COOKIE` et mets
+> `FETCH_VIEWS=true` (voir réglages).
+
+## Définir ta watchlist
+
+Édite [`watchlist.txt`](watchlist.txt) (une recherche par ligne, `#` = commentaire) :
+
+```
+nike air max
+jordan 1
+stanley cup
+labubu
+```
+
+Ou passe-les en variable d'environnement : `VINTED_QUERIES="nike air max,jordan 1"`.
+
+## Lancer en local
+
+```bash
+pip install -r requirements.txt
+
+# Analyse à blanc (n'envoie aucun digest) :
+DRY_RUN=true VINTED_QUERIES="jordan 1,stanley cup" python3 vinted_analyzer.py
+
+# Avec digest Discord :
+DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/xxx/yyy" python3 vinted_analyzer.py
+```
+
+## Automatisation (GitHub Actions)
+
+Le workflow [`.github/workflows/vinted-demand.yml`](.github/workflows/vinted-demand.yml)
+tourne **toutes les 6 heures**, écrit le rapport dans `state/` et envoie le
+digest. Ajoute tes secrets dans **Settings → Secrets and variables → Actions** :
+`DISCORD_WEBHOOK_URL` (ou `TELEGRAM_*`), et `VINTED_COOKIE` si tu veux les vues.
+
+## Réglages (variables d'environnement)
+
+| Variable | Défaut | Rôle |
+|----------|--------|------|
+| `VINTED_QUERIES` | *(vide)* | Recherches séparées par des virgules (prioritaire sur le fichier) |
+| `WATCHLIST_FILE` | `watchlist.txt` | Fichier de recherches (une par ligne) |
+| `VINTED_DOMAIN` | `www.vinted.fr` | Domaine Vinted ciblé |
+| `MAX_PAGES` | `3` | Pages de 96 articles lues par recherche |
+| `CATALOG_ORDER` | `relevance` | Tri : `relevance` / `newest_first` / `price_low_to_high`… |
+| `PRICE_FROM` / `PRICE_TO` | *(vide)* | Filtre de prix appliqué à toutes les recherches |
+| `FETCH_VIEWS` | `false` | Récupérer les vues (nécessite `VINTED_COOKIE`) |
+| `VINTED_COOKIE` | *(vide)* | En-tête `Cookie` de ta session connectée (débloque les vues) |
+| `VINTED_ACCESS_TOKEN` | *(vide)* | Alternative : jeton Bearer de session |
+| `TOP_VIEWS` | `20` | Articles enrichis en vues par recherche |
+| `VIEW_WEIGHT` | `0.05` | Poids des vues dans l'indice de demande |
+| `TOP_ITEMS` | `25` | Taille du top d'articles affiché |
+| `CONCURRENCY` | `4` | Requêtes parallèles |
+| `PROXY` | *(vide)* | Proxy (idéalement résidentiel) pour contourner DataDome sur VPS |
+| `LOOP_ENABLED` | `false` | Boucle continue (service systemd) |
+| `LOOP_INTERVAL_SECONDS` | `3600` | Pause entre deux analyses en boucle |
+| `REPORT_JSON` / `REPORT_CSV` | `state/vinted_report.*` | Chemins des rapports |
+| `DRY_RUN` | `false` | N'envoie aucun digest |
+
+> ⚠️ Comme Micromania, Vinted est derrière **DataDome**. Sur une IP datacenter
+> (VPS), installe `curl_cffi` (déjà dans `requirements.txt`) et/ou utilise un
+> **proxy résidentiel** (`PROXY=...`). Sur GitHub Actions, l'IP passe sans proxy.
+
+---
+
 # Micromania deals watcher 🔥
 
 Détecteur automatique de **grosses réductions et erreurs de prix** sur
