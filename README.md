@@ -12,96 +12,98 @@ Ce dépôt contient deux outils indépendants :
 
 # Analyseur de demande Vinted 🛍️
 
-Pour une liste de recherches (produits, marques, modèles…), interroge le
-catalogue Vinted et **classe ce qui est le plus recherché** — mesuré par le
-nombre de **favoris (likes)** et, si tu fournis ta session connectée, de
-**vues**. Tu vois d'un coup d'œil ce qui s'arrache, à quel **prix médian** ça se
-revend, et combien il y a de concurrence (nombre d'annonces).
+Deux modes :
 
-## Ce que ça donne
+- **`categories` (par défaut)** — scanne **toutes les catégories Vinted sauf les
+  vêtements** et liste les **produits récents (postés ≤ 7 jours) qui ont le plus
+  de favoris**. C'est *le* mode pour repérer ce qui buzz en ce moment, par
+  catégorie, sans rien présupposer.
+- **`watchlist`** — pour une liste de recherches précises (produits/marques),
+  classe ce qui est le plus recherché et donne le **prix médian** de revente.
+
+Mesure de demande = nombre de **favoris (likes)** ; les **vues** ne sont
+récupérables qu'avec une session connectée (voir plus bas).
+
+## Mode `categories` — ce que ça donne
 
 ```
-CLASSEMENT DE LA DEMANDE VINTED (le plus recherché en premier)
- #  recherche                   demande  fav.moy vues.moy annonces   prix méd
- 1  stanley cup                    35.3     35.3        —      192    30,50 €
- 2  jordan 1                       17.1     17.1        —      192    45,00 €
- 3  labubu                         10.4     10.4        —      192     5,00 €
+TOP 30 PRODUITS LES PLUS LIKÉS — postés ≤ 7j, hors vêtements (67 catégories)
+ #   ❤fav  /jour   âge     prix  catégorie               article
+ 1    287    176  1.6j  60,00 €  Entretien de la maison  Climatizador evaporativo Starlyf
+ 2    253    216  1.2j   3,50 €  Loisirs créatifs        Patchs / écussons thermocollants
+ 3    216     36  6.0j 260,00 €  Ordinateurs             MacBook Pro 2017 - Apple
+16    163    302   12h  95,00 €  Jeux vidéo et consoles  Nintendo switch 1
 
-TOP ARTICLES LES PLUS CONVOITÉS (favoris / vues)
- 1. ❤241  👁  —   28,00 €  Stanley Cup rosa            https://www.vinted.fr/items/...
+⚡ TENDANCES QUI MONTENT VITE (favoris/jour)
+ 1    302 fav/j  ❤163   12h   95,00 €  Jeux vidéo  Nintendo switch 1
 ```
 
-Le détail complet est aussi écrit en **JSON** (`state/vinted_report.json`) et en
-**CSV** (`state/vinted_report.csv`) pour analyse dans un tableur.
+- **`/jour` (favoris/jour)** = vitesse à laquelle l'article accumule des likes →
+  repère les **tendances naissantes** mieux que le total brut.
+- **`âge`** = depuis quand l'article est en ligne (filtré à ≤ 7 jours).
+- Détail complet écrit en **JSON** (`state/vinted_report.json`) et **CSV**
+  (`state/vinted_report.csv`) pour analyse dans un tableur.
 
 ## Comment ça marche
 
-1. Pour chaque recherche, lit le catalogue via l'API JSON de Vinted
-   (`/api/v2/catalog/items`) — chaque annonce expose son nombre de **favoris**.
-2. Agrège par recherche : favoris moyens, **prix médian** (= prix de revente
-   réaliste), nombre d'annonces, et un **indice de demande**
-   `= favoris + 0,05·vues`.
-3. Sort le classement dans la console + JSON + CSV, et (option) un digest
-   Discord/Telegram.
+1. Récupère l'arbre des catégories Vinted (depuis la home) et retire les
+   catégories de **vêtements** (`EXCLUDE_PATTERNS`). Reste : chaussures, sacs,
+   accessoires, **électronique**, maison, **collections/cartes**, jeux/jouets,
+   sport, beauté…
+2. Pour chaque catégorie, lit le catalogue en tri `relevance` (qui remonte les
+   articles **récents les plus engageants**) et ne garde que ceux postés depuis
+   ≤ `DAYS_WINDOW` jours (date = timestamp de la photo).
+3. Déduplique, filtre le bruit (`MIN_FAVOURITES`), classe par **favoris** et
+   sort le top global + les tendances qui montent vite + JSON/CSV + digest.
 
-> 📌 **À propos des vues.** Vinted n'expose plus les vues en accès anonyme
-> (catalogue et fiche renvoient 0 / 404). Le classement se base donc sur les
-> **favoris**, qui sont un excellent indicateur de demande. Pour récupérer aussi
-> les vues, fournis ta **session connectée** via `VINTED_COOKIE` et mets
-> `FETCH_VIEWS=true` (voir réglages).
-
-## Définir ta watchlist
-
-Édite [`watchlist.txt`](watchlist.txt) (une recherche par ligne, `#` = commentaire) :
-
-```
-nike air max
-jordan 1
-stanley cup
-labubu
-```
-
-Ou passe-les en variable d'environnement : `VINTED_QUERIES="nike air max,jordan 1"`.
+> 📌 **Vues indisponibles en anonyme.** Vinted renvoie `0` vue dans le catalogue
+> et `404` sur la fiche sans être connecté. Le classement se base donc sur les
+> **favoris** (excellent proxy de demande). Pour débloquer les vues : colle ta
+> session via `VINTED_COOKIE` et mets `FETCH_VIEWS=true` (mode watchlist).
+>
+> ⚠️ Vinted **plafonne ~960 résultats** par requête : sur les très grosses
+> catégories on échantillonne les plus pertinents récents, pas l'exhaustivité.
 
 ## Lancer en local
 
 ```bash
 pip install -r requirements.txt
 
-# Analyse à blanc (n'envoie aucun digest) :
-DRY_RUN=true VINTED_QUERIES="jordan 1,stanley cup" python3 vinted_analyzer.py
+# Mode catégories (défaut), à blanc :
+DRY_RUN=true python3 vinted_analyzer.py
 
-# Avec digest Discord :
-DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/xxx/yyy" python3 vinted_analyzer.py
+# Restreindre à quelques catégories (IDs) et élargir la fenêtre :
+DRY_RUN=true VINTED_CATEGORIES="2994,4824" DAYS_WINDOW=14 python3 vinted_analyzer.py
+
+# Mode watchlist (recherches précises) :
+DRY_RUN=true MODE=watchlist VINTED_QUERIES="jordan 1,stanley cup" python3 vinted_analyzer.py
 ```
 
 ## Automatisation (GitHub Actions)
 
 Le workflow [`.github/workflows/vinted-demand.yml`](.github/workflows/vinted-demand.yml)
-tourne **toutes les 6 heures**, écrit le rapport dans `state/` et envoie le
-digest. Ajoute tes secrets dans **Settings → Secrets and variables → Actions** :
-`DISCORD_WEBHOOK_URL` (ou `TELEGRAM_*`), et `VINTED_COOKIE` si tu veux les vues.
+lance le scan catégories **toutes les 6 heures**, écrit le rapport dans `state/`
+et envoie le digest. Ajoute tes secrets dans **Settings → Secrets and variables
+→ Actions** : `DISCORD_WEBHOOK_URL` (ou `TELEGRAM_*`).
 
 ## Réglages (variables d'environnement)
 
 | Variable | Défaut | Rôle |
 |----------|--------|------|
-| `VINTED_QUERIES` | *(vide)* | Recherches séparées par des virgules (prioritaire sur le fichier) |
-| `WATCHLIST_FILE` | `watchlist.txt` | Fichier de recherches (une par ligne) |
+| `MODE` | `categories` | `categories` (scan hors vêtements) ou `watchlist` |
+| `DAYS_WINDOW` | `7` | Fenêtre de fraîcheur : articles postés depuis N jours |
+| `CATEGORY_MAX_PAGES` | `3` | Pages de 96 articles lues par catégorie |
+| `MIN_FAVOURITES` | `3` | Ignore les articles sous ce nombre de favoris |
+| `EXCLUDE_PATTERNS` | `vêtement,…,créateur` | Catégories exclues par titre |
+| `VINTED_CATEGORIES` | *(auto)* | Forcer des IDs de catégories (sépar. virgules) |
+| `TOP_ITEMS` | `30` | Taille du top produits affiché |
 | `VINTED_DOMAIN` | `www.vinted.fr` | Domaine Vinted ciblé |
-| `MAX_PAGES` | `3` | Pages de 96 articles lues par recherche |
-| `CATALOG_ORDER` | `relevance` | Tri : `relevance` / `newest_first` / `price_low_to_high`… |
-| `PRICE_FROM` / `PRICE_TO` | *(vide)* | Filtre de prix appliqué à toutes les recherches |
-| `FETCH_VIEWS` | `false` | Récupérer les vues (nécessite `VINTED_COOKIE`) |
-| `VINTED_COOKIE` | *(vide)* | En-tête `Cookie` de ta session connectée (débloque les vues) |
-| `VINTED_ACCESS_TOKEN` | *(vide)* | Alternative : jeton Bearer de session |
-| `TOP_VIEWS` | `20` | Articles enrichis en vues par recherche |
-| `VIEW_WEIGHT` | `0.05` | Poids des vues dans l'indice de demande |
-| `TOP_ITEMS` | `25` | Taille du top d'articles affiché |
+| `VINTED_QUERIES` / `WATCHLIST_FILE` | *(vide)* / `watchlist.txt` | Recherches (mode watchlist) |
+| `FETCH_VIEWS` + `VINTED_COOKIE` | `false` | Récupérer les vues (session requise) |
+| `PRICE_FROM` / `PRICE_TO` | *(vide)* | Filtre de prix |
 | `CONCURRENCY` | `4` | Requêtes parallèles |
-| `PROXY` | *(vide)* | Proxy (idéalement résidentiel) pour contourner DataDome sur VPS |
-| `LOOP_ENABLED` | `false` | Boucle continue (service systemd) |
-| `LOOP_INTERVAL_SECONDS` | `3600` | Pause entre deux analyses en boucle |
+| `PROXY` | *(vide)* | Proxy (idéalement résidentiel) pour DataDome sur VPS |
+| `LOOP_ENABLED` / `LOOP_INTERVAL_SECONDS` | `false` / `3600` | Boucle continue (systemd) |
 | `REPORT_JSON` / `REPORT_CSV` | `state/vinted_report.*` | Chemins des rapports |
 | `DRY_RUN` | `false` | N'envoie aucun digest |
 

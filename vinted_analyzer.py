@@ -91,7 +91,41 @@ VINTED_ACCESS_TOKEN = os.environ.get("VINTED_ACCESS_TOKEN", "").strip()
 VIEW_WEIGHT = float(os.environ.get("VIEW_WEIGHT", "0.05"))
 
 # Combien d'articles afficher dans le top global du rapport.
-TOP_ITEMS = int(os.environ.get("TOP_ITEMS", "25"))
+TOP_ITEMS = int(os.environ.get("TOP_ITEMS", "30"))
+
+# --------------------------------------------------------------------------- #
+# Mode SCAN CATÉGORIES — trouver les produits récents les plus likés, toutes
+# catégories SAUF les vêtements. C'est le mode par défaut.
+#   MODE=categories : scanne l'arbre des catégories Vinted (hors vêtements),
+#       filtre aux articles postés depuis DAYS_WINDOW jours, classe par favoris.
+#   MODE=watchlist  : ancien mode, analyse les recherches de la watchlist.
+# --------------------------------------------------------------------------- #
+MODE = os.environ.get("MODE", "categories").strip().lower()
+# Fenêtre de fraîcheur : on ne garde que les articles postés depuis N jours.
+DAYS_WINDOW = float(os.environ.get("DAYS_WINDOW", "7"))
+# Pages (de 96) lues par catégorie en mode scan (relevance remonte les
+# articles récents les plus engageants en premier).
+CATEGORY_MAX_PAGES = int(os.environ.get("CATEGORY_MAX_PAGES", "3"))
+# On ignore le bruit : n'afficher que les articles ayant au moins X favoris.
+MIN_FAVOURITES = int(os.environ.get("MIN_FAVOURITES", "3"))
+# Catégories à EXCLURE par titre (insensible casse/accents). Par défaut on
+# retire les vêtements et la mode créateurs ; on GARDE chaussures, sacs,
+# accessoires, électronique, maison, collections, jouets, sport…
+EXCLUDE_PATTERNS = [
+    p.strip().lower()
+    for p in os.environ.get(
+        "EXCLUDE_PATTERNS", "vêtement,vetement,créateur,createur"
+    ).split(",")
+    if p.strip()
+]
+# Forcer une liste d'IDs de catégories (sinon arbre auto). Ex: "2994,4824,1918"
+VINTED_CATEGORIES = [
+    c.strip()
+    for c in os.environ.get("VINTED_CATEGORIES", "").split(",")
+    if c.strip()
+]
+# Combien d'articles du top afficher PAR catégorie dans le rapport.
+TOP_PER_CATEGORY = int(os.environ.get("TOP_PER_CATEGORY", "5"))
 
 CONCURRENCY = int(os.environ.get("CONCURRENCY", "4"))
 REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "20"))
@@ -171,13 +205,20 @@ _warm_lock = threading.Lock()
 
 
 def _is_challenge(content: bytes) -> bool:
-    """Détecte une page-challenge anti-bot (DataDome) au lieu du JSON attendu."""
+    """Détecte une page-challenge anti-bot (DataDome).
+
+    Attention : la home Vinted est du HTML légitime — on ne flague donc PAS le
+    simple fait d'être du HTML, seulement les marqueurs explicites de challenge
+    ou une réponse anormalement courte.
+    """
     if len(content) < 2:
         return True
-    head = content[:600].lstrip().lower()
-    if head[:1] in (b"{", b"["):  # JSON valide
-        return False
-    return b"datadome" in head or b"<html" in head or b"captcha" in head
+    head = content[:1500].lstrip().lower()
+    return (
+        b"datadome" in head
+        or b"captcha-delivery" in head
+        or b"are you a human" in head
+    )
 
 
 def _new_session():
@@ -373,22 +414,63 @@ def _photo_url(item: dict) -> str:
     return ""
 
 
-def fetch_catalog(query: str) -> list[dict]:
-    """Lit jusqu'à MAX_PAGES pages du catalogue pour une recherche.
+def _posted_ts(item: dict) -> int | None:
+    """Timestamp (Unix) de mise en ligne ≈ date de publication, lu sur la
+    photo principale (photo.high_resolution.timestamp)."""
+    photo = item.get("photo") or {}
+    if isinstance(photo, dict):
+        hr = photo.get("high_resolution") or {}
+        ts = hr.get("timestamp")
+        if ts:
+            try:
+                return int(ts)
+            except (TypeError, ValueError):
+                return None
+    return None
 
-    Renvoie une liste d'articles normalisés : id, title, price, brand, size,
-    status (état), favourites, url, image. Les vues ne sont PAS ici (voir
-    fetch_views).
+
+def _normalize(it: dict, *, query: str = "", category: str = "") -> dict:
+    """Article brut de l'API -> dict normalisé commun à tous les modes."""
+    ts = _posted_ts(it)
+    age = None
+    if ts:
+        age = round((time.time() - ts) / 86400.0, 2)
+    return {
+        "id": it.get("id"),
+        "title": it.get("title") or "",
+        "price": _price(it),
+        "brand": it.get("brand_title") or "",
+        "size": it.get("size_title") or "",
+        "status": it.get("status") or "",
+        "favourites": int(it.get("favourite_count") or 0),
+        "views": None,  # rempli par fetch_views (option, session requise)
+        "posted_ts": ts,
+        "age_days": age,
+        "url": it.get("url") or f"{SITE_ROOT}/items/{it.get('id')}",
+        "image": _photo_url(it),
+        "query": query,
+        "category": category,
+    }
+
+
+def _fetch_items(extra_params: dict, max_pages: int, *, query: str = "",
+                 category: str = "", age_max_days: float | None = None,
+                 order: str | None = None) -> list[dict]:
+    """Lit jusqu'à max_pages du catalogue avec les filtres donnés.
+
+    Si age_max_days est fixé, on s'arrête dès qu'une page n'apporte plus
+    d'article assez récent (l'API trie en gros par fraîcheur/pertinence), et on
+    ne renvoie que les articles dans la fenêtre.
     """
     items: list[dict] = []
     seen_ids: set = set()
-    for page in range(1, MAX_PAGES + 1):
+    for page in range(1, max_pages + 1):
         params = {
-            "search_text": query,
             "page": page,
             "per_page": PER_PAGE,
-            "order": CATALOG_ORDER,
+            "order": order or CATALOG_ORDER,
             "currency": CURRENCY,
+            **extra_params,
         }
         if PRICE_FROM:
             params["price_from"] = PRICE_FROM
@@ -397,32 +479,32 @@ def fetch_catalog(query: str) -> list[dict]:
         url = f"{API_ROOT}/catalog/items?" + urllib.parse.urlencode(params)
         data = http_get_json(url)
         raw_items = data.get("items") or []
+        fresh_on_page = 0
         for it in raw_items:
             iid = it.get("id")
             if iid in seen_ids:
-                continue  # même article revu sur une autre page
+                continue
             seen_ids.add(iid)
-            items.append(
-                {
-                    "id": it.get("id"),
-                    "title": it.get("title") or "",
-                    "price": _price(it),
-                    "brand": it.get("brand_title") or "",
-                    "size": it.get("size_title") or "",
-                    "status": it.get("status") or "",
-                    "favourites": int(it.get("favourite_count") or 0),
-                    "views": None,  # rempli par fetch_views (option)
-                    "url": it.get("url") or f"{SITE_ROOT}/items/{it.get('id')}",
-                    "image": _photo_url(it),
-                    "query": query,
-                }
-            )
-        # Stop si dernière page atteinte.
+            norm = _normalize(it, query=query, category=category)
+            if age_max_days is not None:
+                if norm["age_days"] is None or norm["age_days"] > age_max_days:
+                    continue  # hors fenêtre de fraîcheur
+                fresh_on_page += 1
+            items.append(norm)
         pag = data.get("pagination") or {}
         total_pages = int(pag.get("total_pages") or 0)
         if not raw_items or (total_pages and page >= total_pages):
             break
+        # En mode fenêtre : si une page entière ne contient plus rien de récent,
+        # inutile de continuer (les suivantes sont encore plus anciennes).
+        if age_max_days is not None and fresh_on_page == 0 and page >= 2:
+            break
     return items
+
+
+def fetch_catalog(query: str) -> list[dict]:
+    """Lit le catalogue pour une recherche texte (mode watchlist)."""
+    return _fetch_items({"search_text": query}, MAX_PAGES, query=query)
 
 
 def fetch_views(item_id) -> tuple[int | None, int | None]:
@@ -442,8 +524,104 @@ def fetch_views(item_id) -> tuple[int | None, int | None]:
 
 
 # --------------------------------------------------------------------------- #
+# Arbre des catégories Vinted (mode scan)
+# --------------------------------------------------------------------------- #
+
+def fetch_catalog_tree() -> list[dict]:
+    """Récupère l'arbre des catégories depuis la home (JSON embarqué).
+
+    Vinted n'expose pas d'endpoint catégories ; l'arbre est sérialisé dans la
+    page d'accueil sous la clé "catalogTree". On le déséchappe et on le parse.
+    """
+    raw = http_get(SITE_ROOT + "/").decode("utf-8", "replace")
+    s = raw.replace('\\"', '"').replace("\\\\", "\\")
+    key = '"catalogTree":'
+    i = s.find(key)
+    if i == -1:
+        raise RuntimeError("catalogTree introuvable dans la home")
+    j = s.find("[", i)
+    depth = 0
+    end = None
+    for k in range(j, len(s)):
+        c = s[k]
+        if c == "[":
+            depth += 1
+        elif c == "]":
+            depth -= 1
+            if depth == 0:
+                end = k + 1
+                break
+    if end is None:
+        raise RuntimeError("catalogTree mal formé")
+    return json.loads(s[j:end])
+
+
+def _strip_accents(text: str) -> str:
+    table = str.maketrans("àâäéèêëïîôöùûüç", "aaaeeeeiioouuuc")
+    return text.lower().translate(table)
+
+
+def _excluded(title: str) -> bool:
+    t = _strip_accents(title)
+    return any(_strip_accents(p) in t for p in EXCLUDE_PATTERNS)
+
+
+def list_scan_categories() -> list[dict]:
+    """Liste des catégories à scanner = sous-catégories de niveau 1 de chaque
+    racine, en retirant les vêtements (EXCLUDE_PATTERNS). Renvoie [{id, title}].
+
+    Si VINTED_CATEGORIES est fourni, on l'utilise tel quel (override).
+    """
+    if VINTED_CATEGORIES:
+        return [{"id": cid, "title": f"cat {cid}"} for cid in VINTED_CATEGORIES]
+
+    tree = fetch_catalog_tree()
+    cats: list[dict] = []
+    seen: set = set()
+    for root in tree:
+        if _excluded(root.get("title", "")):
+            continue
+        children = root.get("catalogs") or []
+        # Une racine sans enfants -> on la scanne directement.
+        targets = children or [root]
+        for c in targets:
+            title = c.get("title", "")
+            cid = c.get("id")
+            if cid is None or cid in seen or _excluded(title):
+                continue
+            seen.add(cid)
+            cats.append({"id": cid, "title": f"{root.get('title','')} › {title}"})
+    return cats
+
+
+def scan_category(cat: dict) -> list[dict]:
+    """Scanne une catégorie : articles postés depuis DAYS_WINDOW jours."""
+    try:
+        items = _fetch_items(
+            {"catalog_ids": cat["id"]},
+            CATEGORY_MAX_PAGES,
+            category=cat["title"],
+            age_max_days=DAYS_WINDOW,
+            order="relevance",  # remonte les articles récents les + engageants
+        )
+    except Exception as err:  # noqa: BLE001
+        print(f"[catégorie] {cat['title']}: {err}", file=sys.stderr)
+        return []
+    return items
+
+
+# --------------------------------------------------------------------------- #
 # Analyse / score de demande
 # --------------------------------------------------------------------------- #
+
+def hotness(item: dict) -> float:
+    """Favoris par jour depuis la mise en ligne : favorise ce qui monte vite."""
+    age = item.get("age_days")
+    fav = item.get("favourites") or 0
+    if not age or age < 0.5:
+        age = 0.5  # évite de surévaluer les articles de quelques heures
+    return round(fav / age, 1)
+
 
 def demand_score(item: dict) -> float:
     """Score de demande d'un article : favoris + poids · vues."""
@@ -700,10 +878,183 @@ def load_queries() -> list[str]:
 
 
 # --------------------------------------------------------------------------- #
+# Mode SCAN CATÉGORIES : rapport "produits les plus likés (récents)"
+# --------------------------------------------------------------------------- #
+
+def _age_label(age: float | None) -> str:
+    if age is None:
+        return "?"
+    if age < 1:
+        return f"{int(age * 24)}h"
+    return f"{age:.1f}j"
+
+
+def print_products_report(items: list[dict], cats: list[dict]) -> None:
+    """Affiche le top des articles récents les plus likés + résumé catégories."""
+    ranked = sorted(items, key=lambda x: x["favourites"], reverse=True)
+    top = ranked[:TOP_ITEMS]
+    print("\n" + "=" * 92)
+    print(
+        f"TOP {len(top)} PRODUITS LES PLUS LIKÉS — postés ≤ {DAYS_WINDOW:.0f}j, "
+        f"hors vêtements ({len(cats)} catégories scannées)"
+    )
+    print("=" * 92)
+    print(f"{'#':>2}  {'❤fav':>5}{'/jour':>7}{'âge':>6}{'prix':>9}  "
+          f"{'catégorie':<24}{'article':<30}")
+    print("-" * 92)
+    for i, it in enumerate(top, 1):
+        cat = (it.get("category") or "").split("›")[-1].strip()
+        print(
+            f"{i:>2}  {it['favourites']:>5}{hotness(it):>7.0f}"
+            f"{_age_label(it['age_days']):>6}{_euro(it['price']):>9}  "
+            f"{cat[:24]:<24}{it['title'][:30]:<30}  {it['url']}"
+        )
+    print("=" * 92 + "\n")
+
+    # Top "ça monte vite" (favoris/jour) = repérer les tendances naissantes.
+    by_hot = sorted(items, key=hotness, reverse=True)[:TOP_PER_CATEGORY * 2]
+    print(f"⚡ TENDANCES QUI MONTENT VITE (favoris/jour)")
+    print("-" * 92)
+    for i, it in enumerate(by_hot, 1):
+        cat = (it.get("category") or "").split("›")[-1].strip()
+        print(
+            f"{i:>2}  {hotness(it):>5.0f} fav/j  ❤{it['favourites']:<4} "
+            f"{_age_label(it['age_days']):>5}  {_euro(it['price']):>8}  "
+            f"{cat[:20]:<20} {it['title'][:34]}"
+        )
+    print()
+
+
+def write_products_report(items: list[dict]) -> None:
+    """Écrit le top produits en JSON + CSV."""
+    ranked = sorted(items, key=lambda x: x["favourites"], reverse=True)[:max(TOP_ITEMS, 200)]
+    payload = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "domain": VINTED_DOMAIN,
+        "mode": "categories",
+        "days_window": DAYS_WINDOW,
+        "n_items": len(items),
+        "top": ranked,
+    }
+    try:
+        os.makedirs(os.path.dirname(REPORT_JSON) or ".", exist_ok=True)
+        with open(REPORT_JSON, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, ensure_ascii=False, indent=2)
+        print(f"[rapport] JSON écrit -> {REPORT_JSON}")
+    except OSError as err:
+        print(f"[rapport] JSON échec: {err}", file=sys.stderr)
+
+    try:
+        os.makedirs(os.path.dirname(REPORT_CSV) or ".", exist_ok=True)
+        with open(REPORT_CSV, "w", encoding="utf-8", newline="") as fh:
+            w = csv.writer(fh)
+            w.writerow(
+                ["rang", "favoris", "favoris_par_jour", "age_jours", "prix",
+                 "marque", "etat", "categorie", "titre", "url"]
+            )
+            for i, it in enumerate(ranked, 1):
+                w.writerow(
+                    [i, it["favourites"], hotness(it), it["age_days"],
+                     it["price"], it["brand"], it["status"], it["category"],
+                     it["title"], it["url"]]
+                )
+        print(f"[rapport] CSV écrit -> {REPORT_CSV}")
+    except OSError as err:
+        print(f"[rapport] CSV échec: {err}", file=sys.stderr)
+
+
+def send_products_digest(items: list[dict]) -> None:
+    if not items:
+        return
+    ranked = sorted(items, key=lambda x: x["favourites"], reverse=True)[:15]
+    title = f"🛍️ Vinted — top produits likés (≤{DAYS_WINDOW:.0f}j, hors vêtements)"
+    lines = []
+    for i, it in enumerate(ranked, 1):
+        cat = (it.get("category") or "").split("›")[-1].strip()
+        lines.append(
+            f"**{i}.** ❤{it['favourites']} · {hotness(it):.0f}/j · "
+            f"{_euro(it['price'])} · _{cat}_ — [{it['title'][:40]}]({it['url']})"
+        )
+    body = "\n".join(lines)
+    if DRY_RUN:
+        print("[DRY_RUN] digest:\n" + title + "\n" + body)
+        return
+    if DISCORD_WEBHOOK_URL:
+        embed = {
+            "title": title,
+            "description": body[:4000],
+            "color": 0x09B1BA,
+            "footer": {"text": "Vinted demand analyzer"},
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        try:
+            _http_post_json(DISCORD_WEBHOOK_URL, {"embeds": [embed]})
+        except Exception as err:  # noqa: BLE001
+            print(f"[discord] échec: {err}", file=sys.stderr)
+    if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
+        text = title + "\n\n" + body.replace("**", "")
+        try:
+            _http_post_json(
+                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                {"chat_id": TELEGRAM_CHAT_ID, "text": text[:4000],
+                 "parse_mode": "Markdown", "disable_web_page_preview": True},
+            )
+        except Exception as err:  # noqa: BLE001
+            print(f"[telegram] échec: {err}", file=sys.stderr)
+
+
+def run_categories() -> int:
+    """Scanne toutes les catégories (hors vêtements) et liste les produits
+    récents les plus likés."""
+    now = datetime.now(timezone.utc)
+    print(f"== Scan catégories Vinted == {now.isoformat()} — {VINTED_DOMAIN}")
+    try:
+        cats = list_scan_categories()
+    except Exception as err:  # noqa: BLE001
+        print(f"[catégories] impossible de lister: {err}", file=sys.stderr)
+        return 1
+    if not cats:
+        print("Aucune catégorie à scanner.", file=sys.stderr)
+        return 1
+    print(
+        f"{len(cats)} catégories (hors: {', '.join(EXCLUDE_PATTERNS)}), "
+        f"fenêtre {DAYS_WINDOW:.0f}j, {CATEGORY_MAX_PAGES} page(s)/cat."
+    )
+
+    all_items: dict = {}  # id -> item (dédup inter-catégories)
+    with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
+        futs = {pool.submit(scan_category, c): c for c in cats}
+        done = 0
+        for fut in as_completed(futs):
+            c = futs[fut]
+            got = fut.result()
+            for it in got:
+                if it["favourites"] < MIN_FAVOURITES:
+                    continue
+                prev = all_items.get(it["id"])
+                if prev is None or it["favourites"] > prev["favourites"]:
+                    all_items[it["id"]] = it
+            done += 1
+            print(f"  • [{done}/{len(cats)}] {c['title']}: {len(got)} récents")
+            sd_notify("WATCHDOG=1")
+
+    items = list(all_items.values())
+    if not items:
+        print("Aucun article récent trouvé.", file=sys.stderr)
+        return 1
+    print(f"\n{len(items)} articles récents (≥{MIN_FAVOURITES} favoris) collectés.")
+
+    print_products_report(items, cats)
+    write_products_report(items)
+    send_products_digest(items)
+    return 0
+
+
+# --------------------------------------------------------------------------- #
 # Main
 # --------------------------------------------------------------------------- #
 
-def run_once() -> int:
+def run_watchlist() -> int:
     queries = load_queries()
     if not queries:
         print(
@@ -743,6 +1094,13 @@ def run_once() -> int:
     write_reports(results)
     send_digest(results)
     return 0
+
+
+def run_once() -> int:
+    """Choisit le mode : scan catégories (défaut) ou watchlist."""
+    if MODE == "watchlist":
+        return run_watchlist()
+    return run_categories()
 
 
 def main() -> int:
