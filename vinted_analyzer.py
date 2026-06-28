@@ -418,6 +418,26 @@ def _photo_url(item: dict) -> str:
     return ""
 
 
+# Heure de RÉFÉRENCE pour calculer l'âge = horloge du serveur Vinted
+# (pagination.time de chaque réponse). Fiable même si l'horloge locale dérive
+# (utile en CI). Repli sur time.time() tant qu'aucune réponse n'a été lue.
+_server_now = [0.0]
+_server_lock = threading.Lock()
+
+
+def _ref_now() -> float:
+    with _server_lock:
+        return _server_now[0] or time.time()
+
+
+def _note_server_time(data: dict) -> None:
+    t = (data.get("pagination") or {}).get("time")
+    if t:
+        with _server_lock:
+            if t > _server_now[0]:
+                _server_now[0] = float(t)
+
+
 def _posted_ts(item: dict) -> int | None:
     """Timestamp (Unix) de mise en ligne ≈ date de publication, lu sur la
     photo principale (photo.high_resolution.timestamp)."""
@@ -438,7 +458,7 @@ def _normalize(it: dict, *, query: str = "", category: str = "") -> dict:
     ts = _posted_ts(it)
     age = None
     if ts:
-        age = round((time.time() - ts) / 86400.0, 2)
+        age = round((_ref_now() - ts) / 86400.0, 2)
     return {
         "id": it.get("id"),
         "title": it.get("title") or "",
@@ -482,6 +502,7 @@ def _fetch_items(extra_params: dict, max_pages: int, *, query: str = "",
             params["price_to"] = PRICE_TO
         url = f"{API_ROOT}/catalog/items?" + urllib.parse.urlencode(params)
         data = http_get_json(url)
+        _note_server_time(data)  # cale l'heure de référence sur le serveur
         raw_items = data.get("items") or []
         fresh_on_page = 0
         for it in raw_items:
