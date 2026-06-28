@@ -1,2 +1,201 @@
-rang,recherche,indice_demande,favoris_moyens,vues_moyennes,annonces,prix_median,prix_min,favoris_total,vues_total
-1,jordan 1,18.97,18.97,,96,105.0,5.0,1821,
+rang,favoris,favoris_par_jour,age_jours,prix,marque,etat,categorie,titre,url
+1,288,176.7,1.63,60.0,Starlyf,Neuf avec étiquette,Maison › Entretien de la maison,"Climatizador evaporativo Starlyf Cold Air, modelo YS-48",https://www.vinted.fr/items/9262822881-climatizador-evaporativo-starlyf-cold-air-modelo-ys-48
+2,275,550.0,0.26,90.0,boutique indépendante,Très bon état,Femmes › Sacs,Inspiration sac 24h Gérard Darel kaki,https://www.vinted.fr/items/9274452035-inspiration-sac-24h-gerard-darel-kaki
+3,263,42.8,6.14,52.0,Stanley,Neuf sans étiquette,"Sport › Fitness, course à pied et yoga",Stanley Quencher 1.18L,https://www.vinted.fr/items/9235070419-stanley-quencher-118l
+4,253,216.2,1.17,3.5,Alternative,Neuf sans étiquette,Loisirs et collections › Loisirs créatifs,Patchs / écussons thermocollants,https://www.vinted.fr/items/9264419685-patchs-ecussons-thermocollants
+5,246,76.4,3.22,1.0,Panini,Neuf sans étiquette,Loisirs et collections › Cartes à collectionner,Panini Sticker nach Wahl,https://www.vinted.fr/items/9254477516-panini-sticker-nach-wahl
+6,244,488.0,0.41,28.0,Accessories,Neuf sans étiquette,Femmes › Sacs,polka dot retro bag,https://www.vinted.fr/items/9272166549-polka-dot-retro-bag
+7,238,476.0,0.27,30.0,,Très bon état,Femmes › Chaussures,Babies Mary Jane pointure 39,https://www.vinted.fr/items/9274369498-babies-mary-jane-pointure-39
+8,235,183.6,1.28,68.0,JW PEI,Neuf sans étiquette,Femmes › Sacs,jw pei bag,https://www.vinted.fr/items/9266495256-jw-pei-bag
+9,217,35.9,6.05,260.0,Apple,Très bon état,Électronique › Ordinateurs et accessoires,MacBook Pro 2017 - Apple,https://www.vinted.fr/items/9235910151-macbook-pro-2017-apple
+10,213,140.1,1.52,58.0,Stanley,Très bon état,"Sport › Fitness, course à pied et yoga",Stanley x LoveShackFancy Quencher H2.0 – Edição Limitada 🌸,https://www.vinted.fr/items/9263830654-stanley-x-loveshackfancy-quencher-h20-edicao-limitada
+11,196,126.5,1.55,60.0,sans marque,Très bon état,Loisirs et collections › Jeux de société,Échiquier en résine rose et doré,https://www.vinted.fr/items/9263513963-echiquier-en-resine-rose-et-dore
+12,195,63.7,3.06,65.0,Bébé Confort,Très bon état,Enfants › Meubles et décoration,Berceau Cododo calidoo Bébé confort,https://www.vinted.fr/items/9255868762-berceau-cododo-calidoo-bebe-confort
+13,195,94.2,2.07,50.0,FUJIFILM,Très bon état,Électronique › Appareils photo et accessoires,Appareil photo Fujifilm,https://www.vinted.fr/items/9261832490-appareil-photo-fujifilm
+14,186,40.3,4.62,90.0,Apple,Très bon état,"Électronique › Tablettes, liseuses et accessoires",iPad 7ème génération - Gris Sidéral,https://www.vinted.fr/items/9134565760-ipad-7eme-generation-gris-sideral
+15,186,35.3,5.27,20.0,DUAL,Très bon état,Électronique › TV et home cinema,Portable DVD Spieler Player,https://www.vinted.fr/items/9240550642-portable-dvd-spieler-player
+16,182,51.3,3.55,10.0,FairyLoot,Neuf avec étiquette,Loisirs et collections › Rangements pour objets de collection,Fairyloot - Crimson Month pin book (YA June box ),https://www.vinted.fr/items/9251142557-fairyloot-crimson-month-pin-book-ya-june-box
+17,180,52.2,3.45,11.0,Squishy,Très bon état,Loisirs et collections › Accessoires de jeux,Squishy,https://www.vinted.fr/items/9252026023-squishy
+18,179,38.2,4.68,25.0,bricard,Neuf avec étiquette,Maison › Arts de la table,Bricard 4 x Cupido | Cupid | Barles | Perla kom 14x6.9 cm,https://www.vinted.fr/items/9243510931-bricard-4-x-cupido-cupid-barles-perla-kom-14x69-cm
+19,178,141.3,1.26,13.0,Quartz,Très bon état,Hommes › Accessoires,Montre femme dorée à perles,https://www.vinted.fr/items/9265755975-montre-femme-doree-a-perles
+20,178,40.7,4.37,350.0,Apple,Bon état,Électronique › Téléphones portables et équipements de communication,iPhone 15 Wit 128GB | 100% Batterij | Nieuw OLED Scherm,https://www.vinted.fr/items/9246262993-iphone-15-wit-128gb-100-batterij-nieuw-oled-scherm
+21,172,66.4,2.59,39.99,Kodak,Bon état,Électronique › Appareils photo et accessoires,Kodak EasyShare CX6200 2MP Digicam Y2K Appareil Photo Numérique Vintage Fonctionnel,https://www.vinted.fr/items/9151674895-kodak-easyshare-cx6200-2mp-digicam-y2k-appareil-photo-numerique-vintage-fonctionnel
+22,171,111.8,1.53,60.0,Dragon's,Très bon état,Femmes › Sacs,Borsa intrecciata marrone effetto pelle stile Bottega Veneta,https://www.vinted.fr/items/9263656024-borsa-intrecciata-marrone-effetto-pelle-stile-bottega-veneta
+23,168,64.9,2.59,59.99,Nikon,Très bon état,Électronique › Appareils photo et accessoires,Nikon Coolpix L5 7.2MP VR Appareil Photo Numérique Vintage Y2K Complet Boîte Fonctionnel,https://www.vinted.fr/items/9204800313-nikon-coolpix-l5-72mp-vr-appareil-photo-numerique-vintage-y2k-complet-boite-fonctionnel
+24,167,26.3,6.34,15.0,Apple,Bon état,Électronique › Téléphones portables et équipements de communication,Cerco stock di iphone,https://www.vinted.fr/items/9232592118-cerco-stock-di-iphone
+25,167,30.8,5.42,59.99,Enhypen,Neuf avec étiquette,Loisirs et collections › Instruments de musique et équipement,Enhypen Lightstick (New),https://www.vinted.fr/items/9227142374-enhypen-lightstick-new
+26,165,300.0,0.55,95.0,Nintendo,Satisfaisant,Électronique › Jeux vidéo et consoles,Nintendo switch 1,https://www.vinted.fr/items/9270227801-nintendo-switch-1
+27,164,328.0,0.45,90.0,& Other Stories,Neuf avec étiquette,Femmes › Sacs,"Sac four tout, cabas en cuir marron",https://www.vinted.fr/items/9271639839-sac-four-tout-cabas-en-cuir-marron
+28,160,36.0,4.44,390.0,Apple,Neuf avec étiquette,"Électronique › Tablettes, liseuses et accessoires",iPad pro m4,https://www.vinted.fr/items/9245554781-ipad-pro-m4
+29,158,316.0,0.29,20.0,Vintage Dressing,Bon état,Femmes › Chaussures,Escarpins vintage en cuir véritable,https://www.vinted.fr/items/9272717585-escarpins-vintage-en-cuir-veritable
+30,156,104.0,1.5,40.0,Fisher Price,Très bon état,"Électronique › Audio, casques et hi-fi","Fisher price.  Reproductor, grabador de cintas de casete.",https://www.vinted.fr/items/9264024217-fisher-price-reproductor-grabador-de-cintas-de-casete
+31,154,308.0,0.22,10.0,H&M,Très bon état,Femmes › Chaussures,Mules plates à bout carré camel taille 38,https://www.vinted.fr/items/9275103474-mules-plates-a-bout-carre-camel-taille-38
+32,153,133.0,1.15,3.0,Charm,Neuf avec étiquette,Électronique › Téléphones portables et équipements de communication,Spille e portachiavi fatti a mano,https://www.vinted.fr/items/9267838424-spille-e-portachiavi-fatti-a-mano
+33,152,257.6,0.59,10.0,Vintage,Bon état,Maison › Décoration,Patère 70's,https://www.vinted.fr/items/9269827805-patere-70s
+34,150,47.0,3.19,30.0,adidas,Très bon état,Hommes › Chaussures,Adidas,https://www.vinted.fr/items/9254737608-adidas
+35,148,166.3,0.89,32.0,Vintage Dressing,Neuf avec étiquette,Femmes › Sacs,Sac baguette rouge Y2K,https://www.vinted.fr/items/9268985126-sac-baguette-rouge-y2k
+36,147,26.0,5.66,45.0,Urban Outfitters,Neuf avec étiquette,"Électronique › Audio, casques et hi-fi",Suitcase Wireless Record Player,https://www.vinted.fr/items/9236764906-suitcase-wireless-record-player
+37,147,23.5,6.25,15.0,,Neuf sans étiquette,Divertissement › Musique,Billie Eilish (Over Now) Cd-Single / Fan made,https://www.vinted.fr/items/9233766510-billie-eilish-over-now-cd-single-fan-made
+38,146,94.2,1.55,80.0,FUJIFILM,Très bon état,Électronique › Appareils photo et accessoires,fotocamera digitale Y2K fujifilm FinePix  14MP Rosa,https://www.vinted.fr/items/9263439152-fotocamera-digitale-y2k-fujifilm-finepix-14mp-rosa
+39,145,278.8,0.52,170.0,Apple,Bon état,"Électronique › Tablettes, liseuses et accessoires",iPad 10.9 10 Generation 2022,https://www.vinted.fr/items/9270684365-ipad-109-10-generation-2022
+40,144,236.1,0.61,39.9,GUESS,Bon état,Femmes › Sacs,Vintage Guess Bag / Tasche schwarz | y2k | pashastyle | Handbag | Shoulder Bag | Archive,https://www.vinted.fr/items/9269591360-vintage-guess-bag-tasche-schwarz-y2k-pashastyle-handbag-shoulder-bag-archive
+41,144,288.0,0.44,20.0,Eisbecher,Très bon état,Maison › Outils de cuisine,Schöne Eisbecher Pink,https://www.vinted.fr/items/9271768488-schone-eisbecher-pink
+42,144,22.1,6.53,15.9,Disneyland Paris,Neuf sans étiquette,Maison › Arts de la table,Tasse Originale Alice In Wonderland,https://www.vinted.fr/items/9230467201-tasse-originale-alice-in-wonderland
+43,143,286.0,0.22,15.0,Fait Main,Très bon état,Femmes › Accessoires,Montre Quartz dorée avec cadran nacré,https://www.vinted.fr/items/9275107658-montre-quartz-doree-avec-cadran-nacre
+44,143,22.2,6.45,85.0,Sony,Très bon état,Électronique › Appareils photo et accessoires,Sony Cyber-shot DSC-TX5 | 10 megapixels exmor R | 4Gb SD,https://www.vinted.fr/items/9231153956-sony-cyber-shot-dsc-tx5-10-megapixels-exmor-r-4gb-sd
+45,142,59.9,2.37,55.0,Ölend,Très bon état,Hommes › Accessoires,Bolso Ölend estampado vichy,https://www.vinted.fr/items/9259109388-bolso-olend-estampado-vichy
+46,141,282.0,0.23,30.0,ZAG,Très bon état,Femmes › Accessoires,Lot de 2 bijoux ZAG,https://www.vinted.fr/items/9274937776-lot-de-2-bijoux-zag
+47,140,96.6,1.45,100.0,Nintendo,Très bon état,Électronique › Jeux vidéo et consoles,Nintendo Switch Lite Coral,https://www.vinted.fr/items/9264589111-nintendo-switch-lite-coral
+48,139,278.0,0.41,35.0,Westwing,Très bon état,Maison › Arts de la table,Schöne Trinkgläser Rosa Murano,https://www.vinted.fr/items/9272086998-schone-trinkglaser-rosa-murano
+49,138,276.0,0.25,38.5,hcn,Satisfaisant,Électronique › TV et home cinema,Lecteur DVD/CD noir portable avec motif floral,https://www.vinted.fr/items/9274719230-lecteur-dvdcd-noir-portable-avec-motif-floral
+50,138,129.0,1.07,18.0,Nelko,Très bon état,Électronique › Autres appareils et accessoires,Imprimante thermique Nelko PM230,https://www.vinted.fr/items/9268229056-imprimante-thermique-nelko-pm230
+51,137,274.0,0.25,17.0,Zara,Très bon état,Femmes › Accessoires,Collar vueltas cuentas redondas Zara,https://www.vinted.fr/items/9274618188-collar-vueltas-cuentas-redondas-zara
+52,132,40.7,3.24,45.0,Maisons du Monde,Très bon état,Maison › Décoration,"Tapisserie murale Carte du Monde ""Around the World"" avec franges",https://www.vinted.fr/items/9251180265-tapisserie-murale-carte-du-monde-around-the-world-avec-franges
+53,131,262.0,0.09,18.0,Vintage Dressing,Très bon état,Femmes › Accessoires,Chocker,https://www.vinted.fr/items/9276818361-chocker
+54,129,29.4,4.39,65.0,Michael Kors,Très bon état,Électronique › Objets connectés,Montre Mickael kors,https://www.vinted.fr/items/9246030883-montre-mickael-kors
+55,128,92.1,1.39,75.0,Coach,Très bon état,Femmes › Sacs,Sac Boston Coach • Style bowling • Toile enduite monogram marron / finitions cuir • Hardware doré,https://www.vinted.fr/items/9265270566-sac-boston-coach-style-bowling-toile-enduite-monogram-marron-finitions-cuir-hardware-dore
+56,128,61.0,2.1,28.0,Silvercrest,Très bon état,Maison › Petits appareils de cuisine,extracteur de jus silvercrest,https://www.vinted.fr/items/9261621706-extracteur-de-jus-silvercrest
+57,128,109.4,1.17,50.0,Nikon,Bon état,Électronique › Appareils photo et accessoires,Nikon coolpix s3300,https://www.vinted.fr/items/9267642209-nikon-coolpix-s3300
+58,127,109.5,1.16,15.0,Demon Slayer,Très bon état,Enfants › Jeux et jouets,Demon slayer,https://www.vinted.fr/items/9267753118-demon-slayer
+59,127,254.0,0.14,30.0,GUESS,Neuf sans étiquette,"Électronique › Audio, casques et hi-fi",Écouteurs sans fil Guess,https://www.vinted.fr/items/9276295011-ecouteurs-sans-fil-guess
+60,126,51.6,2.44,28.0,IKEA,Très bon état,Enfants › Meubles et décoration,Bureau Ikea,https://www.vinted.fr/items/9258456322-bureau-ikea
+61,126,252.0,0.05,85.0,Babymoov,Neuf sans étiquette,Enfants › Allaitement et alimentation,Robot de cocina para bebes,https://www.vinted.fr/items/9227404371-robot-de-cocina-para-bebes
+62,125,250.0,0.31,23.0,Pandora,Très bon état,Femmes › Accessoires,Conjunto aneis,https://www.vinted.fr/items/9273749758-conjunto-aneis
+63,125,250.0,0.23,20.0,ProSports,Très bon état,Femmes › Sacs,Y2K Handtasche Herz Print Vintage Schultertasche Shoulder Bag Retro Trashy,https://www.vinted.fr/items/9267690303-y2k-handtasche-herz-print-vintage-schultertasche-shoulder-bag-retro-trashy
+64,125,47.3,2.64,30.0,RARE,Très bon état,Enfants › Meubles et décoration,Petit banc / repose-pieds rustique en bois massif – fabrication artisanale,https://www.vinted.fr/items/9256815761-petit-banc-repose-pieds-rustique-en-bois-massif-fabrication-artisanale
+65,124,89.2,1.39,17.0,Bershka,Très bon état,Femmes › Sacs,Sac Bershka bordeaux effet cuir,https://www.vinted.fr/items/9265284931-sac-bershka-bordeaux-effet-cuir
+66,124,19.7,6.28,13.0,Miffy,Neuf sans étiquette,Enfants › Sommeil et literie,Nachtlicht Mr Maria Miffy,https://www.vinted.fr/items/9233381655-nachtlicht-mr-maria-miffy
+67,123,95.3,1.29,60.0,Longchamp,Très bon état,Femmes › Sacs,Sac Longchamp Le Pliage Cuir Marron,https://www.vinted.fr/items/9266398501-sac-longchamp-le-pliage-cuir-marron
+68,123,96.1,1.28,80.0,Oculus Quest 2,Bon état,Électronique › Jeux vidéo et consoles,Oculus quest 2 vr headset,https://www.vinted.fr/items/9266498072-oculus-quest-2-vr-headset
+69,123,19.4,6.35,65.0,,Neuf sans étiquette,Divertissement › Musique,Olivia Rodrigo - vinyl (Apple exclusive),https://www.vinted.fr/items/9232518775-olivia-rodrigo-vinyl-apple-exclusive
+70,122,244.0,0.22,45.0,,Très bon état,Maison › Décoration,Metaal krukje,https://www.vinted.fr/items/9275166717-metaal-krukje
+71,121,140.7,0.86,63.0,GD24h,Très bon état,Femmes › Sacs,Sac noir style Gérard Darel 24h noir & finitions dorées - grande capacité,https://www.vinted.fr/items/9269003189-sac-noir-style-gerard-darel-24h-noir-finitions-dorees-grande-capacite
+72,121,112.0,1.08,7.0,,Neuf avec étiquette,Hommes › Accessoires,Nos foulards en  neufs et avec étiquette.,https://www.vinted.fr/items/9268313003-nos-foulards-en-neufs-et-avec-etiquette
+73,120,18.3,6.57,55.0,,Neuf sans étiquette,Divertissement › Musique,Album XLOV signé et complet,https://www.vinted.fr/items/9230144989-album-xlov-signe-et-complet
+74,119,28.7,4.15,308.0,Apple,Très bon état,Électronique › Ordinateurs et accessoires,"MacBook Air (Retina, 13-inch, 2020) Intel Core i5, 8GB RAM, 256GB SSD – Kit completo con accessori",https://www.vinted.fr/items/9248506640-macbook-air-retina-13-inch-2020-intel-core-i5-8gb-ram-256gb-ssd-kit-completo-con-accessori
+75,117,234.0,0.35,13.9,,Très bon état,Femmes › Accessoires,ceinture cloutée gothique,https://www.vinted.fr/items/9272972948-ceinture-cloutee-gothique
+76,117,180.0,0.65,17.0,Plage,Très bon état,Femmes › Sacs,Sac plage paille,https://www.vinted.fr/items/9269343506-sac-plage-paille
+77,117,21.4,5.46,90.0,NINJA,Très bon état,Maison › Petits appareils de cuisine,Ninja Crispi Air Fryer in vetro con accessori originali,https://www.vinted.fr/items/9238509163-ninja-crispi-air-fryer-in-vetro-con-accessori-originali
+78,117,26.6,4.4,145.0,Samsung,Neuf avec étiquette,Électronique › Ordinateurs et accessoires,Galaxy Chromebook Go - Sealed - Nieuw in doos,https://www.vinted.fr/items/9245967292-galaxy-chromebook-go-sealed-nieuw-in-doos
+79,115,17.0,6.77,39.0,Vintage Love,Très bon état,Maison › Arts de la table,Antike Buttermuschel Muschel Silber top Zustand,https://www.vinted.fr/items/9229297841-antike-buttermuschel-muschel-silber-top-zustand
+80,115,28.5,4.04,650.0,Apple,Neuf avec étiquette,Électronique › Téléphones portables et équipements de communication,Iphone 16 256GB,https://www.vinted.fr/items/9249606708-iphone-16-256gb
+81,113,176.6,0.64,37.0,Lampe,Très bon état,Maison › Décoration,Orientalische Mozaiklampe#,https://www.vinted.fr/items/9261481934-orientalische-mozaiklampe
+82,112,224.0,0.33,15.0,Quartz,Très bon état,Femmes › Accessoires,Montre bracelet femme dorée – style vintage élégant,https://www.vinted.fr/items/9273434141-montre-bracelet-femme-doree-style-vintage-elegant
+83,112,49.8,2.25,28.0,Hasbro,Très bon état,Loisirs et collections › Jeux de société,Monopoly - The Nightmare Before Christmas,https://www.vinted.fr/items/9260267103-monopoly-the-nightmare-before-christmas
+84,111,222.0,0.27,50.5,Victoria's Secret,Neuf sans étiquette,Femmes › Sacs,Sac - Victoria secret’s,https://www.vinted.fr/items/9273980650-sac-victoria-secrets
+85,111,75.5,1.47,10.0,Liewood,Neuf avec étiquette,Sport › Sports nautiques,Chapeau de bain bébé fille,https://www.vinted.fr/items/9264363398-chapeau-de-bain-bebe-fille
+86,111,222.0,0.22,60.0,Harcour,Neuf avec étiquette,Sport › Équitation,Tapis Harcour,https://www.vinted.fr/items/9275183374-tapis-harcour
+87,110,220.0,0.15,25.0,Monoprix,Neuf sans étiquette,Femmes › Chaussures,Nouvelles ballerines Monoprix 40 eur,https://www.vinted.fr/items/9276148707-nouvelles-ballerines-monoprix-40-eur
+88,110,82.1,1.34,18.5,,Très bon état,Enfants › Sommeil et literie,Süße kuschlige *große* Katzenpfote 🐾,https://www.vinted.fr/items/9265868111-susse-kuschlige-grosse-katzenpfote
+89,110,32.7,3.36,8.0,Fait Main,Neuf sans étiquette,Maison › Outils de cuisine,Lot 3 charlottes alimentaires,https://www.vinted.fr/items/9252952906-lot-3-charlottes-alimentaires
+90,110,34.5,3.19,75.0,DJI,Très bon état,Loisirs et collections › Instruments de musique et équipement,Pack micrófono DJI con pack tapas de colores,https://www.vinted.fr/items/9254712305-pack-microfono-dji-con-pack-tapas-de-colores
+91,109,106.9,1.02,39.0,,Très bon état,Maison › Textiles,Tapis rond 120 cm diamètre rose,https://www.vinted.fr/items/9268725689-tapis-rond-120-cm-diametre-rose
+92,108,216.0,0.47,11.0,Creole,Très bon état,Femmes › Accessoires,Boucles d’oreilles argenté en acier inoxydable diamètre 4 cm,https://www.vinted.fr/items/9271337927-boucles-doreilles-argente-en-acier-inoxydable-diametre-4-cm
+93,108,216.0,0.26,23.0,Swarovski,Très bon état,Femmes › Accessoires,Pendientes plata925 baño oro,https://www.vinted.fr/items/9274505325-pendientes-plata925-bano-oro
+94,108,17.6,6.15,18.0,Action,Neuf avec étiquette,Maison › Outils de cuisine,Salz- und Pfefferstreuer,https://www.vinted.fr/items/9234889464-salz-und-pfefferstreuer
+95,108,200.0,0.54,10.0,Hobby Horse,Très bon état,Sport › Sports de plein air,Accessoire pour Hobby Horse,https://www.vinted.fr/items/9270302723-accessoire-pour-hobby-horse
+96,107,214.0,0.46,28.0,Zara,Neuf avec étiquette,Femmes › Chaussures,Zara meravigliosa scarpa donna com perline e piccoli strass luccicanti n.30,https://www.vinted.fr/items/9271420146-zara-meravigliosa-scarpa-donna-com-perline-e-piccoli-strass-luccicanti-n30
+97,107,184.5,0.58,5.5,Legami,Neuf avec étiquette,Maison › Fournitures de bureau,Crayon de la ferme légami,https://www.vinted.fr/items/9269859434-crayon-de-la-ferme-legami
+98,107,17.0,6.31,80.0,Apple,Bon état,Électronique › Objets connectés,Apple Watch SE GPS 44 mm Space Grey | Excelente Estado | Caixa Original,https://www.vinted.fr/items/9232954419-apple-watch-se-gps-44-mm-space-grey-excelente-estado-caixa-original
+99,106,212.0,0.47,9.0,,Très bon état,Femmes › Accessoires,Bracelet jonc ouvrant émaillé,https://www.vinted.fr/items/9271371468-bracelet-jonc-ouvrant-emaille
+100,105,210.0,0.47,18.0,UGG,Satisfaisant,Femmes › Chaussures,Ugg Boots,https://www.vinted.fr/items/9271249859-ugg-boots
+101,105,20.5,5.13,240.0,Apple,Très bon état,Électronique › Téléphones portables et équipements de communication,Iphone 13 + cavo + accessori originali + 15 cover,https://www.vinted.fr/items/9242158026-iphone-13-cavo-accessori-originali-15-cover
+102,105,67.3,1.56,9.0,Philips,Très bon état,Électronique › TV et home cinema,Philips Lettore DVD Portatile Modello PET719/12 Black and White,https://www.vinted.fr/items/9263397461-philips-lettore-dvd-portatile-modello-pet71912-black-and-white
+103,105,24.5,4.28,35.0,Nature & Decouvertes,Très bon état,"Sport › Fitness, course à pied et yoga",Tapis de yoga,https://www.vinted.fr/items/9247315655-tapis-de-yoga
+104,104,71.2,1.46,35.0,Studio Noos,Neuf avec étiquette,Femmes › Sacs,Studio Noos Tasche Klein,https://www.vinted.fr/items/9264494809-studio-noos-tasche-klein
+105,103,206.0,0.47,12.0,NeeDoh,Très bon état,Enfants › Jeux et jouets,Needoh Nice Cube DrPepper,https://www.vinted.fr/items/9271271629-needoh-nice-cube-drpepper
+106,103,206.0,0.48,200.0,PlayStation,Très bon état,Électronique › Jeux vidéo et consoles,PSP 3000 zp rose comme neuve !!,https://www.vinted.fr/items/9271188286-psp-3000-zp-rose-comme-neuve
+107,103,206.0,0.34,165.0,Apple,Très bon état,Électronique › Téléphones portables et équipements de communication,iPhone 15,https://www.vinted.fr/items/9273262232-iphone-15
+108,102,19.8,5.15,30.0,Philips,Très bon état,Électronique › TV et home cinema,lettore dvd,https://www.vinted.fr/items/9241879461-lettore-dvd
+109,101,43.5,2.32,15.0,,Très bon état,Hommes › Accessoires,Lunettes de soleil couleur noir avec cygne doré y2k uv400 sans monture/bords tendance style vintage,https://www.vinted.fr/items/9259567803-lunettes-de-soleil-couleur-noir-avec-cygne-dore-y2k-uv400-sans-monturebords-tendance-style-vintage
+110,101,19.7,5.13,80.0,Liu Jo,Très bon état,Électronique › Objets connectés,Liu Jo Glam SWLJ157 smartwatch,https://www.vinted.fr/items/9242121761-liu-jo-glam-swlj157-smartwatch
+111,100,79.4,1.26,11.9,,Neuf avec étiquette,Femmes › Beauté,Poudre de sidr,https://www.vinted.fr/items/9266811027-poudre-de-sidr
+112,100,200.0,0.28,90.0,Longchamp,Très bon état,Femmes › Sacs,Sac de voyage longchamp taille L neuf,https://www.vinted.fr/items/9274150038-sac-de-voyage-longchamp-taille-l-neuf
+113,100,93.5,1.07,34.5,,Très bon état,Femmes › Sacs,Handtasche FLORA Olivgrün Retro Vintage Crossbody Vegan,https://www.vinted.fr/items/9268440759-handtasche-flora-olivgrun-retro-vintage-crossbody-vegan
+114,100,64.9,1.54,20.0,,Très bon état,Maison › Décoration,Candeeiro de mesa Polvo,https://www.vinted.fr/items/9263544811-candeeiro-de-mesa-polvo
+115,100,71.9,1.39,100.0,Apple,Bon état,Électronique › Téléphones portables et équipements de communication,iphone 12 64Go,https://www.vinted.fr/items/9265255674-iphone-12-64go
+116,99,198.0,0.43,15.0,vampire diaries,Neuf sans étiquette,Femmes › Accessoires,Lote de collares de crónicas vampíricas (The Vampire Diaries),https://www.vinted.fr/items/9271846980-lote-de-collares-de-cronicas-vampiricas-the-vampire-diaries
+117,99,78.6,1.26,40.0,COAC,Neuf sans étiquette,Femmes › Sacs,Porte-carte Coach marron foncé,https://www.vinted.fr/items/9266736843-porte-carte-coach-marron-fonce
+118,99,37.9,2.61,15.0,Gisela Graham,Très bon état,Maison › Arts de la table,Très beau pichet en grès Gisela Graham,https://www.vinted.fr/items/9256965432-tres-beau-pichet-en-gres-gisela-graham
+119,99,32.4,3.06,19.95,Republic,Très bon état,Maison › Fournitures de bureau,Leather journal - travel journal,https://www.vinted.fr/items/9255892404-leather-journal-travel-journal
+120,99,38.5,2.57,130.0,Nintendo,Bon état,Électronique › Jeux vidéo et consoles,Nintendo Switch + Juegos,https://www.vinted.fr/items/9257252510-nintendo-switch-juegos
+121,99,102.1,0.97,84.0,Panasonic,Très bon état,Électronique › Appareils photo et accessoires,Cámara Digital Panasonic Lumix DMC FS6 Rosa,https://www.vinted.fr/items/9268860227-camara-digital-panasonic-lumix-dmc-fs6-rosa
+122,99,38.2,2.59,49.99,Olympus,Bon état,Électronique › Appareils photo et accessoires,Olympus Camedia C-310 Zoom 3.2MP Digicam Y2K Appareil Photo Numérique Vintage Fonctionnel,https://www.vinted.fr/items/9151709620-olympus-camedia-c-310-zoom-32mp-digicam-y2k-appareil-photo-numerique-vintage-fonctionnel
+123,98,83.8,1.17,13.0,Sweet Years,Très bon état,Hommes › Accessoires,Orologio Sweet Years 6177M originale con scatola e garanzia,https://www.vinted.fr/items/9267643191-orologio-sweet-years-6177m-originale-con-scatola-e-garanzia
+124,98,40.7,2.41,50.0,Smiski,Neuf avec étiquette,Enfants › Sommeil et literie,Lampe Smiski veilleuse neuve vol.1,https://www.vinted.fr/items/9258668070-lampe-smiski-veilleuse-neuve-vol1
+125,98,196.0,0.09,200.0,Garfield,Très bon état,Électronique › Téléphones portables et équipements de communication,Téléphone Garfield Vintage COMOC France Années 80 Fonctionnel Rare,https://www.vinted.fr/items/9276886820-telephone-garfield-vintage-comoc-france-annees-80-fonctionnel-rare
+126,98,188.5,0.52,11.0,,Neuf avec étiquette,Loisirs et collections › Loisirs créatifs,Carnet notes /scrapbooking sous blister vintage,https://www.vinted.fr/items/9226653517-carnet-notes-scrapbooking-sous-blister-vintage
+127,97,161.7,0.6,7.15,Selfmade,Bon état,Femmes › Accessoires,Lepelring,https://www.vinted.fr/items/9269684355-lepelring
+128,97,194.0,0.12,13.9,creolen,Très bon état,Femmes › Accessoires,Elegante 925 goldene Silber Creolen 45mm Ohrringe Earrings schön glänzend leicht,https://www.vinted.fr/items/9276500226-elegante-925-goldene-silber-creolen-45mm-ohrringe-earrings-schon-glanzend-leicht
+129,97,23.3,4.16,21.5,Nike,Très bon état,Hommes › Chaussures,Zapatillas Nike revolution 6.,https://www.vinted.fr/items/9248557741-zapatillas-nike-revolution-6
+130,97,70.8,1.37,28.5,Meller,Neuf sans étiquette,Hommes › Accessoires,Meller Oza sunglasses,https://www.vinted.fr/items/9265482621-meller-oza-sunglasses
+131,97,156.5,0.62,10.0,Disney,Très bon état,Maison › Petits appareils de cuisine,Waffle stitch,https://www.vinted.fr/items/9269526750-waffle-stitch
+132,97,17.8,5.46,38.0,Bavaria,Très bon état,Maison › Arts de la table,Bavaria Schwarzenhammer Vintage Porzellan Kaffeeservice,https://www.vinted.fr/items/9238517297-bavaria-schwarzenhammer-vintage-porzellan-kaffeeservice
+133,97,48.0,2.02,13.0,Surf Style,Très bon état,Maison › Décoration,Affiche surf avec cadre,https://www.vinted.fr/items/9262053589-affiche-surf-avec-cadre
+134,97,40.9,2.37,18.0,Funko,Neuf avec étiquette,Loisirs et collections › Jeux de société,Funko Bitty pop Toy story,https://www.vinted.fr/items/9259048858-funko-bitty-pop-toy-story
+135,97,176.4,0.55,25.0,2026,Neuf sans étiquette,Sport › Sports d'équipe,Ballon coupe du monde 2026,https://www.vinted.fr/items/9270194395-ballon-coupe-du-monde-2026
+136,96,64.4,1.49,45.0,Vintage Dressing,Très bon état,Femmes › Sacs,vintage tasche schultertasche y2k bestickt kunstleder 2000er 90er,https://www.vinted.fr/items/9264148682-vintage-tasche-schultertasche-y2k-bestickt-kunstleder-2000er-90er
+137,95,22.7,4.19,75.5,Apple,Très bon état,"Électronique › Tablettes, liseuses et accessoires",Zo goed als nieuwe iPad 6e generatie,https://www.vinted.fr/items/9248312112-zo-goed-als-nieuwe-ipad-6e-generatie
+138,94,188.0,0.39,48.0,New Balance,Très bon état,Femmes › Chaussures,"New Balance 530 Silber blau 39,5",https://www.vinted.fr/items/9272427138-new-balance-530-silber-blau-395
+139,94,109.3,0.86,88.0,Vivienne Westwood,Très bon état,Femmes › Sacs,sac bandouliere,https://www.vinted.fr/items/9269005638-sac-bandouliere
+140,94,37.3,2.52,5.0,Sac,Neuf avec étiquette,Maison › Célébrations et fêtes,"Lot de pochette d'envoi expédition 33,5x 43 cm à motif",https://www.vinted.fr/items/9257716630-lot-de-pochette-denvoi-expedition-335x-43-cm-a-motif
+141,94,188.0,0.08,35.0,Kodak,Neuf sans étiquette,Électronique › Appareils photo et accessoires,Kodak charmera,https://www.vinted.fr/items/9276931134-kodak-charmera
+142,93,78.8,1.18,20.0,Vintage Dressing,Très bon état,Femmes › Sacs,Sac à nœud beige à pois et noeud marron  ,https://www.vinted.fr/items/9267572983-sac-a-noeud-beige-a-pois-et-noeud-marron
+143,93,38.6,2.41,40.0,Polaroid,Très bon état,Électronique › Appareils photo et accessoires,Polaroid Now instant camera gen 2 + Fotoalbum,https://www.vinted.fr/items/9258682536-polaroid-now-instant-camera-gen-2-fotoalbum
+144,92,184.0,0.15,15.0,Japan Style,Très bon état,Femmes › Sacs,Sac y2k,https://www.vinted.fr/items/9276100383-sac-y2k
+145,92,184.0,0.43,7.0,Caterina Lucchi,Neuf sans étiquette,Femmes › Sacs,Borsetta da donna,https://www.vinted.fr/items/9271887289-borsetta-da-donna
+146,92,80.0,1.15,20.0,LES PETITS CULOTTÉS,Neuf avec étiquette,Enfants › Bain et change,Les petits culottés taille 1,https://www.vinted.fr/items/9267827083-les-petits-culottes-taille-1
+147,92,16.7,5.52,18.0,Nespresso,Très bon état,Maison › Petits appareils de cuisine,Mug voyage Nespresso 300ml,https://www.vinted.fr/items/9237897483-mug-voyage-nespresso-300ml
+148,92,38.2,2.41,50.0,Vintage Dressing,Très bon état,Maison › Décoration,vintage barock messing jugendstil mid century barock  kleiderbügel gold y2k,https://www.vinted.fr/items/9258736263-vintage-barock-messing-jugendstil-mid-century-barock-kleiderbugel-gold-y2k
+149,91,182.0,0.23,40.0,Vintage Boutique,Très bon état,Maison › Décoration,Lampe de table Led vintage champignon orange,https://www.vinted.fr/items/9267523362-lampe-de-table-led-vintage-champignon-orange
+150,91,20.1,4.53,15.0,Miniso,Neuf sans étiquette,Maison › Textiles,"Hello Kitty, My Melody Decke Miniso",https://www.vinted.fr/items/9244557544-hello-kitty-my-melody-decke-miniso
+151,91,14.8,6.14,250.0,Samsung,Très bon état,Électronique › Téléphones portables et équipements de communication,Samsung Galaxy S23 128gb,https://www.vinted.fr/items/9235120783-samsung-galaxy-s23-128gb
+152,91,182.0,0.31,15.0,,Très bon état,Divertissement › Livres,Livre « Bratva Bride »,https://www.vinted.fr/items/9273718822-livre-bratva-bride
+153,91,30.5,2.98,10.0,Clifton,Neuf sans étiquette,Loisirs et collections › Instruments de musique et équipement,Guitare,https://www.vinted.fr/items/9256187266-guitare
+154,91,77.1,1.18,60.0,Sevylor,Bon état,Sport › Sports nautiques,Kayak inflable Sevylor para 2-3 personas,https://www.vinted.fr/items/9267572512-kayak-inflable-sevylor-para-2-3-personas
+155,90,13.7,6.57,45.0,Inconnu,Neuf sans étiquette,Maison › Arts de la table,Duo de saladiers artisanaux en céramique émaillée verte – Provence,https://www.vinted.fr/items/9230082595-duo-de-saladiers-artisanaux-en-ceramique-emaillee-verte-provence
+156,90,67.2,1.34,40.0,Kyocera,Satisfaisant,Électronique › Téléphones portables et équipements de communication,Kyocera KYF39 Keitai 4G Unlocked,https://www.vinted.fr/items/9265828513-kyocera-kyf39-keitai-4g-unlocked
+157,90,152.5,0.59,30.0,Philips,Bon état,Électronique › TV et home cinema,Lecteur dvd portable,https://www.vinted.fr/items/9269768644-lecteur-dvd-portable
+158,89,178.0,0.42,20.0,My Jewellery,Très bon état,Femmes › Accessoires,Ketting,https://www.vinted.fr/items/9271981629-ketting
+159,89,178.0,0.2,30.0,Bershka,Neuf avec étiquette,Femmes › Sacs,Sac été,https://www.vinted.fr/items/9275429842-sac-ete
+160,89,67.4,1.32,40.0,LEGO,Neuf avec étiquette,Enfants › Jeux et jouets,Lego botanicals bouquet of pink roses,https://www.vinted.fr/items/9266066911-lego-botanicals-bouquet-of-pink-roses
+161,89,125.4,0.71,75.0,Tefal,Neuf avec étiquette,Maison › Cuisson et pâtisserie,Lot Tefal Ingenio 8 pièces – Neuf,https://www.vinted.fr/items/9269163198-lot-tefal-ingenio-8-pieces-neuf
+162,89,20.0,4.46,25.0,Argentina,Neuf avec étiquette,Maison › Outils de cuisine,MATE Argentino imperial + bombilla pico de loro,https://www.vinted.fr/items/9245341714-mate-argentino-imperial-bombilla-pico-de-loro
+163,89,81.7,1.09,4.5,Shein,Neuf avec étiquette,Maison › Décoration,Relógio de mesa eletrônico com espelho LED multfuncional,https://www.vinted.fr/items/9268349096-relogio-de-mesa-eletronico-com-espelho-led-multfuncional
+164,89,88.1,1.01,40.0,FUJIFILM,Très bon état,Électronique › Appareils photo et accessoires,Fujifilm Finepix J27,https://www.vinted.fr/items/9268760303-fujifilm-finepix-j27
+165,89,16.0,5.55,29.9,Nikon,Bon état,Électronique › Appareils photo et accessoires,Nikon Coolpix L23 Leggi la Descrizione,https://www.vinted.fr/items/9237342506-nikon-coolpix-l23-leggi-la-descrizione
+166,89,178.0,0.42,1.0,,Neuf avec étiquette,Divertissement › Musique,Album romance untold incepto arcanum enhypen,https://www.vinted.fr/items/9271996477-album-romance-untold-incepto-arcanum-enhypen
+167,89,39.0,2.28,25.0,,Bon état,Divertissement › Musique,Ariana grande: Sweetener vinyl,https://www.vinted.fr/items/9260043930-ariana-grande-sweetener-vinyl
+168,88,36.8,2.39,39.7,Vintage Love,Très bon état,Maison › Décoration,Lampe de table orange style champignon – design moderne rétro 🍊,https://www.vinted.fr/items/9258890546-lampe-de-table-orange-style-champignon-design-moderne-retro
+169,88,157.1,0.56,40.0,FUJIFILM,Bon état,Électronique › Appareils photo et accessoires,Macchina fotografica digitale Fujifilm,https://www.vinted.fr/items/9270162775-macchina-fotografica-digitale-fujifilm
+170,87,158.2,0.55,29.0,Dior,Neuf avec étiquette,Femmes › Beauté,Dior Backstage Glow Maximizer Palette,https://www.vinted.fr/items/9270271216-dior-backstage-glow-maximizer-palette
+171,87,66.4,1.31,38.0,Vintage,Très bon état,Femmes › Sacs,Fourre-tout idéal pour les cours,https://www.vinted.fr/items/9266134758-fourre-tout-ideal-pour-les-cours
+172,87,174.0,0.25,5.0,,Très bon état,Hommes › Accessoires,Bracelet cordon kaki très bon état,https://www.vinted.fr/items/9274613347-bracelet-cordon-kaki-tres-bon-etat
+173,87,174.0,0.45,25.0,Westwing,Très bon état,Maison › Arts de la table,Perlmutt Optik Gläser Murano Mundgeblasen,https://www.vinted.fr/items/9271589835-perlmutt-optik-glaser-murano-mundgeblasen
+174,87,80.6,1.08,35.0,,Neuf sans étiquette,Maison › Extérieur et jardin,Dekorativer Metall-Blumentopf / Pflanzgefäß im Vintage-Rost-Look,https://www.vinted.fr/items/9234370770-dekorativer-metall-blumentopf-pflanzgefass-im-vintage-rost-look
+175,87,164.2,0.53,10.0,Paco Rabanne,Neuf avec étiquette,"Sport › Fitness, course à pied et yoga",Gourde 750 ml Paco Rabanne,https://www.vinted.fr/items/9270558691-gourde-750-ml-paco-rabanne
+176,86,172.0,0.07,22.0,H&M,Neuf avec étiquette,Femmes › Chaussures,H&M instappers ballerina's beige slippers rieten look nieuw 38 loafers,https://www.vinted.fr/items/9277003052-hm-instappers-ballerinas-beige-slippers-rieten-look-nieuw-38-loafers
+177,86,84.3,1.02,55.0,,Très bon état,Maison › Textiles,Tapis bordeaux 160/230 vintage,https://www.vinted.fr/items/9268717615-tapis-bordeaux-160230-vintage
+178,86,61.9,1.39,30.0,Sony,Neuf sans étiquette,Électronique › TV et home cinema,Reproductor DVD,https://www.vinted.fr/items/9265226756-reproductor-dvd
+179,86,35.7,2.41,6.0,Hema,Neuf avec étiquette,Loisirs et collections › Loisirs créatifs,HEMA x Nijntje Blind Box – Nieuw & ongeopend (1 doosje),https://www.vinted.fr/items/9258668264-hema-x-nijntje-blind-box-nieuw-ongeopend-1-doosje
+180,85,170.0,0.27,30.0,New Balance,Très bon état,Femmes › Chaussures,Très belles baskets New Balance 520 pointure 40,https://www.vinted.fr/items/9274294144-tres-belles-baskets-new-balance-520-pointure-40
+181,85,151.8,0.56,55.0,Ray-Ban,Très bon état,Femmes › Accessoires,Occhiali da sole Ray Ban ORB4472 nero,https://www.vinted.fr/items/9270165053-occhiali-da-sole-ray-ban-orb4472-nero
+182,85,170.0,0.39,25.0,Hecho a Mano,Très bon état,Femmes › Sacs,Bolso vichy con volantes rosa y rojo y estampado interior de flores,https://www.vinted.fr/items/9272410242-bolso-vichy-con-volantes-rosa-y-rojo-y-estampado-interior-de-flores
+183,85,39.5,2.15,60.0,Twice,Très bon état,Électronique › Autres appareils et accessoires,Twice Lightstick Candybong,https://www.vinted.fr/items/9261224203-twice-lightstick-candybong
+184,85,64.9,1.31,7.0,Showmaster,Très bon état,Sport › Équitation,Licol et Longe Showmaster bordeaux,https://www.vinted.fr/items/9266218386-licol-et-longe-showmaster-bordeaux
+185,84,168.0,0.06,10.0,Mystery,Neuf sans étiquette,Femmes › Accessoires,Lot de bijoux,https://www.vinted.fr/items/9276789136-lot-de-bijoux
+186,84,168.0,0.33,10.0,Crayola,Neuf avec étiquette,Enfants › Jeux et jouets,Color wonder crayola,https://www.vinted.fr/items/9273430282-color-wonder-crayola
+187,84,65.6,1.28,110.0,Smeg,Très bon état,Maison › Petits appareils de cuisine,Grille pain Smeg - smeg - très bon état - vintage - bleu clair,https://www.vinted.fr/items/9266546289-grille-pain-smeg-smeg-tres-bon-etat-vintage-bleu-clair
+188,84,36.2,2.32,12.0,Alternative,Neuf sans étiquette,Maison › Textiles,toile gothique,https://www.vinted.fr/items/9259605077-toile-gothique
+189,84,59.2,1.42,50.0,Sony,Très bon état,Électronique › Appareils photo et accessoires,Appareil photo sony A230 sans batterie,https://www.vinted.fr/items/9264909466-appareil-photo-sony-a230-sans-batterie
+190,84,35.0,2.4,350.0,Apple,Neuf sans étiquette,"Électronique › Tablettes, liseuses et accessoires",iPad A16,https://www.vinted.fr/items/9258717231-ipad-a16
+191,83,63.4,1.31,12.0,Zara,Neuf avec étiquette,Femmes › Sacs,Borsetta da sera Zara,https://www.vinted.fr/items/9266236509-borsetta-da-sera-zara
+192,83,76.9,1.08,11.0,Cérémonie,Neuf avec étiquette,Maison › Célébrations et fêtes,Boite kit de secours bois cérémonie mariage baptême,https://www.vinted.fr/items/9268370448-boite-kit-de-secours-bois-ceremonie-mariage-bapteme
+193,83,18.6,4.47,140.0,Lenovo,Très bon état,"Électronique › Tablettes, liseuses et accessoires",Lenovo tab 11 + pen,https://www.vinted.fr/items/9245155996-lenovo-tab-11-pen
+194,83,15.4,5.39,30.0,Apple,Très bon état,"Électronique › Tablettes, liseuses et accessoires","Tablette Apple ipad air 2, 16 Go.",https://www.vinted.fr/items/9239264563-tablette-apple-ipad-air-2-16-go
+195,83,37.6,2.21,5.0,FIFA,Neuf sans étiquette,Sport › Sports d'équipe,Porte clés coupe du monde fifa,https://www.vinted.fr/items/9260703967-porte-cles-coupe-du-monde-fifa
+196,82,64.1,1.28,20.0,Disney,Très bon état,Maison › Petits appareils de cuisine,Tostapane stitch,https://www.vinted.fr/items/9266520502-tostapane-stitch
+197,82,37.3,2.2,12.0,Leroy Merlin,Neuf sans étiquette,Maison › Textiles,Voilage motif tropical palmiers – effet lin,https://www.vinted.fr/items/9228038932-voilage-motif-tropical-palmiers-effet-lin
+198,82,62.6,1.31,59.0,Nintendo,Très bon état,Électronique › Jeux vidéo et consoles,Nintendo DS Orginal,https://www.vinted.fr/items/9266239142-nintendo-ds-orginal
+199,82,15.6,5.24,23.0,Hugo Boss,Neuf sans étiquette,Électronique › Téléphones portables et équipements de communication,Pochette de téléphone/ bandoulière Hugo boss,https://www.vinted.fr/items/9240960126-pochette-de-telephone-bandouliere-hugo-boss
+200,82,33.9,2.42,42.0,Olympus,Très bon état,Électronique › Appareils photo et accessoires,Olympus D-720,https://www.vinted.fr/items/9258607049-olympus-d-720
