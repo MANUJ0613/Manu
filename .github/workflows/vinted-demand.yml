@@ -57,10 +57,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git pull --rebase --autostash origin "${GITHUB_REF_NAME}" || true
-          git add state/vinted_report.json state/vinted_report.csv
+          git add state/vinted_report.json state/vinted_report.csv state/vinted_history.json
           if git diff --cached --quiet; then
             echo "Aucun changement de rapport à committer."
           else
-            git commit -m "chore: rapport demande Vinted [skip ci]"
+            git commit -m "chore: rapport + historique tendances Vinted [skip ci]"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi

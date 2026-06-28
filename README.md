@@ -69,6 +69,24 @@ fenêtre :
 > ⚠️ Vinted **plafonne ~960 résultats** par requête : sur les très grosses
 > catégories on échantillonne les plus pertinents récents, pas l'exhaustivité.
 
+## Détection de tendances dans le temps 📈
+
+À chaque run, le bot enregistre un **instantané** (favoris cumulés par mot-clé,
+par sous-catégorie et par annonce) dans `state/vinted_history.json`, puis le
+compare au run précédent pour repérer **ce qui MONTE** — avant que ça explose :
+
+```
+📈 TENDANCES QUI MONTENT (vs run précédent, il y a 6h)
+• Mots-clés en hausse :      +150 (+300%) pokemon → 200 favoris
+• Mots-clés ÉMERGENTS :      ✦ sonny (80 favoris)   ← absent avant
+• Sous-catégories en hausse : +300 (+150%) Électronique › Téléphones
+• Annonces qui décollent :   +85 ❤95  40€  Pokemon Charizard …
+```
+
+Un **embed Discord/Telegram dédié** est aussi envoyé. Comme le workflow tourne
+toutes les 6 h et committe l'historique, les comparaisons s'enrichissent toutes
+seules. Le **premier run** ne fait qu'enregistrer la base (rien à comparer).
+
 ## Lancer en local
 
 ```bash
@@ -101,6 +119,10 @@ et envoie le digest. Ajoute tes secrets dans **Settings → Secrets and variable
 | `TOP_PER_CATEGORY` | `15` | Nombre d'articles listés par sous-catégorie |
 | `CATEGORY_MAX_PAGES` | `3` | Pages de 96 articles lues par catégorie |
 | `MIN_FAVOURITES` | `3` | Ignore les articles sous ce nombre de favoris |
+| `TRACK_TRENDS` | `true` | Suivi des tendances dans le temps (instantané + comparaison) |
+| `HISTORY_FILE` | `state/vinted_history.json` | Historique des instantanés |
+| `HISTORY_MAX_RUNS` | `60` | Nombre de runs conservés dans l'historique |
+| `TOP_TRENDS` | `12` | Nombre de tendances montantes affichées |
 | `EXCLUDE_PATTERNS` | `vêtement,…,créateur` | Catégories exclues par titre |
 | `VINTED_CATEGORIES` | *(auto)* | Forcer des IDs de catégories (sépar. virgules) |
 | `TOP_ITEMS` | `30` | Taille du top produits affiché |

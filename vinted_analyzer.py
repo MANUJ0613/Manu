@@ -33,6 +33,7 @@ import csv
 import gzip
 import json
 import os
+import re
 import socket
 import statistics
 import sys
@@ -130,6 +131,15 @@ VINTED_CATEGORIES = [
 ]
 # Combien d'articles afficher PAR catégorie (digest groupé par catégorie).
 TOP_PER_CATEGORY = int(os.environ.get("TOP_PER_CATEGORY", "15"))
+
+# --- Suivi des tendances dans le temps ---
+# À chaque run on mémorise un instantané (favoris cumulés par mot-clé /
+# sous-catégorie / annonce) et on le compare au run précédent pour repérer CE
+# QUI MONTE — la vraie détection de tendance, avant que ça explose.
+TRACK_TRENDS = os.environ.get("TRACK_TRENDS", "true").lower() == "true"
+HISTORY_FILE = os.environ.get("HISTORY_FILE", "state/vinted_history.json")
+HISTORY_MAX_RUNS = int(os.environ.get("HISTORY_MAX_RUNS", "60"))
+TOP_TRENDS = int(os.environ.get("TOP_TRENDS", "12"))  # tendances montantes affichées
 
 CONCURRENCY = int(os.environ.get("CONCURRENCY", "4"))
 REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "20"))
@@ -1082,6 +1092,215 @@ def send_products_digest(grouped: list[tuple[str, list[dict]]]) -> None:
                 print(f"[telegram] échec: {err}", file=sys.stderr)
 
 
+# --------------------------------------------------------------------------- #
+# Suivi des tendances dans le temps (snapshot + comparaison run-à-run)
+# --------------------------------------------------------------------------- #
+
+# Mots vides ignorés dans l'extraction de mots-clés des titres.
+_STOP = set(
+    "de la le les un une et ou pour en the and per con des du au aux avec sans "
+    "new neuf neuve neufs taille size lot set état etat tres très bon comme "
+    "vinted pz gr cm mit für und nur sur dans plus mini maxi style nuovo nuova "
+    "vintage".split()
+)
+# Note : "vintage" est volontairement ignoré comme mot-clé (trop générique, il
+# domine tout) — on le suit séparément si besoin.
+
+
+def _keywords(title: str) -> set[str]:
+    """Mots-clés normalisés d'un titre (>=3 lettres, hors mots vides/nombres)."""
+    out: set[str] = set()
+    for w in re.findall(r"[a-zà-ÿ0-9']{3,}", title.lower()):
+        if w in _STOP or w.isdigit():
+            continue
+        out.add(w)
+    return out
+
+
+def build_snapshot(items: list[dict]) -> dict:
+    """Instantané comparable : favoris cumulés par mot-clé / sous-catégorie /
+    annonce. Les favoris (pas le simple comptage) reflètent la demande."""
+    kw: dict[str, int] = {}
+    kw_n: dict[str, int] = {}
+    cat: dict[str, int] = {}
+    item_fav: dict[str, int] = {}
+    for it in items:
+        fav = it.get("favourites") or 0
+        for w in _keywords(it.get("title") or ""):
+            kw[w] = kw.get(w, 0) + fav
+            kw_n[w] = kw_n.get(w, 0) + 1
+        c = it.get("category") or "?"
+        cat[c] = cat.get(c, 0) + fav
+        if it.get("id") is not None:
+            item_fav[str(it["id"])] = fav
+    # On ne garde que les mots-clés vus dans >=3 annonces (réduit le bruit).
+    kw = {w: v for w, v in kw.items() if kw_n.get(w, 0) >= 3}
+    return {
+        "ts": int(time.time()),
+        "keywords": kw,
+        "keyword_counts": {w: kw_n[w] for w in kw},
+        "subcats": cat,
+        "items": item_fav,
+    }
+
+
+def load_history() -> dict:
+    try:
+        with open(HISTORY_FILE, "r", encoding="utf-8") as fh:
+            return json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {"runs": []}
+
+
+def save_history(hist: dict) -> None:
+    os.makedirs(os.path.dirname(HISTORY_FILE) or ".", exist_ok=True)
+    hist["runs"] = hist["runs"][-HISTORY_MAX_RUNS:]
+    with open(HISTORY_FILE, "w", encoding="utf-8") as fh:
+        json.dump(hist, fh, ensure_ascii=False)
+
+
+def _rising(cur: dict, prev: dict, min_now: int) -> list[tuple[str, int, int, int]]:
+    """Renvoie [(clé, valeur_now, delta, pct)] triés par delta décroissant,
+    pour les clés dont la valeur actuelle dépasse min_now."""
+    out = []
+    for k, now in cur.items():
+        if now < min_now:
+            continue
+        before = prev.get(k, 0)
+        delta = now - before
+        if delta <= 0:
+            continue
+        pct = int(delta * 100 / before) if before else 999
+        out.append((k, now, delta, pct))
+    out.sort(key=lambda x: x[2], reverse=True)
+    return out
+
+
+def compute_trends(cur: dict, prev: dict) -> dict:
+    """Compare deux instantanés et renvoie ce qui monte."""
+    dt_h = max((cur["ts"] - prev["ts"]) / 3600.0, 0.1)
+    new_kw = [
+        (k, v)
+        for k, v in sorted(cur["keywords"].items(), key=lambda x: x[1], reverse=True)
+        if k not in prev.get("keywords", {}) and v >= 40
+    ]
+    return {
+        "dt_hours": dt_h,
+        "keywords": _rising(cur["keywords"], prev.get("keywords", {}), min_now=40),
+        "subcats": _rising(cur["subcats"], prev.get("subcats", {}), min_now=80),
+        "new_keywords": new_kw,
+    }
+
+
+def item_gainers(items: list[dict], prev: dict) -> list[dict]:
+    """Annonces présentes au run précédent qui ont gagné le plus de favoris."""
+    prev_items = prev.get("items", {})
+    out = []
+    for it in items:
+        iid = str(it.get("id"))
+        if iid in prev_items:
+            delta = (it.get("favourites") or 0) - prev_items[iid]
+            if delta > 0:
+                g = dict(it)
+                g["delta_fav"] = delta
+                out.append(g)
+    out.sort(key=lambda x: x["delta_fav"], reverse=True)
+    return out
+
+
+def print_trends(trends: dict, gainers: list[dict]) -> None:
+    dt = trends["dt_hours"]
+    since = f"{dt:.0f}h" if dt < 48 else f"{dt/24:.1f}j"
+    print("\n" + "=" * 92)
+    print(f"📈 TENDANCES QUI MONTENT (vs run précédent, il y a {since})")
+    print("=" * 92)
+    print("\n• Mots-clés en hausse (favoris cumulés) :")
+    for k, now, delta, pct in trends["keywords"][:TOP_TRENDS]:
+        print(f"   +{delta:<5} (+{pct}%)  {k}  → {now} favoris")
+    if trends["new_keywords"]:
+        print("\n• Mots-clés ÉMERGENTS (absents au run précédent) :")
+        for k, v in trends["new_keywords"][:TOP_TRENDS]:
+            print(f"   ✦ {k}  ({v} favoris)")
+    print("\n• Sous-catégories en hausse :")
+    for k, now, delta, pct in trends["subcats"][:8]:
+        print(f"   +{delta:<6} (+{pct}%)  {k}")
+    if gainers:
+        print("\n• Annonces qui décollent (favoris gagnés depuis le dernier run) :")
+        for it in gainers[:TOP_TRENDS]:
+            print(
+                f"   +{it['delta_fav']:<4} ❤{it['favourites']:<4} "
+                f"{_euro(it['price']):>8}  {it['title'][:44]:<44}  {it['url']}"
+            )
+    print("\n" + "=" * 92 + "\n")
+
+
+def send_trends_digest(trends: dict, gainers: list[dict]) -> None:
+    """Embed Discord/Telegram dédié aux tendances montantes."""
+    dt = trends["dt_hours"]
+    since = f"{dt:.0f}h" if dt < 48 else f"{dt/24:.1f}j"
+    parts = []
+    if trends["keywords"]:
+        parts.append("**🔑 Mots-clés en hausse**\n" + "\n".join(
+            f"`+{d}` (+{p}%) **{k}** → {n}❤"
+            for k, n, d, p in trends["keywords"][:TOP_TRENDS]
+        ))
+    if trends["new_keywords"]:
+        parts.append("**✦ Émergents**\n" + ", ".join(
+            f"{k} ({v}❤)" for k, v in trends["new_keywords"][:TOP_TRENDS]
+        ))
+    if gainers:
+        parts.append("**🚀 Annonces qui décollent**\n" + "\n".join(
+            f"`+{it['delta_fav']}❤` {_euro(it['price'])} — [{it['title'][:38]}]({it['url']})"
+            for it in gainers[:8]
+        ))
+    if not parts:
+        return
+    body = "\n\n".join(parts)
+    title = f"📈 Tendances Vinted qui montent (depuis {since})"
+    if DRY_RUN:
+        print("[DRY_RUN] digest tendances:\n" + title + "\n" + body[:1500])
+        return
+    if DISCORD_WEBHOOK_URL:
+        try:
+            _http_post_json(DISCORD_WEBHOOK_URL, {"embeds": [
+                {"title": title, "description": body[:4000], "color": 0xF1C40F,
+                 "footer": {"text": "Vinted — détection de tendances"}}
+            ]})
+        except Exception as err:  # noqa: BLE001
+            print(f"[discord] échec tendances: {err}", file=sys.stderr)
+    if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
+        try:
+            _http_post_json(
+                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                {"chat_id": TELEGRAM_CHAT_ID, "text": (title + "\n\n" + body).replace("**", "")[:4000],
+                 "parse_mode": "Markdown", "disable_web_page_preview": True},
+            )
+        except Exception as err:  # noqa: BLE001
+            print(f"[telegram] échec tendances: {err}", file=sys.stderr)
+
+
+def track_trends(items: list[dict]) -> None:
+    """Construit l'instantané, le compare au précédent, publie les tendances,
+    puis l'enregistre dans l'historique."""
+    snap = build_snapshot(items)
+    hist = load_history()
+    runs = hist.get("runs", [])
+    if runs:
+        prev = runs[-1]
+        trends = compute_trends(snap, prev)
+        gainers = item_gainers(items, prev)
+        print_trends(trends, gainers)
+        send_trends_digest(trends, gainers)
+    else:
+        print(
+            "\n[tendances] Première mesure enregistrée — la comparaison "
+            "s'affichera au prochain run.\n"
+        )
+    runs.append(snap)
+    hist["runs"] = runs
+    save_history(hist)
+
+
 def run_categories() -> int:
     """Scanne toutes les catégories (hors vêtements) et liste les produits
     récents les plus likés."""
@@ -1127,6 +1346,8 @@ def run_categories() -> int:
     print_products_report(grouped, cats)
     write_products_report(grouped)
     send_products_digest(grouped)
+    if TRACK_TRENDS:
+        track_trends(items)
     return 0
 
 
