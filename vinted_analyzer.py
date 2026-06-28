@@ -103,6 +103,10 @@ TOP_ITEMS = int(os.environ.get("TOP_ITEMS", "30"))
 MODE = os.environ.get("MODE", "categories").strip().lower()
 # Fenêtre de fraîcheur : on ne garde que les articles postés depuis N jours.
 DAYS_WINDOW = float(os.environ.get("DAYS_WINDOW", "7"))
+# Critère de classement du top :
+#   "hotness"    -> favoris PAR JOUR : privilégie ce qui monte vite (le + frais) ;
+#   "favourites" -> favoris totaux : privilégie les annonces les plus likées.
+RANK_BY = os.environ.get("RANK_BY", "hotness").strip().lower()
 # Pages (de 96) lues par catégorie en mode scan (relevance remonte les
 # articles récents les plus engageants en premier).
 CATEGORY_MAX_PAGES = int(os.environ.get("CATEGORY_MAX_PAGES", "3"))
@@ -124,8 +128,8 @@ VINTED_CATEGORIES = [
     for c in os.environ.get("VINTED_CATEGORIES", "").split(",")
     if c.strip()
 ]
-# Combien d'articles du top afficher PAR catégorie dans le rapport.
-TOP_PER_CATEGORY = int(os.environ.get("TOP_PER_CATEGORY", "5"))
+# Combien d'articles afficher PAR catégorie (digest groupé par catégorie).
+TOP_PER_CATEGORY = int(os.environ.get("TOP_PER_CATEGORY", "15"))
 
 CONCURRENCY = int(os.environ.get("CONCURRENCY", "4"))
 REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "20"))
@@ -623,6 +627,13 @@ def hotness(item: dict) -> float:
     return round(fav / age, 1)
 
 
+def rank_key(item: dict) -> float:
+    """Clé de tri du top selon RANK_BY (hotness = le plus frais qui monte)."""
+    if RANK_BY == "favourites":
+        return item.get("favourites") or 0
+    return hotness(item)
+
+
 def demand_score(item: dict) -> float:
     """Score de demande d'un article : favoris + poids · vues."""
     fav = item.get("favourites") or 0
@@ -889,52 +900,62 @@ def _age_label(age: float | None) -> str:
     return f"{age:.1f}j"
 
 
-def print_products_report(items: list[dict], cats: list[dict]) -> None:
-    """Affiche le top des articles récents les plus likés + résumé catégories."""
-    ranked = sorted(items, key=lambda x: x["favourites"], reverse=True)
-    top = ranked[:TOP_ITEMS]
+def group_by_category(items: list[dict]) -> list[tuple[str, list[dict]]]:
+    """Groupe les articles par catégorie, garde les TOP_PER_CATEGORY meilleurs
+    de chaque (triés par rank_key), et ordonne les catégories par leur meilleur
+    article (la catégorie la plus chaude d'abord)."""
+    groups: dict[str, list[dict]] = {}
+    for it in items:
+        groups.setdefault(it.get("category") or "?", []).append(it)
+    out: list[tuple[str, list[dict]]] = []
+    for cat, lst in groups.items():
+        lst.sort(key=rank_key, reverse=True)
+        out.append((cat, lst[:TOP_PER_CATEGORY]))
+    out.sort(key=lambda g: rank_key(g[1][0]) if g[1] else 0, reverse=True)
+    return out
+
+
+def _item_line(rank: int, it: dict) -> str:
+    return (
+        f"**{rank}.** {hotness(it):.0f} fav/j · ❤{it['favourites']} · "
+        f"{_age_label(it['age_days'])} · {_euro(it['price'])} — "
+        f"[{it['title'][:42]}]({it['url']})"
+    )
+
+
+def print_products_report(grouped: list[tuple[str, list[dict]]],
+                          cats: list[dict]) -> None:
+    """Affiche, par catégorie, ses TOP_PER_CATEGORY articles qui montent."""
+    crit = "favoris/jour (le + frais)" if RANK_BY != "favourites" else "favoris"
     print("\n" + "=" * 92)
     print(
-        f"TOP {len(top)} PRODUITS LES PLUS LIKÉS — postés ≤ {DAYS_WINDOW:.0f}j, "
-        f"hors vêtements ({len(cats)} catégories scannées)"
+        f"{TOP_PER_CATEGORY} PRODUITS / CATÉGORIE — postés ≤ {DAYS_WINDOW:.0f}j, "
+        f"classés par {crit}, hors vêtements ({len(grouped)} catégories)"
     )
     print("=" * 92)
-    print(f"{'#':>2}  {'❤fav':>5}{'/jour':>7}{'âge':>6}{'prix':>9}  "
-          f"{'catégorie':<24}{'article':<30}")
-    print("-" * 92)
-    for i, it in enumerate(top, 1):
-        cat = (it.get("category") or "").split("›")[-1].strip()
-        print(
-            f"{i:>2}  {it['favourites']:>5}{hotness(it):>7.0f}"
-            f"{_age_label(it['age_days']):>6}{_euro(it['price']):>9}  "
-            f"{cat[:24]:<24}{it['title'][:30]:<30}  {it['url']}"
-        )
-    print("=" * 92 + "\n")
-
-    # Top "ça monte vite" (favoris/jour) = repérer les tendances naissantes.
-    by_hot = sorted(items, key=hotness, reverse=True)[:TOP_PER_CATEGORY * 2]
-    print(f"⚡ TENDANCES QUI MONTENT VITE (favoris/jour)")
-    print("-" * 92)
-    for i, it in enumerate(by_hot, 1):
-        cat = (it.get("category") or "").split("›")[-1].strip()
-        print(
-            f"{i:>2}  {hotness(it):>5.0f} fav/j  ❤{it['favourites']:<4} "
-            f"{_age_label(it['age_days']):>5}  {_euro(it['price']):>8}  "
-            f"{cat[:20]:<20} {it['title'][:34]}"
-        )
-    print()
+    for cat, lst in grouped:
+        print(f"\n▸ {cat}")
+        for i, it in enumerate(lst, 1):
+            print(
+                f"   {i:>2}. {hotness(it):>5.0f}/j  ❤{it['favourites']:<4} "
+                f"{_age_label(it['age_days']):>4}  {_euro(it['price']):>8}  "
+                f"{it['title'][:46]:<46}  {it['url']}"
+            )
+    print("\n" + "=" * 92 + "\n")
 
 
-def write_products_report(items: list[dict]) -> None:
-    """Écrit le top produits en JSON + CSV."""
-    ranked = sorted(items, key=lambda x: x["favourites"], reverse=True)[:max(TOP_ITEMS, 200)]
+def write_products_report(grouped: list[tuple[str, list[dict]]]) -> None:
+    """Écrit le rapport groupé par catégorie en JSON + CSV (à plat)."""
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "domain": VINTED_DOMAIN,
         "mode": "categories",
         "days_window": DAYS_WINDOW,
-        "n_items": len(items),
-        "top": ranked,
+        "rank_by": RANK_BY,
+        "per_category": TOP_PER_CATEGORY,
+        "categories": [
+            {"category": cat, "items": lst} for cat, lst in grouped
+        ],
     }
     try:
         os.makedirs(os.path.dirname(REPORT_JSON) or ".", exist_ok=True)
@@ -949,58 +970,95 @@ def write_products_report(items: list[dict]) -> None:
         with open(REPORT_CSV, "w", encoding="utf-8", newline="") as fh:
             w = csv.writer(fh)
             w.writerow(
-                ["rang", "favoris", "favoris_par_jour", "age_jours", "prix",
-                 "marque", "etat", "categorie", "titre", "url"]
+                ["categorie", "rang", "favoris_par_jour", "favoris",
+                 "age_jours", "prix", "marque", "etat", "titre", "url"]
             )
-            for i, it in enumerate(ranked, 1):
-                w.writerow(
-                    [i, it["favourites"], hotness(it), it["age_days"],
-                     it["price"], it["brand"], it["status"], it["category"],
-                     it["title"], it["url"]]
-                )
+            for cat, lst in grouped:
+                for i, it in enumerate(lst, 1):
+                    w.writerow(
+                        [cat, i, hotness(it), it["favourites"], it["age_days"],
+                         it["price"], it["brand"], it["status"], it["title"],
+                         it["url"]]
+                    )
         print(f"[rapport] CSV écrit -> {REPORT_CSV}")
     except OSError as err:
         print(f"[rapport] CSV échec: {err}", file=sys.stderr)
 
 
-def send_products_digest(items: list[dict]) -> None:
-    if not items:
+def _post_discord_embeds(embeds: list[dict]) -> None:
+    """Envoie les embeds par lots (≤10 embeds et ≤5500 car. par message,
+    espacés pour respecter le rate-limit du webhook)."""
+    batch: list[dict] = []
+    size = 0
+    sent = 0
+
+    def flush() -> None:
+        nonlocal batch, size, sent
+        if not batch:
+            return
+        try:
+            _http_post_json(DISCORD_WEBHOOK_URL, {"embeds": batch})
+            sent += len(batch)
+        except Exception as err:  # noqa: BLE001
+            print(f"[discord] échec lot: {err}", file=sys.stderr)
+        batch = []
+        size = 0
+        time.sleep(2.0)  # anti rate-limit (≤30 msg/min/webhook)
+
+    for e in embeds:
+        elen = len(e.get("description", "")) + len(e.get("title", ""))
+        if batch and (len(batch) >= 8 or size + elen > 5500):
+            flush()
+        batch.append(e)
+        size += elen
+    flush()
+    print(f"[discord] {sent} embed(s) catégorie envoyés")
+
+
+def send_products_digest(grouped: list[tuple[str, list[dict]]]) -> None:
+    """Un embed Discord PAR catégorie, contenant ses TOP_PER_CATEGORY articles."""
+    if not grouped:
         return
-    ranked = sorted(items, key=lambda x: x["favourites"], reverse=True)[:15]
-    title = f"🛍️ Vinted — top produits likés (≤{DAYS_WINDOW:.0f}j, hors vêtements)"
-    lines = []
-    for i, it in enumerate(ranked, 1):
-        cat = (it.get("category") or "").split("›")[-1].strip()
-        lines.append(
-            f"**{i}.** ❤{it['favourites']} · {hotness(it):.0f}/j · "
-            f"{_euro(it['price'])} · _{cat}_ — [{it['title'][:40]}]({it['url']})"
+    embeds = []
+    for cat, lst in grouped:
+        if not lst:
+            continue
+        body = "\n".join(_item_line(i, it) for i, it in enumerate(lst, 1))
+        embeds.append(
+            {
+                "title": f"🔥 {cat}"[:256],
+                "description": body[:4000],
+                "color": 0x09B1BA,
+                "footer": {"text": f"Vinted — postés ≤{DAYS_WINDOW:.0f}j · favoris/jour"},
+            }
         )
-    body = "\n".join(lines)
+
     if DRY_RUN:
-        print("[DRY_RUN] digest:\n" + title + "\n" + body)
+        print(f"[DRY_RUN] {len(embeds)} embeds catégorie (15 articles chacun).")
+        for e in embeds[:2]:
+            print("\n# " + e["title"])
+            print(e["description"])
         return
+
     if DISCORD_WEBHOOK_URL:
-        embed = {
-            "title": title,
-            "description": body[:4000],
-            "color": 0x09B1BA,
-            "footer": {"text": "Vinted demand analyzer"},
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        }
-        try:
-            _http_post_json(DISCORD_WEBHOOK_URL, {"embeds": [embed]})
-        except Exception as err:  # noqa: BLE001
-            print(f"[discord] échec: {err}", file=sys.stderr)
+        _post_discord_embeds(embeds)
+
     if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
-        text = title + "\n\n" + body.replace("**", "")
-        try:
-            _http_post_json(
-                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
-                {"chat_id": TELEGRAM_CHAT_ID, "text": text[:4000],
-                 "parse_mode": "Markdown", "disable_web_page_preview": True},
+        for cat, lst in grouped:
+            if not lst:
+                continue
+            text = f"🔥 {cat}\n" + "\n".join(
+                _item_line(i, it).replace("**", "") for i, it in enumerate(lst, 1)
             )
-        except Exception as err:  # noqa: BLE001
-            print(f"[telegram] échec: {err}", file=sys.stderr)
+            try:
+                _http_post_json(
+                    f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                    {"chat_id": TELEGRAM_CHAT_ID, "text": text[:4000],
+                     "parse_mode": "Markdown", "disable_web_page_preview": True},
+                )
+                time.sleep(0.5)
+            except Exception as err:  # noqa: BLE001
+                print(f"[telegram] échec: {err}", file=sys.stderr)
 
 
 def run_categories() -> int:
@@ -1044,9 +1102,10 @@ def run_categories() -> int:
         return 1
     print(f"\n{len(items)} articles récents (≥{MIN_FAVOURITES} favoris) collectés.")
 
-    print_products_report(items, cats)
-    write_products_report(items)
-    send_products_digest(items)
+    grouped = group_by_category(items)  # par catégorie › sous-catégorie
+    print_products_report(grouped, cats)
+    write_products_report(grouped)
+    send_products_digest(grouped)
     return 0
 
 

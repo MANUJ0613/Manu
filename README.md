@@ -26,23 +26,28 @@ récupérables qu'avec une session connectée (voir plus bas).
 
 ## Mode `categories` — ce que ça donne
 
-```
-TOP 30 PRODUITS LES PLUS LIKÉS — postés ≤ 7j, hors vêtements (67 catégories)
- #   ❤fav  /jour   âge     prix  catégorie               article
- 1    287    176  1.6j  60,00 €  Entretien de la maison  Climatizador evaporativo Starlyf
- 2    253    216  1.2j   3,50 €  Loisirs créatifs        Patchs / écussons thermocollants
- 3    216     36  6.0j 260,00 €  Ordinateurs             MacBook Pro 2017 - Apple
-16    163    302   12h  95,00 €  Jeux vidéo et consoles  Nintendo switch 1
+Un classement **par catégorie › sous-catégorie**, avec les **15 produits** de
+chaque sous-catégorie qui **montent le plus vite** (favoris/jour), postés sur la
+fenêtre :
 
-⚡ TENDANCES QUI MONTENT VITE (favoris/jour)
- 1    302 fav/j  ❤163   12h   95,00 €  Jeux vidéo  Nintendo switch 1
+```
+15 PRODUITS / CATÉGORIE — postés ≤ 7j, classés par favoris/jour, hors vêtements
+
+▸ Électronique › Jeux vidéo et consoles
+    1.  302/j  ❤163   12h   95,00 €  Nintendo switch 1
+    2.  108/j  ❤54     4h  210,00 €  Nintendo switch 2
+    ...
+▸ Loisirs et collections › Cartes à collectionner
+    1.   62/j  ❤31     9h    1,00 €  Lot de cartes Pokémon
+    ...
 ```
 
 - **`/jour` (favoris/jour)** = vitesse à laquelle l'article accumule des likes →
-  repère les **tendances naissantes** mieux que le total brut.
-- **`âge`** = depuis quand l'article est en ligne (filtré à ≤ 7 jours).
-- Détail complet écrit en **JSON** (`state/vinted_report.json`) et **CSV**
-  (`state/vinted_report.csv`) pour analyse dans un tableur.
+  repère les **tendances fraîches** mieux que le total brut.
+- **`âge`** = depuis quand l'article est en ligne (heure de référence = horloge
+  du **serveur Vinted**, donc fiable même si l'horloge locale est décalée).
+- Sur Discord : **un message par sous-catégorie** (liens cliquables). Détail
+  complet aussi en **JSON** + **CSV** pour analyse dans un tableur.
 
 ## Comment ça marche
 
@@ -92,6 +97,8 @@ et envoie le digest. Ajoute tes secrets dans **Settings → Secrets and variable
 |----------|--------|------|
 | `MODE` | `categories` | `categories` (scan hors vêtements) ou `watchlist` |
 | `DAYS_WINDOW` | `7` | Fenêtre de fraîcheur : articles postés depuis N jours |
+| `RANK_BY` | `hotness` | `hotness` (favoris/jour, le + frais) ou `favourites` (favoris totaux) |
+| `TOP_PER_CATEGORY` | `15` | Nombre d'articles listés par sous-catégorie |
 | `CATEGORY_MAX_PAGES` | `3` | Pages de 96 articles lues par catégorie |
 | `MIN_FAVOURITES` | `3` | Ignore les articles sous ce nombre de favoris |
 | `EXCLUDE_PATTERNS` | `vêtement,…,créateur` | Catégories exclues par titre |

@@ -45,6 +45,8 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           MODE: "categories"
           DAYS_WINDOW: ${{ github.event.inputs.days_window || '7' }}
+          RANK_BY: "hotness"
+          TOP_PER_CATEGORY: "15"
           CATEGORY_MAX_PAGES: "3"
           CONCURRENCY: "4"
         run: python3 vinted_analyzer.py
