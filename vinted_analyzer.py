@@ -460,6 +460,103 @@ def http_get(url: str, retries: int = 3) -> bytes:
 
 
 # --------------------------------------------------------------------------- #
+# Recherche par IMAGE (nécessite une session CONNECTÉE via VINTED_COOKIE)
+#   1) POST /web/api/images/images (multipart stream + photo_type=query_image)
+#   2) GET  /api/v2/catalog/items?search_by_image_id=<id>
+# --------------------------------------------------------------------------- #
+
+IMAGE_UPLOAD_URL = os.environ.get(
+    "IMAGE_UPLOAD_URL", f"{SITE_ROOT}/web/api/images/images"
+)
+_CSRF_RE = re.compile(r'"CSRF_TOKEN":"([^"]+)"')
+_CSRF_META_RE = re.compile(
+    r'<meta[^>]+name=["\']csrf-token["\'][^>]+content=["\']([^"\']+)', re.I
+)
+
+
+def _csrf_token() -> str:
+    """Récupère le CSRF token depuis la home (session connectée)."""
+    try:
+        html_txt = http_get(SITE_ROOT + "/").decode("utf-8", "replace")
+    except Exception:  # noqa: BLE001
+        return ""
+    m = _CSRF_RE.search(html_txt) or _CSRF_META_RE.search(html_txt)
+    return m.group(1) if m else ""
+
+
+def _multipart_image(image_bytes: bytes, filename: str = "query.jpg") -> tuple[bytes, str]:
+    """Construit un corps multipart (champ 'stream' + photo_type=query_image)."""
+    import uuid as _uuid
+    boundary = "----vinted" + _uuid.uuid4().hex
+    pre = (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="stream"; filename="{filename}"\r\n'
+        f"Content-Type: image/jpeg\r\n\r\n"
+    ).encode()
+    mid = (
+        f"\r\n--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="photo_type"\r\n\r\nquery_image\r\n'
+        f"--{boundary}--\r\n"
+    ).encode()
+    return pre + image_bytes + mid, boundary
+
+
+def upload_query_image(image_bytes: bytes) -> str:
+    """Upload l'image et renvoie son id (recherche par image). Lève une erreur
+    explicite si la session n'est pas connectée."""
+    if not (VINTED_COOKIE or VINTED_ACCESS_TOKEN):
+        raise RuntimeError(
+            "Recherche par image : session connectée requise. Renseigne "
+            "VINTED_COOKIE (cookie de ton compte Vinted)."
+        )
+    body, boundary = _multipart_image(image_bytes)
+    csrf = _csrf_token()
+    headers = {
+        **_BROWSER_HEADERS,
+        "Content-Type": f"multipart/form-data; boundary={boundary}",
+        "Accept": "application/json",
+        "Referer": SITE_ROOT + "/",
+    }
+    if csrf:
+        headers["X-Csrf-Token"] = csrf
+
+    raw = b""
+    if HAVE_CFFI:
+        r = _session().post(IMAGE_UPLOAD_URL, data=body, headers=headers,
+                            timeout=REQUEST_TIMEOUT)
+        if r.status_code >= 400:
+            raise RuntimeError(f"upload image: HTTP {r.status_code} {r.text[:200]}")
+        raw = r.content
+    else:
+        opener = _urllib_opener()
+        req = urllib.request.Request(IMAGE_UPLOAD_URL, data=body, headers=headers,
+                                     method="POST")
+        try:
+            with opener.open(req, timeout=REQUEST_TIMEOUT) as resp:
+                raw = resp.read()
+        except urllib.error.HTTPError as err:
+            raise RuntimeError(
+                f"upload image: HTTP {err.code} {err.read()[:200]!r}"
+            ) from err
+    try:
+        data = json.loads(raw.decode("utf-8", "replace"))
+    except json.JSONDecodeError as err:
+        raise RuntimeError(f"upload image: réponse non-JSON ({raw[:120]!r})") from err
+    iid = data.get("id") or (data.get("photo") or {}).get("id") or data.get("image_id")
+    if not iid:
+        raise RuntimeError(f"upload image: id introuvable dans {data}")
+    return str(iid)
+
+
+def search_by_image(image_bytes: bytes, max_pages: int = 2) -> list[dict]:
+    """Recherche les articles Vinted ressemblant à l'image fournie."""
+    image_id = upload_query_image(image_bytes)
+    items = _fetch_items({"search_by_image_id": image_id}, max_pages,
+                         query="📷 image")
+    return items
+
+
+# --------------------------------------------------------------------------- #
 # Client API Vinted
 # --------------------------------------------------------------------------- #
 
@@ -946,6 +1043,67 @@ def analyze_query(query: str) -> dict | None:
         "score_parts": parts,
         "verdict": verdict_revente(n_total, avg_fav, len(items)),
         "top_items": ranked[: max(TOP_VIEWS, 10)],
+        "all_items": items,
+    }
+    result["advice"] = advice_revente(result)
+    return result
+
+
+def velocity_from_items(items: list[dict]) -> float | None:
+    """Rythme d'écoulement estimé à partir des dates des articles fournis."""
+    ts = sorted(it["posted_ts"] for it in items if it.get("posted_ts"))
+    if len(ts) < 8:
+        return None
+    span = (ts[-1] - ts[0]) / 86400.0
+    return round(len(ts) / span, 1) if span > 0 else None
+
+
+def analyze_image(image_bytes: bytes, label: str = "📷 Recherche par image") -> dict | None:
+    """Analyse de revente à partir d'une IMAGE (mêmes indicateurs que par texte)."""
+    items = search_by_image(image_bytes)
+    if not items:
+        return None
+    for it in items:
+        it["score"] = round(demand_score(it), 2)
+    prices = [i["price"] for i in items]
+    favs = [i["favourites"] for i in items]
+    sp = sorted(p for p in prices if p is not None and p > 0)
+    avg_fav = _mean(favs)
+    pct_hot = round(100 * sum(1 for f in favs if f > 10) / len(favs)) if favs else 0
+    velocity = velocity_from_items(items)
+    p25 = _percentile(sp, 0.25)
+    median_price = _median(prices)
+    conds: dict[str, list] = {}
+    for it in items:
+        c = (it.get("status") or "").strip()
+        if c and it.get("price"):
+            conds.setdefault(c, []).append(it["price"])
+    conditions = {
+        c: {"n": len(v), "median": round(statistics.median(v), 2)}
+        for c, v in sorted(conds.items(), key=lambda kv: -len(kv[1]))
+    }
+    parts = resale_breakdown(avg_fav or 0, velocity, pct_hot)
+    titles = ", ".join(dict.fromkeys(
+        (it.get("title") or "").split(" - ")[0][:24] for it in
+        sorted(items, key=lambda i: i["favourites"], reverse=True)[:3]
+    ))
+    result = {
+        "query": f"{label} ({titles})" if titles else label,
+        "n_total": len(items), "n_listings": len(items), "n_scanned": len(items),
+        "match_pct": 100, "strict_match": True,
+        "total_favourites": sum(favs), "avg_favourites": avg_fav,
+        "max_favourites": max(favs) if favs else 0,
+        "with_fav_pct": round(100 * sum(1 for f in favs if f > 0) / len(favs)) if favs else 0,
+        "pct_hot": pct_hot, "velocity": velocity,
+        "avg_views": None, "total_views": None,
+        "median_price": median_price, "p25_price": p25, "p75_price": _percentile(sp, 0.75),
+        "min_price": round(sp[0], 2) if sp else None,
+        "max_price": round(sp[-1], 2) if sp else None,
+        "margin": round(median_price - p25, 2) if (median_price and p25) else None,
+        "conditions": conditions, "demand_index": round(avg_fav or 0, 2),
+        "score": parts["total"], "score_parts": parts,
+        "verdict": verdict_revente(len(items), avg_fav, len(items)),
+        "top_items": sorted(items, key=lambda i: i["favourites"], reverse=True)[:10],
         "all_items": items,
     }
     result["advice"] = advice_revente(result)

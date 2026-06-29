@@ -4,9 +4,13 @@ Bot Discord interactif pour l'analyseur Vinted.
 
 Tu tapes une commande dans ton salon Discord et le bot répond avec la fiche :
     /vinted <produit>     → vérif revente (annonces, favoris, prix, verdict)
+    /photo  <image>       → RECHERCHE PAR IMAGE : vérif revente depuis une photo
     /marques <id_cat>     → top marques d'une catégorie (favoris)
-    /deals                → affaires du moment (sous le prix du marché)
-ou en préfixe : !vinted <produit>, !marques <id>, !deals
+ou en préfixe : !vinted <produit>, !marques <id>, et !photo (avec une photo jointe)
+
+🖼️ La recherche par image utilise la vraie recherche visuelle de Vinted : elle
+exige une SESSION CONNECTÉE. Renseigne la variable VINTED_COOKIE avec le cookie
+de ton compte Vinted (connecté sur vinted.fr → outils dev → en-tête Cookie).
 
 ⚠️ Contrairement au webhook (à sens unique), ce bot ÉCOUTE le salon : il doit
 donc tourner en CONTINU (VPS, PC allumé, hébergeur type Railway/Render…).
@@ -165,6 +169,25 @@ async def vinted_slash(interaction: discord.Interaction, produit: str):
     await interaction.followup.send(embed=check_embed(r))
 
 
+@bot.tree.command(name="photo", description="Vérif revente à partir d'une PHOTO du produit")
+@app_commands.describe(image="Photo du produit (recherche par image Vinted)")
+async def photo_slash(interaction: discord.Interaction, image: discord.Attachment):
+    await interaction.response.defer(thinking=True)
+    if not (image.content_type or "").startswith("image"):
+        await interaction.followup.send("Envoie une **image** (jpg/png).")
+        return
+    try:
+        data = await image.read()
+        r = await _run(va.analyze_image, data)
+    except Exception as err:  # noqa: BLE001
+        await interaction.followup.send(f"⚠️ Recherche par image impossible : {err}")
+        return
+    if not r:
+        await interaction.followup.send("Aucun article ressemblant trouvé pour cette photo.")
+        return
+    await interaction.followup.send(embed=check_embed(r))
+
+
 @bot.tree.command(name="marques", description="Top marques d'une catégorie Vinted")
 @app_commands.describe(categorie="ID de catégorie Vinted (ex: 1499 = jouets)")
 async def marques_slash(interaction: discord.Interaction, categorie: str):
@@ -192,6 +215,34 @@ async def marques_cmd(ctx: commands.Context, categorie: str):
     async with ctx.typing():
         e = await _run(brands_embed, categorie)
     await ctx.reply(embed=e)
+
+
+# Recherche par image : poste une photo avec "!photo" en légende (ou réponds
+# "!photo" à un message contenant une image).
+@bot.command(name="photo")
+async def photo_cmd(ctx: commands.Context):
+    atts = list(ctx.message.attachments)
+    if not atts and ctx.message.reference:
+        try:
+            ref = await ctx.channel.fetch_message(ctx.message.reference.message_id)
+            atts = list(ref.attachments)
+        except Exception:  # noqa: BLE001
+            atts = []
+    img = next((a for a in atts if (a.content_type or "").startswith("image")), None)
+    if not img:
+        await ctx.reply("Joins une **photo** au message (ou réponds `!photo` à une photo).")
+        return
+    async with ctx.typing():
+        try:
+            data = await img.read()
+            r = await _run(va.analyze_image, data)
+        except Exception as err:  # noqa: BLE001
+            await ctx.reply(f"⚠️ Recherche par image impossible : {err}")
+            return
+    if not r:
+        await ctx.reply("Aucun article ressemblant trouvé pour cette photo.")
+        return
+    await ctx.reply(embed=check_embed(r))
 
 
 @bot.event
