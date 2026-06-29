@@ -753,40 +753,6 @@ def get_total_listings(query: str) -> int | None:
         return None
 
 
-def _percentile(sorted_vals: list[float], p: float) -> float | None:
-    if not sorted_vals:
-        return None
-    k = (len(sorted_vals) - 1) * p
-    f = int(k)
-    c = min(f + 1, len(sorted_vals) - 1)
-    return round(sorted_vals[f] + (sorted_vals[c] - sorted_vals[f]) * (k - f), 2)
-
-
-def estimate_velocity(query: str) -> float | None:
-    """Estime le RYTHME D'ÉCOULEMENT : nombre d'annonces postées par jour,
-    calculé sur les annonces les plus récentes. À l'équilibre, le flux d'entrée
-    ≈ le flux de vente, donc c'est un bon proxy de « combien il s'en vend/jour »."""
-    try:
-        items = _fetch_items({"search_text": query}, 1, order="newest_first")
-    except Exception:  # noqa: BLE001
-        return None
-    ts = sorted(it["posted_ts"] for it in items if it.get("posted_ts"))
-    if len(ts) < 10:
-        return None
-    span_days = (ts[-1] - ts[0]) / 86400.0
-    if span_days <= 0:
-        return None
-    return round(len(ts) / span_days, 1)
-
-
-def resale_score(avg_fav: float, velocity: float | None, pct_hot: float) -> int:
-    """Score de revente 0-100 : demande (favoris) + écoulement + ampleur."""
-    demand = min((avg_fav or 0) * 3.5, 60)
-    speed = min((velocity or 0) * 1.5, 30) if velocity else 0
-    breadth = min(pct_hot * 0.2, 10)
-    return int(round(min(demand + speed + breadth, 100)))
-
-
 def verdict_revente(n_total: int | None, avg_fav: float | None,
                     n_sample: int) -> dict:
     """Verdict achat-revente à partir de la demande (favoris/annonce) et de
@@ -851,21 +817,6 @@ def analyze_query(query: str) -> dict | None:
     ranked = sorted(items, key=lambda i: i["score"], reverse=True)
     avg_fav = _mean(favs)
     n_total = get_total_listings(query)
-    sp = sorted(p for p in prices if p is not None and p > 0)
-    pct_hot = round(100 * sum(1 for f in favs if f > 10) / len(favs)) if favs else 0
-    velocity = estimate_velocity(query)
-    p25 = _percentile(sp, 0.25)
-    median_price = _median(prices)
-    # Répartition par état (neuf / très bon / bon…), prix médian par état.
-    conds: dict[str, list] = {}
-    for it in items:
-        c = (it.get("status") or "").strip()
-        if c and it.get("price"):
-            conds.setdefault(c, []).append(it["price"])
-    conditions = {
-        c: {"n": len(v), "median": round(statistics.median(v), 2)}
-        for c, v in sorted(conds.items(), key=lambda kv: -len(kv[1]))
-    }
 
     return {
         "query": query,
@@ -875,19 +826,16 @@ def analyze_query(query: str) -> dict | None:
         "avg_favourites": avg_fav,
         "max_favourites": max(favs) if favs else 0,
         "with_fav_pct": round(100 * sum(1 for f in favs if f > 0) / len(favs)) if favs else 0,
-        "pct_hot": pct_hot,             # % d'annonces à fort intérêt (>10 ❤)
-        "velocity": velocity,           # ≈ annonces postées/jour (rythme de vente)
         "avg_views": _mean(views_known) if views_known else None,
         "total_views": sum(views_known) if views_known else None,
-        "median_price": median_price,
-        "p25_price": p25,               # prix d'achat « malin »
-        "p75_price": _percentile(sp, 0.75),
-        "min_price": round(sp[0], 2) if sp else None,
-        "max_price": round(sp[-1], 2) if sp else None,
-        "margin": round(median_price - p25, 2) if (median_price and p25) else None,
-        "conditions": conditions,
+        "median_price": _median(prices),
+        "min_price": round(min([p for p in prices if p is not None]), 2)
+        if any(p is not None for p in prices)
+        else None,
+        "max_price": round(max([p for p in prices if p is not None]), 2)
+        if any(p is not None for p in prices)
+        else None,
         "demand_index": round(_mean([i["score"] for i in items]) or 0, 2),
-        "score": resale_score(avg_fav or 0, velocity, pct_hot),
         "verdict": verdict_revente(n_total, avg_fav, len(items)),
         "top_items": ranked[: max(TOP_VIEWS, 10)],
         "all_items": items,
@@ -1935,27 +1883,14 @@ def run_watchlist() -> int:
 
 def _check_lines(r: dict) -> list[str]:
     v = r["verdict"]
-    vel = (f"≈ {r['velocity']:.0f} annonces/jour postées (rythme de vente)"
-           if r.get("velocity") else "rythme de vente indéterminé")
-    lines = [
-        f"{v['emoji']} **{r['query'].upper()}** — {v['label']}  ·  score revente "
-        f"**{r.get('score', 0)}/100**",
-        f"📦 Offre : **{_fmt_total(r['n_total'])}** annonces ({v['note']})",
-        f"🔁 Écoulement : **{vel}**",
-        f"❤️ Demande : **{(r['avg_favourites'] or 0):.1f} favoris/annonce** · "
-        f"max {r['max_favourites']} · {r.get('pct_hot', 0)}% des annonces ont >10 likes",
-        f"💰 Achat malin **{_euro(r.get('p25_price'))}** → revente **{_euro(r['median_price'])}** "
-        f"→ haut {_euro(r.get('p75_price'))}  (marge ~**{_euro(r.get('margin'))}**)",
+    return [
+        f"{v['emoji']} **{r['query'].upper()}** — {v['label']}",
+        f"📦 Annonces sur Vinted : **{_fmt_total(r['n_total'])}**  ({v['note']})",
+        f"❤️ Favoris : **{(r['avg_favourites'] or 0):.1f}/annonce** en moyenne · "
+        f"max {r['max_favourites']} · {r['with_fav_pct']}% des annonces ont des likes",
+        f"💶 Prix revente : médian **{_euro(r['median_price'])}** "
+        f"(de {_euro(r['min_price'])} à {_euro(r['max_price'])})",
     ]
-    conds = r.get("conditions") or {}
-    if conds:
-        top = list(conds.items())[:3]
-        lines.append(
-            "📦 États : " + " · ".join(
-                f"{c} ({d['n']}, méd. {_euro(d['median'])})" for c, d in top
-            )
-        )
-    return lines
 
 
 def print_checks(results: list[dict]) -> None:

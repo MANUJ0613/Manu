@@ -57,60 +57,25 @@ def _color(emoji: str) -> int:
             else 0xF1C40F if emoji == "🟡" else 0xE74C3C)
 
 
-def _bar(score: int) -> str:
-    filled = round(score / 10)
-    return "█" * filled + "░" * (10 - filled)
-
-
 def check_embed(r: dict) -> discord.Embed:
     v = r["verdict"]
-    score = r.get("score", 0)
     e = discord.Embed(
         title=f"{v['emoji']} {r['query']} — {v['label']}"[:256],
-        description=f"**Score revente : {score}/100**  `{_bar(score)}`",
+        description="\n".join(va._check_lines(r)[1:])[:4000],
         color=_color(v["emoji"]),
     )
-    vel = (f"≈ **{r['velocity']:.0f}** annonces/jour\n(rythme de vente estimé)"
-           if r.get("velocity") else "indéterminé")
-    e.add_field(name="📦 Offre (concurrence)",
-                value=f"**{va._fmt_total(r['n_total'])}** annonces\n_{v['note']}_",
-                inline=True)
-    e.add_field(name="🔁 Écoulement", value=vel, inline=True)
-    e.add_field(
-        name="❤️ Demande",
-        value=(f"**{(r['avg_favourites'] or 0):.1f}** favoris/annonce\n"
-               f"max {r['max_favourites']} · {r.get('pct_hot', 0)}% à >10 ❤"),
-        inline=True,
-    )
-    e.add_field(
-        name="💰 Prix : achat → revente",
-        value=(f"Achat malin **{va._euro(r.get('p25_price'))}**\n"
-               f"Revente (médian) **{va._euro(r['median_price'])}**\n"
-               f"Haut de marché {va._euro(r.get('p75_price'))}\n"
-               f"➡️ marge potentielle **~{va._euro(r.get('margin'))}**"),
-        inline=False,
-    )
-    conds = r.get("conditions") or {}
-    if conds:
-        e.add_field(
-            name="📦 Par état",
-            value="\n".join(
-                f"**{c}** — {d['n']} ann. · méd. {va._euro(d['median'])}"
-                for c, d in list(conds.items())[:4]
-            )[:1024],
-            inline=False,
-        )
-    top = sorted(r.get("all_items") or [], key=lambda i: i["favourites"], reverse=True)[:5]
+    # Quelques annonces les plus likées, en bonus.
+    top = sorted(r.get("all_items") or [], key=lambda i: i["favourites"], reverse=True)[:3]
     if top:
         e.add_field(
-            name="🔝 Les plus likées (la cote du marché)",
+            name="🔝 Les plus likées",
             value="\n".join(
                 f"❤{it['favourites']} · {va._euro(it['price'])} — "
-                f"[{it['title'][:38]}]({it['url']})" for it in top
+                f"[{it['title'][:40]}]({it['url']})" for it in top
             )[:1024],
             inline=False,
         )
-    e.set_footer(text="Vinted — vérif revente · score = demande + écoulement")
+    e.set_footer(text="Vinted — vérif revente")
     return e
 
 
