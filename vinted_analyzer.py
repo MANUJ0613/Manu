@@ -468,7 +468,9 @@ def http_get(url: str, retries: int = 3) -> bytes:
 IMAGE_UPLOAD_URL = os.environ.get(
     "IMAGE_UPLOAD_URL", f"{SITE_ROOT}/web/api/images/images"
 )
-_CSRF_RE = re.compile(r'"CSRF_TOKEN":"([^"]+)"')
+# Le token est sérialisé (souvent ÉCHAPPÉ) dans le payload Next.js de la home :
+#   \"CSRF_TOKEN\":\"<uuid>\"
+_CSRF_RE = re.compile(r'\\?"CSRF_TOKEN\\?":\\?"([^"\\]+)')
 _CSRF_META_RE = re.compile(
     r'<meta[^>]+name=["\']csrf-token["\'][^>]+content=["\']([^"\']+)', re.I
 )
