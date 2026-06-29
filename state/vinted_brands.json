@@ -1,0 +1,193 @@
+{
+  "generated_at": "2026-06-29T11:19:47.937729+00:00",
+  "domain": "www.vinted.fr",
+  "n_brands": 31,
+  "brands": [
+    {
+      "brand": "Disney",
+      "listings": 11,
+      "favourites": 129,
+      "fav_per_listing": 11.7
+    },
+    {
+      "brand": "Vertbaudet",
+      "listings": 4,
+      "favourites": 106,
+      "fav_per_listing": 26.5
+    },
+    {
+      "brand": "Squishy",
+      "listings": 5,
+      "favourites": 103,
+      "fav_per_listing": 20.6
+    },
+    {
+      "brand": "Little Dutch",
+      "listings": 6,
+      "favourites": 68,
+      "fav_per_listing": 11.3
+    },
+    {
+      "brand": "Nathan",
+      "listings": 4,
+      "favourites": 54,
+      "fav_per_listing": 13.5
+    },
+    {
+      "brand": "Barbie",
+      "listings": 10,
+      "favourites": 53,
+      "fav_per_listing": 5.3
+    },
+    {
+      "brand": "Action",
+      "listings": 3,
+      "favourites": 51,
+      "fav_per_listing": 17.0
+    },
+    {
+      "brand": "VTech",
+      "listings": 6,
+      "favourites": 50,
+      "fav_per_listing": 8.3
+    },
+    {
+      "brand": "Pop Mart",
+      "listings": 3,
+      "favourites": 46,
+      "fav_per_listing": 15.3
+    },
+    {
+      "brand": "Playmobil",
+      "listings": 16,
+      "favourites": 42,
+      "fav_per_listing": 2.6
+    },
+    {
+      "brand": "Tonies",
+      "listings": 6,
+      "favourites": 25,
+      "fav_per_listing": 4.2
+    },
+    {
+      "brand": "Peppa Pig",
+      "listings": 3,
+      "favourites": 25,
+      "fav_per_listing": 8.3
+    },
+    {
+      "brand": "Schleich",
+      "listings": 6,
+      "favourites": 19,
+      "fav_per_listing": 3.2
+    },
+    {
+      "brand": "Funko Pop",
+      "listings": 13,
+      "favourites": 17,
+      "fav_per_listing": 1.3
+    },
+    {
+      "brand": "Jellycat",
+      "listings": 3,
+      "favourites": 13,
+      "fav_per_listing": 4.3
+    },
+    {
+      "brand": "Bandai",
+      "listings": 3,
+      "favourites": 13,
+      "fav_per_listing": 4.3
+    },
+    {
+      "brand": "Pokémon",
+      "listings": 5,
+      "favourites": 11,
+      "fav_per_listing": 2.2
+    },
+    {
+      "brand": "Mattel",
+      "listings": 3,
+      "favourites": 11,
+      "fav_per_listing": 3.7
+    },
+    {
+      "brand": "LEGO",
+      "listings": 7,
+      "favourites": 8,
+      "fav_per_listing": 1.1
+    },
+    {
+      "brand": "Disneyland Paris",
+      "listings": 3,
+      "favourites": 8,
+      "fav_per_listing": 2.7
+    },
+    {
+      "brand": "Ravensburger",
+      "listings": 4,
+      "favourites": 6,
+      "fav_per_listing": 1.5
+    },
+    {
+      "brand": "McDonald's",
+      "listings": 3,
+      "favourites": 6,
+      "fav_per_listing": 2.0
+    },
+    {
+      "brand": "Intex",
+      "listings": 3,
+      "favourites": 5,
+      "fav_per_listing": 1.7
+    },
+    {
+      "brand": "Super Mario",
+      "listings": 4,
+      "favourites": 4,
+      "fav_per_listing": 1.0
+    },
+    {
+      "brand": "Monster High",
+      "listings": 3,
+      "favourites": 2,
+      "fav_per_listing": 0.7
+    },
+    {
+      "brand": "Sesame Street",
+      "listings": 3,
+      "favourites": 1,
+      "fav_per_listing": 0.3
+    },
+    {
+      "brand": "Beyblade",
+      "listings": 3,
+      "favourites": 1,
+      "fav_per_listing": 0.3
+    },
+    {
+      "brand": "Funko",
+      "listings": 5,
+      "favourites": 0,
+      "fav_per_listing": 0.0
+    },
+    {
+      "brand": "Janod",
+      "listings": 4,
+      "favourites": 0,
+      "fav_per_listing": 0.0
+    },
+    {
+      "brand": "L.O.L. Surprise",
+      "listings": 4,
+      "favourites": 0,
+      "fav_per_listing": 0.0
+    },
+    {
+      "brand": "Ty",
+      "listings": 3,
+      "favourites": 0,
+      "fav_per_listing": 0.0
+    }
+  ]
+}
