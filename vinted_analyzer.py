@@ -779,12 +779,45 @@ def estimate_velocity(query: str) -> float | None:
     return round(len(ts) / span_days, 1)
 
 
+def resale_breakdown(avg_fav: float, velocity: float | None,
+                     pct_hot: float) -> dict:
+    """Détail du score de revente : sous-notes Demande/Écoulement/Ampleur."""
+    demand = round(min((avg_fav or 0) * 3.5, 60))
+    speed = round(min((velocity or 0) * 1.5, 30)) if velocity else 0
+    breadth = round(min(pct_hot * 0.2, 10))
+    return {"demand": demand, "speed": speed, "breadth": breadth,
+            "total": min(demand + speed + breadth, 100)}
+
+
 def resale_score(avg_fav: float, velocity: float | None, pct_hot: float) -> int:
     """Score de revente 0-100 : demande (favoris) + écoulement + ampleur."""
-    demand = min((avg_fav or 0) * 3.5, 60)
-    speed = min((velocity or 0) * 1.5, 30) if velocity else 0
-    breadth = min(pct_hot * 0.2, 10)
-    return int(round(min(demand + speed + breadth, 100)))
+    return int(resale_breakdown(avg_fav, velocity, pct_hot)["total"])
+
+
+def advice_revente(r: dict) -> str:
+    """Phrase de conseil concrète selon demande / écoulement / concurrence."""
+    avg = r.get("avg_favourites") or 0
+    vel = r.get("velocity")
+    n = r.get("n_total") or 0
+    demand_ok = avg >= 8
+    fast = (vel or 0) >= 8
+    if demand_ok and fast:
+        return ("✅ Très recherché ET part vite : revente facile et rapide. "
+                "Sous le prix médian, fonce.")
+    if demand_ok and not fast:
+        return ("🟡 Recherché mais s'écoule lentement (offre abondante) : marge "
+                "possible, mais la revente peut prendre des semaines.")
+    if not demand_ok and fast:
+        return ("🟡 Ça tourne vite mais peu de favoris : se vend surtout au bon "
+                "prix, marge plus serrée.")
+    if n and n < 30:
+        return ("🔵 Niche : peu d'offre et peu de demande. Rentable surtout si tu "
+                "as déjà un acheteur ou une pièce rare.")
+    if avg >= 4:
+        return ("🟡 Demande modérée et écoulement plutôt lent : revente possible "
+                "mais sans garantie de rapidité — achète au bas du marché.")
+    return ("🔴 Peu recherché et peu d'écoulement : risque de rester sur les bras, "
+            "à éviter pour de la revente.")
 
 
 def verdict_revente(n_total: int | None, avg_fav: float | None,
@@ -867,7 +900,8 @@ def analyze_query(query: str) -> dict | None:
         for c, v in sorted(conds.items(), key=lambda kv: -len(kv[1]))
     }
 
-    return {
+    parts = resale_breakdown(avg_fav or 0, velocity, pct_hot)
+    result = {
         "query": query,
         "n_total": n_total,             # offre réelle sur Vinted
         "n_listings": len(items),       # échantillon analysé
@@ -887,11 +921,14 @@ def analyze_query(query: str) -> dict | None:
         "margin": round(median_price - p25, 2) if (median_price and p25) else None,
         "conditions": conditions,
         "demand_index": round(_mean([i["score"] for i in items]) or 0, 2),
-        "score": resale_score(avg_fav or 0, velocity, pct_hot),
+        "score": parts["total"],
+        "score_parts": parts,
         "verdict": verdict_revente(n_total, avg_fav, len(items)),
         "top_items": ranked[: max(TOP_VIEWS, 10)],
         "all_items": items,
     }
+    result["advice"] = advice_revente(result)
+    return result
 
 
 # --------------------------------------------------------------------------- #
