@@ -36,6 +36,7 @@ import os
 import re
 import socket
 import statistics
+import uuid
 import sys
 import threading
 import time
@@ -460,6 +461,117 @@ def http_get(url: str, retries: int = 3) -> bytes:
 
 
 # --------------------------------------------------------------------------- #
+# Recherche par IMAGE (nécessite une session CONNECTÉE via VINTED_COOKIE)
+# Flux réel de Vinted (reverse-engineeré et validé) :
+#   1) génère un temp_uuid (uuid4) ;
+#   2) POST /api/v2/photos  (multipart : photo[type]=item, photo[temp_uuid]=uuid,
+#      photo[file]=<image>) avec en-têtes x-anon-id + x-csrf-token + locale ;
+#   3) GET /api/v2/catalog/items?search_by_image_uuid=<uuid> -> articles
+#      visuellement ressemblants (modèle d'embedding SigLIP de Vinted).
+# --------------------------------------------------------------------------- #
+
+IMAGE_UPLOAD_URL = os.environ.get("IMAGE_UPLOAD_URL", f"{API_ROOT}/photos")
+# Le token est sérialisé (souvent ÉCHAPPÉ) dans le payload Next.js de la home :
+#   \"CSRF_TOKEN\":\"<uuid>\"
+_CSRF_RE = re.compile(r'\\?"CSRF_TOKEN\\?":\\?"([^"\\]+)')
+_CSRF_META_RE = re.compile(
+    r'<meta[^>]+name=["\']csrf-token["\'][^>]+content=["\']([^"\']+)', re.I
+)
+
+
+def _csrf_token() -> str:
+    """Récupère le CSRF token depuis la home (session connectée)."""
+    try:
+        html_txt = http_get(SITE_ROOT + "/").decode("utf-8", "replace")
+    except Exception:  # noqa: BLE001
+        return ""
+    m = _CSRF_RE.search(html_txt) or _CSRF_META_RE.search(html_txt)
+    return m.group(1) if m else ""
+
+
+def _anon_id() -> str:
+    """Extrait l'anon_id depuis le cookie de session (en-tête x-anon-id)."""
+    m = re.search(r"anon_id=([0-9a-fA-F\-]+)", VINTED_COOKIE or "")
+    return m.group(1) if m else ""
+
+
+def _multipart_photo(image_bytes: bytes, temp_uuid: str,
+                     filename: str = "query.jpg") -> tuple[bytes, str]:
+    """Corps multipart attendu par /api/v2/photos :
+    photo[type]=item, photo[temp_uuid]=<uuid>, photo[file]=<image jpeg>."""
+    boundary = "----vinted" + uuid.uuid4().hex
+    def field(name: str, value: str) -> bytes:
+        return (f"--{boundary}\r\n"
+                f'Content-Disposition: form-data; name="{name}"\r\n\r\n'
+                f"{value}\r\n").encode()
+    body = field("photo[type]", "item") + field("photo[temp_uuid]", temp_uuid)
+    body += (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="photo[file]"; filename="{filename}"\r\n'
+        f"Content-Type: image/jpeg\r\n\r\n"
+    ).encode() + image_bytes + f"\r\n--{boundary}--\r\n".encode()
+    return body, boundary
+
+
+def upload_query_image(image_bytes: bytes) -> str:
+    """Upload l'image comme requête de recherche et renvoie le temp_uuid à
+    utiliser pour la recherche. Lève une erreur claire si pas de session."""
+    if not (VINTED_COOKIE or VINTED_ACCESS_TOKEN):
+        raise RuntimeError(
+            "Recherche par image : session connectée requise. Renseigne "
+            "VINTED_COOKIE (cookie de ton compte Vinted)."
+        )
+    temp_uuid = str(uuid.uuid4())
+    body, boundary = _multipart_photo(image_bytes, temp_uuid)
+    headers = {
+        **_BROWSER_HEADERS,
+        "Content-Type": f"multipart/form-data; boundary={boundary}",
+        "Accept": "application/json",
+        "Origin": SITE_ROOT,
+        "Referer": SITE_ROOT + "/",
+        "locale": "fr-FR",
+    }
+    csrf = _csrf_token()
+    if csrf:
+        headers["X-Csrf-Token"] = csrf
+    anon = _anon_id()
+    if anon:
+        headers["X-Anon-Id"] = anon
+
+    if HAVE_CFFI:
+        r = _session().post(IMAGE_UPLOAD_URL, data=body, headers=headers,
+                            timeout=REQUEST_TIMEOUT)
+        if r.status_code >= 400:
+            raise RuntimeError(f"upload image: HTTP {r.status_code} {r.text[:200]}")
+        raw = r.content
+    else:
+        opener = _urllib_opener()
+        req = urllib.request.Request(IMAGE_UPLOAD_URL, data=body, headers=headers,
+                                     method="POST")
+        try:
+            with opener.open(req, timeout=REQUEST_TIMEOUT) as resp:
+                raw = resp.read()
+        except urllib.error.HTTPError as err:
+            raise RuntimeError(
+                f"upload image: HTTP {err.code} {err.read()[:200]!r}"
+            ) from err
+    try:
+        data = json.loads(raw.decode("utf-8", "replace"))
+    except json.JSONDecodeError as err:
+        raise RuntimeError(f"upload image: réponse non-JSON ({raw[:120]!r})") from err
+    # Vinted renvoie le temp_uuid qu'on a fourni : c'est lui la clé de recherche.
+    return str(data.get("temp_uuid") or temp_uuid)
+
+
+def search_by_image(image_bytes: bytes, max_pages: int = 2) -> list[dict]:
+    """Recherche les articles Vinted ressemblant à l'image fournie."""
+    image_uuid = upload_query_image(image_bytes)
+    items = _fetch_items({"search_by_image_uuid": image_uuid}, max_pages,
+                         query="📷 image")
+    return items
+
+
+# --------------------------------------------------------------------------- #
 # Client API Vinted
 # --------------------------------------------------------------------------- #
 
@@ -878,10 +990,28 @@ def analyze_query(query: str) -> dict | None:
     for it in items:
         it["score"] = round(demand_score(it), 2)
 
-    prices = [i["price"] for i in items]
-    favs = [i["favourites"] for i in items]
-    views_known = [i["views"] for i in items if i["views"] is not None]
-    ranked = sorted(items, key=lambda i: i["score"], reverse=True)
+    # FILTRE DE PERTINENCE : on ne garde que les annonces dont le TITRE contient
+    # vraiment tous tes mots-clés (≥3 lettres), pour coller à TON produit et pas
+    # au bruit de la recherche. Repli sur tout si trop peu d'annonces matchent.
+    qtokens = [
+        t for t in re.findall(r"[a-z0-9]+", _strip_accents(query.lower()))
+        if len(t) >= 3 and t not in _DEAL_STOP
+    ]
+
+    def _relevant(it: dict) -> bool:
+        if not qtokens:
+            return True
+        t = _strip_accents((it.get("title") or "").lower())
+        return all(tok in t for tok in qtokens)
+
+    matched = [it for it in items if _relevant(it)]
+    match_pct = round(100 * len(matched) / len(items)) if items else 0
+    core = matched if len(matched) >= 10 else items  # repli si trop peu matchent
+
+    prices = [i["price"] for i in core]
+    favs = [i["favourites"] for i in core]
+    views_known = [i["views"] for i in core if i["views"] is not None]
+    ranked = sorted(core, key=lambda i: i["score"], reverse=True)
     avg_fav = _mean(favs)
     n_total = get_total_listings(query)
     sp = sorted(p for p in prices if p is not None and p > 0)
@@ -891,7 +1021,7 @@ def analyze_query(query: str) -> dict | None:
     median_price = _median(prices)
     # Répartition par état (neuf / très bon / bon…), prix médian par état.
     conds: dict[str, list] = {}
-    for it in items:
+    for it in core:
         c = (it.get("status") or "").strip()
         if c and it.get("price"):
             conds.setdefault(c, []).append(it["price"])
@@ -904,7 +1034,10 @@ def analyze_query(query: str) -> dict | None:
     result = {
         "query": query,
         "n_total": n_total,             # offre réelle sur Vinted
-        "n_listings": len(items),       # échantillon analysé
+        "n_listings": len(core),        # annonces analysées (pertinentes)
+        "n_scanned": len(items),        # annonces ramenées par la recherche
+        "match_pct": match_pct,         # % qui contiennent vraiment tes mots-clés
+        "strict_match": len(matched) >= 10,
         "total_favourites": sum(favs),
         "avg_favourites": avg_fav,
         "max_favourites": max(favs) if favs else 0,
@@ -925,6 +1058,67 @@ def analyze_query(query: str) -> dict | None:
         "score_parts": parts,
         "verdict": verdict_revente(n_total, avg_fav, len(items)),
         "top_items": ranked[: max(TOP_VIEWS, 10)],
+        "all_items": items,
+    }
+    result["advice"] = advice_revente(result)
+    return result
+
+
+def velocity_from_items(items: list[dict]) -> float | None:
+    """Rythme d'écoulement estimé à partir des dates des articles fournis."""
+    ts = sorted(it["posted_ts"] for it in items if it.get("posted_ts"))
+    if len(ts) < 8:
+        return None
+    span = (ts[-1] - ts[0]) / 86400.0
+    return round(len(ts) / span, 1) if span > 0 else None
+
+
+def analyze_image(image_bytes: bytes, label: str = "📷 Recherche par image") -> dict | None:
+    """Analyse de revente à partir d'une IMAGE (mêmes indicateurs que par texte)."""
+    items = search_by_image(image_bytes)
+    if not items:
+        return None
+    for it in items:
+        it["score"] = round(demand_score(it), 2)
+    prices = [i["price"] for i in items]
+    favs = [i["favourites"] for i in items]
+    sp = sorted(p for p in prices if p is not None and p > 0)
+    avg_fav = _mean(favs)
+    pct_hot = round(100 * sum(1 for f in favs if f > 10) / len(favs)) if favs else 0
+    velocity = velocity_from_items(items)
+    p25 = _percentile(sp, 0.25)
+    median_price = _median(prices)
+    conds: dict[str, list] = {}
+    for it in items:
+        c = (it.get("status") or "").strip()
+        if c and it.get("price"):
+            conds.setdefault(c, []).append(it["price"])
+    conditions = {
+        c: {"n": len(v), "median": round(statistics.median(v), 2)}
+        for c, v in sorted(conds.items(), key=lambda kv: -len(kv[1]))
+    }
+    parts = resale_breakdown(avg_fav or 0, velocity, pct_hot)
+    titles = ", ".join(dict.fromkeys(
+        (it.get("title") or "").split(" - ")[0][:24] for it in
+        sorted(items, key=lambda i: i["favourites"], reverse=True)[:3]
+    ))
+    result = {
+        "query": f"{label} ({titles})" if titles else label,
+        "n_total": len(items), "n_listings": len(items), "n_scanned": len(items),
+        "match_pct": 100, "strict_match": True,
+        "total_favourites": sum(favs), "avg_favourites": avg_fav,
+        "max_favourites": max(favs) if favs else 0,
+        "with_fav_pct": round(100 * sum(1 for f in favs if f > 0) / len(favs)) if favs else 0,
+        "pct_hot": pct_hot, "velocity": velocity,
+        "avg_views": None, "total_views": None,
+        "median_price": median_price, "p25_price": p25, "p75_price": _percentile(sp, 0.75),
+        "min_price": round(sp[0], 2) if sp else None,
+        "max_price": round(sp[-1], 2) if sp else None,
+        "margin": round(median_price - p25, 2) if (median_price and p25) else None,
+        "conditions": conditions, "demand_index": round(avg_fav or 0, 2),
+        "score": parts["total"], "score_parts": parts,
+        "verdict": verdict_revente(len(items), avg_fav, len(items)),
+        "top_items": sorted(items, key=lambda i: i["favourites"], reverse=True)[:10],
         "all_items": items,
     }
     result["advice"] = advice_revente(result)
@@ -1983,6 +2177,8 @@ def _check_lines(r: dict) -> list[str]:
         f"max {r['max_favourites']} · {r.get('pct_hot', 0)}% des annonces ont >10 likes",
         f"💰 Achat malin **{_euro(r.get('p25_price'))}** → revente **{_euro(r['median_price'])}** "
         f"→ haut {_euro(r.get('p75_price'))}  (marge ~**{_euro(r.get('margin'))}**)",
+        f"🎯 Pertinence : **{r.get('match_pct', 0)}%** des annonces contiennent bien tes mots-clés "
+        f"({r.get('n_listings', 0)}/{r.get('n_scanned', 0)} analysées)",
     ]
     conds = r.get("conditions") or {}
     if conds:
