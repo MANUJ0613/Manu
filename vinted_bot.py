@@ -127,7 +127,11 @@ def check_embed(r: dict) -> discord.Embed:
             )[:1024],
             inline=False,
         )
-    e.set_footer(text="Vinted — vérif revente · plus le score est haut, plus c'est facile à revendre")
+    e.set_footer(
+        text=(f"🎯 Pertinence {r.get('match_pct', 0)}% "
+              f"({r.get('n_listings', 0)}/{r.get('n_scanned', 0)} annonces collent à tes mots) "
+              f"· plus le score est haut, plus c'est facile à revendre")
+    )
     return e
 
 

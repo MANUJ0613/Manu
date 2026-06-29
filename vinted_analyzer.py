@@ -878,10 +878,28 @@ def analyze_query(query: str) -> dict | None:
     for it in items:
         it["score"] = round(demand_score(it), 2)
 
-    prices = [i["price"] for i in items]
-    favs = [i["favourites"] for i in items]
-    views_known = [i["views"] for i in items if i["views"] is not None]
-    ranked = sorted(items, key=lambda i: i["score"], reverse=True)
+    # FILTRE DE PERTINENCE : on ne garde que les annonces dont le TITRE contient
+    # vraiment tous tes mots-clés (≥3 lettres), pour coller à TON produit et pas
+    # au bruit de la recherche. Repli sur tout si trop peu d'annonces matchent.
+    qtokens = [
+        t for t in re.findall(r"[a-z0-9]+", _strip_accents(query.lower()))
+        if len(t) >= 3 and t not in _DEAL_STOP
+    ]
+
+    def _relevant(it: dict) -> bool:
+        if not qtokens:
+            return True
+        t = _strip_accents((it.get("title") or "").lower())
+        return all(tok in t for tok in qtokens)
+
+    matched = [it for it in items if _relevant(it)]
+    match_pct = round(100 * len(matched) / len(items)) if items else 0
+    core = matched if len(matched) >= 10 else items  # repli si trop peu matchent
+
+    prices = [i["price"] for i in core]
+    favs = [i["favourites"] for i in core]
+    views_known = [i["views"] for i in core if i["views"] is not None]
+    ranked = sorted(core, key=lambda i: i["score"], reverse=True)
     avg_fav = _mean(favs)
     n_total = get_total_listings(query)
     sp = sorted(p for p in prices if p is not None and p > 0)
@@ -891,7 +909,7 @@ def analyze_query(query: str) -> dict | None:
     median_price = _median(prices)
     # Répartition par état (neuf / très bon / bon…), prix médian par état.
     conds: dict[str, list] = {}
-    for it in items:
+    for it in core:
         c = (it.get("status") or "").strip()
         if c and it.get("price"):
             conds.setdefault(c, []).append(it["price"])
@@ -904,7 +922,10 @@ def analyze_query(query: str) -> dict | None:
     result = {
         "query": query,
         "n_total": n_total,             # offre réelle sur Vinted
-        "n_listings": len(items),       # échantillon analysé
+        "n_listings": len(core),        # annonces analysées (pertinentes)
+        "n_scanned": len(items),        # annonces ramenées par la recherche
+        "match_pct": match_pct,         # % qui contiennent vraiment tes mots-clés
+        "strict_match": len(matched) >= 10,
         "total_favourites": sum(favs),
         "avg_favourites": avg_fav,
         "max_favourites": max(favs) if favs else 0,
@@ -1983,6 +2004,8 @@ def _check_lines(r: dict) -> list[str]:
         f"max {r['max_favourites']} · {r.get('pct_hot', 0)}% des annonces ont >10 likes",
         f"💰 Achat malin **{_euro(r.get('p25_price'))}** → revente **{_euro(r['median_price'])}** "
         f"→ haut {_euro(r.get('p75_price'))}  (marge ~**{_euro(r.get('margin'))}**)",
+        f"🎯 Pertinence : **{r.get('match_pct', 0)}%** des annonces contiennent bien tes mots-clés "
+        f"({r.get('n_listings', 0)}/{r.get('n_scanned', 0)} analysées)",
     ]
     conds = r.get("conditions") or {}
     if conds:
