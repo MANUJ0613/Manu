@@ -12,6 +12,10 @@ Ce dépôt contient deux outils indépendants :
 
 # Analyseur de demande Vinted 🛍️
 
+> 🤖 **Bot Discord interactif** : tu peux aussi taper **`/vinted iphone 13`**
+> directement dans ton salon et recevoir la fiche en réponse — voir
+> [Bot Discord interactif](#bot-discord-interactif-).
+
 Trois modes (`MODE`) :
 
 - **`categories` (par défaut)** — scanne **toutes les catégories Vinted sauf les
@@ -169,6 +173,47 @@ et envoie le digest. Ajoute tes secrets dans **Settings → Secrets and variable
 > ⚠️ Comme Micromania, Vinted est derrière **DataDome**. Sur une IP datacenter
 > (VPS), installe `curl_cffi` (déjà dans `requirements.txt`) et/ou utilise un
 > **proxy résidentiel** (`PROXY=...`). Sur GitHub Actions, l'IP passe sans proxy.
+
+## Bot Discord interactif 🤖
+
+[`vinted_bot.py`](vinted_bot.py) est un **vrai bot** qui ÉCOUTE ton salon : tu
+tapes une commande et il répond, en direct.
+
+```
+/vinted iphone 13      → fiche revente (annonces, favoris, prix, verdict)
+/marques 1499          → top marques d'une catégorie (1499 = jouets)
+!vinted stanley cup    → idem en préfixe (si tu préfères)
+```
+
+> Le **webhook** (utilisé par les workflows) est à sens unique. Pour *taper* dans
+> le salon et obtenir une réponse, il faut ce bot, qui doit tourner **en continu**
+> (VPS, PC allumé, hébergeur). GitHub Actions ne peut pas écouter en temps réel.
+
+### Installation (VPS, ~5 min)
+
+1. **Créer le bot** sur https://discord.com/developers/applications → *New
+   Application* → onglet **Bot** → *Reset Token* → copie le **token**.
+2. Toujours dans **Bot**, active **MESSAGE CONTENT INTENT**.
+3. **Inviter le bot** : onglet *OAuth2 → URL Generator* → scopes **`bot`** +
+   **`applications.commands`** → permissions **Send Messages** + **Embed Links**
+   → ouvre l'URL générée et ajoute-le à ton serveur.
+4. Sur le VPS :
+   ```bash
+   pip install -r requirements-bot.txt
+   DISCORD_BOT_TOKEN="ton_token" python3 vinted_bot.py
+   ```
+   (optionnel : `DISCORD_GUILD_ID="id_serveur"` pour que les commandes `/`
+   apparaissent instantanément.)
+5. **En service permanent** (redémarre tout seul) :
+   ```bash
+   sudo cp deploy/vinted-bot.service /etc/systemd/system/
+   echo 'DISCORD_BOT_TOKEN=ton_token' | sudo tee -a /etc/vinted-demand.env
+   sudo systemctl enable --now vinted-bot
+   sudo journalctl -u vinted-bot -f   # voir les logs
+   ```
+
+Dépendances : [`requirements-bot.txt`](requirements-bot.txt) (`discord.py` +
+`curl_cffi`).
 
 ---
 

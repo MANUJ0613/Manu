@@ -1,0 +1,4 @@
+# Dépendances du bot Discord interactif (vinted_bot.py).
+# Installe-les en plus de requirements.txt :  pip install -r requirements-bot.txt
+discord.py>=2.3
+curl_cffi>=0.7
