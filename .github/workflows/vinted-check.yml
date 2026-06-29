@@ -1,0 +1,45 @@
+name: Vinted check produit
+
+# Vérif revente à la demande : tu entres un (ou des) mot(s)-clé(s), le bot te
+# renvoie sur Discord le nombre d'annonces + favoris + prix médian + un verdict
+# ACHÈTE / PRUDENCE / ÉVITE pour décider d'acheter pour la revente.
+#
+# Utilisation : onglet Actions → "Vinted check produit" → Run workflow →
+# tape ton produit (ex. "iphone 13" ou "stanley cup, labubu").
+
+on:
+  workflow_dispatch:
+    inputs:
+      produit:
+        description: "Produit(s) à vérifier (séparés par des virgules)"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer les dépendances
+        run: pip install -r requirements.txt
+
+      - name: Vérifier la demande revente
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.VINTED_WEBHOOK || secrets.DISCORD_WEBHOOK_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          MODE: "watchlist"
+          VINTED_QUERIES: ${{ github.event.inputs.produit }}
+          MAX_PAGES: "3"
+        run: python3 vinted_analyzer.py
