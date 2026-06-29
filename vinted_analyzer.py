@@ -1830,6 +1830,15 @@ def run_watchlist() -> int:
 
 def run_once() -> int:
     """Choisit le mode : scan catégories (défaut), watchlist ou brands."""
+    # Diagnostic config : indique si une notif est branchée (sans révéler l'URL).
+    notif = []
+    if DISCORD_WEBHOOK_URL:
+        notif.append(f"Discord ✅ (…{DISCORD_WEBHOOK_URL[-6:]})")
+    else:
+        notif.append("Discord ❌ ABSENT (secret VINTED_WEBHOOK/DISCORD_WEBHOOK_URL vide)")
+    if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
+        notif.append("Telegram ✅")
+    print(f"[config] MODE={MODE} · notifications: {' · '.join(notif)}")
     if MODE == "watchlist":
         return run_watchlist()
     if MODE == "brands":
