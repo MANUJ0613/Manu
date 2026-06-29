@@ -1,0 +1,14 @@
+[Unit]
+Description=Vinted Discord bot (commandes interactives /vinted)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/opt/vinted-demand
+EnvironmentFile=/etc/vinted-demand.env
+ExecStart=/opt/vinted-demand/venv/bin/python /opt/vinted-demand/vinted_bot.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
