@@ -1,0 +1,3841 @@
+rang,marque,annonces,favoris,fav_par_annonce
+1,Hermès,348,10290,29.6
+2,Apple,966,9949,10.3
+3,Rolex,208,5054,24.3
+4,Pokémon,714,4237,5.9
+5,LEGO,200,3384,16.9
+6,Sony,203,2870,14.1
+7,Gucci,216,2634,12.2
+8,Samsung,389,2585,6.6
+9,Louis Vuitton,122,2414,19.8
+10,Decathlon,489,2111,4.3
+11,Nintendo,144,2071,14.4
+12,Panini,321,1978,6.2
+13,adidas,275,1831,6.7
+14,Nikon,68,1795,26.4
+15,Canon,106,1764,16.6
+16,Philips,191,1752,9.2
+17,IKEA,227,1636,7.2
+18,Garmin,150,1601,10.7
+19,FUJIFILM,51,1585,31.1
+20,Vintage Dressing,96,1556,16.2
+21,Chanel,80,1550,19.4
+22,Dior,85,1529,18.0
+23,Audemars Piguet,35,1407,40.2
+24,Legami,79,1365,17.3
+25,Disney,223,1361,6.1
+26,Warhammer,119,1178,9.9
+27,Cybex,149,1140,7.7
+28,Kodak,38,1066,28.1
+29,Chrome Hearts,24,1053,43.9
+30,Stanley,23,1030,44.8
+31,Nike,143,998,7.0
+32,Wilson,144,950,6.6
+33,Leica,69,897,13.0
+34,Vintage,60,888,14.8
+35,Action,149,840,5.6
+36,Lenovo,62,815,13.1
+37,Head,133,793,6.0
+38,Zara,50,778,15.6
+39,Ravensburger,173,776,4.5
+40,OnePiece,82,772,9.4
+41,Olympus,21,764,36.4
+42,Vertbaudet,75,756,10.1
+43,No Label,162,754,4.7
+44,Tefal,79,749,9.5
+45,TaylorMade,98,734,7.5
+46,Funko,55,730,13.3
+47,Maisons du Monde,45,717,15.9
+48,Xiaomi,99,716,7.2
+49,Cartier,36,716,19.9
+50,Intex,70,686,9.8
+51,Winning,47,680,14.5
+52,Panasonic,38,669,17.6
+53,Tupperware,154,591,3.8
+54,Bang & Olufsen,20,578,28.9
+55,BIC,47,564,12.0
+56,Titleist,88,559,6.4
+57,Smart Watch,47,556,11.8
+58,Pioneer,53,551,10.4
+59,Momcozy,37,546,14.8
+60,Bandai,43,545,12.7
+61,Dyson,55,543,9.9
+62,Hasbro,69,538,7.8
+63,Patek Philippe,17,536,31.5
+64,Shein,170,535,3.1
+65,Japan Style,24,527,22.0
+66,Babolat,99,525,5.3
+67,Yamaha,59,524,8.9
+68,Diddl,59,522,8.8
+69,Yves Saint Laurent,52,519,10.0
+70,Games Workshop,84,518,6.2
+71,Fouganza,80,518,6.5
+72,Djeco,44,495,11.2
+73,Sol de Janeiro,13,483,37.2
+74,Moulinex,64,477,7.5
+75,CWD,53,466,8.8
+76,Stokke,44,466,10.6
+77,Squishy,10,464,46.4
+78,PlayStation,76,457,6.0
+79,Kiabi,60,455,7.6
+80,Kentucky,16,455,28.4
+81,Star Wars,48,454,9.5
+82,JBL,52,450,8.7
+83,Guerlain,23,450,19.6
+84,Medela,57,448,7.9
+85,Oakley,21,442,21.0
+86,Venum,49,435,8.9
+87,Asus,65,430,6.6
+88,Eastpak,54,429,7.9
+89,BÉABA,75,428,5.7
+90,Burberry,18,428,23.8
+91,Mattel,33,419,12.7
+92,BaByliss,36,412,11.4
+93,Lacoste,23,406,17.7
+94,Pampers,78,395,5.1
+95,GHD,27,388,14.4
+96,Vintage Love,30,382,12.7
+97,D&D,38,381,10.0
+98,Silvercrest,67,380,5.7
+99,Montblanc,66,380,5.8
+100,Handgemaakt,39,376,9.6
+101,Fendi,27,376,13.9
+102,Lange,2,375,187.5
+103,Longchamp,17,373,21.9
+104,Christofle,36,372,10.3
+105,Callaway,97,371,3.8
+106,Philips AVENT,51,368,7.2
+107,DELL,39,366,9.4
+108,Polaroid,17,360,21.2
+109,LEGO Star Wars,10,351,35.1
+110,Huawei,52,350,6.7
+111,Dragon Ball,46,349,7.6
+112,HP,55,347,6.3
+113,The North Face,13,346,26.6
+114,Universal,141,345,2.4
+115,CASIO,32,341,10.7
+116,Harry Potter,113,340,3.0
+117,Braun,43,336,7.8
+118,Quartz,9,334,37.1
+119,DJI,68,330,4.9
+120,Bestway,30,327,10.9
+121,Ray-Ban,26,325,12.5
+122,GiFi,34,324,9.5
+123,Funko Pop,58,321,5.5
+124,Parkside,54,321,5.9
+125,Prada,45,320,7.1
+126,Hublot,17,318,18.7
+127,Vorwerk,188,313,1.7
+128,Cotopaxi,7,313,44.7
+129,Thermomix,128,312,2.4
+130,Art,102,312,3.1
+131,Equi Théme,23,311,13.5
+132,Little Dutch,29,309,10.7
+133,Stickers,34,308,9.1
+134,Victoria's Secret,11,307,27.9
+135,Santa Cruz,19,304,16.0
+136,Local,40,302,7.5
+137,BoB,4,302,75.5
+138,Bébé Confort,18,300,16.7
+139,dualtron,35,297,8.5
+140,Arena,30,294,9.8
+141,Lansinoh,29,294,10.1
+142,Nathan,46,293,6.4
+143,Nokia,30,291,9.7
+144,Forclaz,10,290,29.0
+145,Safety 1st,33,288,8.7
+146,Clementoni,56,287,5.1
+147,MAM,30,287,9.6
+148,Chicco,93,286,3.1
+149,Supreme,15,286,19.1
+150,Google,49,282,5.8
+151,Xbox,33,279,8.5
+152,Vintage Boutique,21,278,13.2
+153,novo,11,278,25.3
+154,Alpinestars,5,277,55.4
+155,Yonex,29,276,9.5
+156,Owlet,30,274,9.1
+157,CASA,52,273,5.2
+158,Hema,31,272,8.8
+159,TinTin,14,270,19.3
+160,Hasselblad,22,269,12.2
+161,Quechua,44,268,6.1
+162,Alternative,14,267,19.1
+163,Logitech,42,265,6.3
+164,VTech,34,265,7.8
+165,Michael Kors,18,265,14.7
+166,Babymoov,40,261,6.5
+167,FIFA,11,259,23.5
+168,Swarovski,36,258,7.2
+169,Toy Story,9,257,28.6
+170,Thun,32,256,8.0
+171,Ferrari,38,255,6.7
+172,Marvel,42,254,6.0
+173,City,4,252,63.0
+174,Argento,35,251,7.2
+175,Paco Rabanne,33,251,7.6
+176,Barbie,19,251,13.2
+177,McDonald's,52,250,4.8
+178,Remington,30,250,8.3
+179,Nabaiji,70,249,3.6
+180,Fabrication Artisanale,26,247,9.5
+181,Technogym,61,244,4.0
+182,Schleich,19,241,12.7
+183,Nature & Decouvertes,11,239,21.7
+184,WWE,10,239,23.9
+185,Villeroy & Boch,17,238,14.0
+186,Felix Bühler,17,237,13.9
+187,Monster High,7,235,33.6
+188,Bugaboo,62,233,3.8
+189,Mano,96,231,2.4
+190,Leroy Merlin,30,231,7.7
+191,Sanrio,10,230,23.0
+192,Scott,39,228,5.8
+193,brionvega,6,228,38.0
+194,A.M.C.,42,227,5.4
+195,Huggies,22,226,10.3
+196,Gibson,23,225,9.8
+197,Oxelo,141,224,1.6
+198,Versace,25,222,8.9
+199,Minolta,9,222,24.7
+200,Stray Kids,13,221,17.0
+201,iscooter,3,221,73.7
+202,Tendance,12,220,18.3
+203,Osprey,6,219,36.5
+204,Laura Ashley,3,219,73.0
+205,Hello Kitty,16,218,13.6
+206,Gisela Graham,4,218,54.5
+207,Educa,33,217,6.6
+208,Ergobaby,29,216,7.4
+209,Antik,26,216,8.3
+210,Monster Energy,5,216,43.2
+211,Salomon,34,215,6.3
+212,Alpine,15,215,14.3
+213,Bosch,46,214,4.7
+214,Limoges France,18,214,11.9
+215,NINJA,14,214,15.3
+216,Michael Jackson,7,214,30.6
+217,Miffy,5,214,42.8
+218,Love Radius,11,213,19.4
+219,Smeg,10,211,21.1
+220,PSG,19,208,10.9
+221,Trail,6,208,34.7
+222,Redmi,31,207,6.7
+223,Nothing,6,207,34.5
+224,Hugo Boss,9,206,22.9
+225,YoYo,10,205,20.5
+226,Instax,14,204,14.6
+227,100%,20,202,10.1
+228,Cavalleria Toscana,2,202,101.0
+229,Jollein,31,201,6.5
+230,GUESS,29,201,6.9
+231,Cooper,25,201,8.0
+232,Playmobil,34,199,5.9
+233,Smart,27,198,7.3
+234,Kenwood,20,198,9.9
+235,La Marzocco,3,198,66.0
+236,Le Creuset,15,197,13.1
+237,Liewood,11,197,17.9
+238,Puma,43,196,4.6
+239,FairyLoot,3,195,65.0
+240,Schmidt,22,194,8.8
+241,Cama,20,194,9.7
+242,Charm,5,194,38.8
+243,Specialized,62,193,3.1
+244,Stitch,39,193,4.9
+245,Jean Paul Gaultier,24,193,8.0
+246,Gigamic,15,193,12.9
+247,TISSU,22,192,8.7
+248,ORO,28,191,6.8
+249,Milwaukee,13,191,14.7
+250,Korg,6,190,31.7
+251,Ratatam,10,189,18.9
+252,Thomson,10,188,18.8
+253,LG,68,187,2.8
+254,Akai,10,187,18.7
+255,Hot Toys,6,187,31.2
+256,Target,51,186,3.6
+257,Pénélope Leprevost,4,186,46.5
+258,Everlast,22,185,8.4
+259,Je ne sais quoi,14,184,13.1
+260,Musc Intime,4,184,46.0
+261,Porsche,19,183,9.6
+262,TREK,20,182,9.1
+263,Christian Dior,8,182,22.8
+264,La Roche Posay,15,180,12.0
+265,Rowenta,32,179,5.6
+266,Disneyland Paris,22,179,8.1
+267,Nespresso,21,179,8.5
+268,LES PETITS CULOTTÉS,14,178,12.7
+269,Paw Patrol,27,177,6.6
+270,Cookut,5,176,35.2
+271,DEVOUCOUX,43,174,4.0
+272,Cecotec,25,173,6.9
+273,Lancôme,20,172,8.6
+274,Ricard,15,172,11.5
+275,GoPro,13,171,13.2
+276,Klipad,3,171,57.0
+277,Van Rysel,5,170,34.0
+278,Sagester,4,170,42.5
+279,Melanie Martinez,3,170,56.7
+280,Nuxe,14,169,12.1
+281,Azela,2,169,84.5
+282,Lattafa,22,168,7.6
+283,Maxi Cosi,20,168,8.4
+284,Garfield,3,168,56.0
+285,Bauer,27,166,6.1
+286,Babybjörn,22,165,7.5
+287,Dreame,9,165,18.3
+288,Urban Outfitters,2,165,82.5
+289,ET,6,164,27.3
+290,Leone,30,163,5.4
+291,NOX,28,163,5.8
+292,Scotty cameron,24,163,6.8
+293,Equestro,4,162,40.5
+294,Butterfly,36,161,4.5
+295,BTS,13,161,12.4
+296,Set,37,160,4.3
+297,anti stress,5,160,32.0
+298,Coach,8,159,19.9
+299,Lafuma,6,158,26.3
+300,Sonny Angel,4,157,39.2
+301,Electric,27,155,5.7
+302,TAG Heuer,23,155,6.7
+303,EDEA,6,154,25.7
+304,Coca-Cola,29,153,5.3
+305,obut,18,153,8.5
+306,Mots d'enfants,17,153,9.0
+307,Olé,4,153,38.2
+308,ArtDeco,3,153,51.0
+309,STABILO,10,151,15.1
+310,SHARK,9,151,16.8
+311,CAT,8,151,18.9
+312,Oculus Quest 2,2,151,75.5
+313,Dobble,13,150,11.5
+314,B'Twin,23,149,6.5
+315,Emporio Armani,16,149,9.3
+316,Unique,13,149,11.5
+317,Jysk,13,148,11.4
+318,Artipoppe,4,148,37.0
+319,Carrefour,27,147,5.4
+320,Vintage Chic,24,147,6.1
+321,SCHALLWERK,12,147,12.2
+322,Asalvo,6,147,24.5
+323,Sylvanian Families,4,147,36.8
+324,MSI,33,146,4.4
+325,Charlotte Tilbury,10,146,14.6
+326,Joie,27,145,5.4
+327,KIKO,14,144,10.3
+328,Harcour,9,144,16.0
+329,cortis,4,144,36.0
+330,Dunlop,27,143,5.3
+331,Mirasol,2,143,71.5
+332,Off-White,2,143,71.5
+333,boutique indépendante,16,142,8.9
+334,UFC,11,142,12.9
+335,Skates,9,142,15.8
+336,Mercedes,12,141,11.8
+337,Army,12,141,11.8
+338,amazing digital circus,2,141,70.5
+339,Miu Miu,5,140,28.0
+340,Roxy,8,139,17.4
+341,Elho,8,139,17.4
+342,Garnier,7,139,19.9
+343,Yu-Gi-Oh!,48,138,2.9
+344,LS2,16,138,8.6
+345,Centrakor,11,138,12.5
+346,Sagem,3,138,46.0
+347,Trixie,29,136,4.7
+348,H&M Home,5,136,27.2
+349,Eskadron,22,135,6.1
+350,silikomart,6,135,22.5
+351,Hobby Horse,3,135,45.0
+352,Crivit,20,134,6.7
+353,Montessori,12,134,11.2
+354,PAS,11,134,12.2
+355,Dolce & Gabbana,8,134,16.8
+356,CHIC,3,134,44.7
+357,Made In Italy,44,133,3.0
+358,Tommee Tippee,15,133,8.9
+359,Amouage,8,133,16.6
+360,Babyzen,7,133,19.0
+361,Doona,7,133,19.0
+362,Orchestra,19,132,6.9
+363,Chopard,8,132,16.5
+364,Pilot,8,132,16.5
+365,Arai,7,132,18.9
+366,Palmor,3,132,44.0
+367,Søstrene Grene,12,130,10.8
+368,Jeremy Scott,9,130,14.4
+369,Monbento,5,130,26.0
+370,Littlest Pet Shop,21,129,6.1
+371,Mango,13,129,9.9
+372,Soleil,3,129,43.0
+373,Red Bull,12,128,10.7
+374,Amazfit,11,128,11.6
+375,black crows,7,128,18.3
+376,ATEEZ,6,128,21.3
+377,Tod's,2,128,64.0
+378,Domyos,33,127,3.8
+379,Zadig & Voltaire,11,127,11.5
+380,Hot Wheels,11,127,11.5
+381,Thai boxing,6,127,21.2
+382,P9,4,127,31.8
+383,Italia,16,126,7.9
+384,Bialetti,12,126,10.5
+385,SMUKEE,4,126,31.5
+386,3M,20,125,6.2
+387,Calor,15,125,8.3
+388,Berkel,10,125,12.5
+389,Petit Béguin,17,124,7.3
+390,Scorpion,10,124,12.4
+391,Jack Daniel's,8,124,15.5
+392,Sézane,7,124,17.7
+393,Smiski,2,124,62.0
+394,ABUS,18,122,6.8
+395,Batman,6,122,20.3
+396,Micro,6,122,20.3
+397,Peugeot,9,121,13.4
+398,NVIDIA,25,120,4.8
+399,Fender,24,119,5.0
+400,Baccarat,15,119,7.9
+401,Marshall,9,119,13.2
+402,Valentino Creations,3,119,39.7
+403,Arne Jacobsen,2,119,59.5
+404,De'Longhi,17,118,6.9
+405,Richard Ginori,12,118,9.8
+406,Omega,8,118,14.8
+407,Tokio Hotel,3,118,39.3
+408,Showmaster,3,118,39.3
+409,Epson,39,117,3.0
+410,Tom Ford,17,117,6.9
+411,Bike,12,117,9.8
+412,Vevor,8,117,14.6
+413,ekinok,4,117,29.2
+414,Beyblade,21,116,5.5
+415,L'Oréal,17,116,6.8
+416,Miniso,6,116,19.3
+417,capybara,3,116,38.7
+418,Swatch,23,115,5.0
+419,Collection Privée,17,115,6.8
+420,MAC,9,115,12.8
+421,Rosenthal,9,115,12.8
+422,Boule,7,115,16.4
+423,Animal Crossing,4,115,28.8
+424,My Hero Academia,4,115,28.8
+425,Mammut,2,115,57.5
+426,Jane,16,114,7.1
+427,Majorette,15,114,7.6
+428,Homday,8,114,14.2
+429,Gisou,3,114,38.0
+430,Calvin Klein,13,113,8.7
+431,ELLE,8,113,14.1
+432,Create,5,113,22.6
+433,Skylanders,11,112,10.2
+434,Jour Ferié,2,112,56.0
+435,Ping,27,111,4.1
+436,Fishing,12,111,9.2
+437,Sailor Moon,4,111,27.8
+438,Mepal,5,110,22.0
+439,Kayali,4,110,27.5
+440,Virgil Abloh X Ikea,4,110,27.5
+441,y2k,3,110,36.7
+442,Pandora,24,109,4.5
+443,Siux,13,109,8.4
+444,Argentina,5,109,21.8
+445,melii,4,109,27.2
+446,Shimano,23,108,4.7
+447,Fisher Price,21,108,5.1
+448,Guangna,5,108,21.6
+449,Sauthon,4,108,27.0
+450,Wedding,19,107,5.6
+451,Konges Sløjd,12,107,8.9
+452,McKinley,11,107,9.7
+453,Horseware,6,107,17.8
+454,Xgimi,5,107,21.4
+455,Rare Beauty,3,107,35.7
+456,3D,3,107,35.7
+457,Puzzle,20,106,5.3
+458,Kinderkraft,12,106,8.8
+459,Westwing,3,106,35.3
+460,Piaget,2,106,53.0
+461,antiquariato,2,106,53.0
+462,hoberg,2,106,53.0
+463,Fjällräven,4,105,26.2
+464,Burton,24,104,4.3
+465,Hilti,20,104,5.2
+466,Blizzard,12,104,8.7
+467,Coton,7,104,14.9
+468,Vista Alegre,5,104,20.8
+469,Wed'ze,41,103,2.5
+470,INOX,38,103,2.7
+471,Topps,32,103,3.2
+472,Primark,26,103,4.0
+473,Peppa Pig,16,103,6.4
+474,Lamborghini,13,103,7.9
+475,Diesel,6,103,17.2
+476,2026,4,103,25.8
+477,WD,4,103,25.8
+478,Dragon Ball Z,12,102,8.5
+479,AGV,10,102,10.2
+480,IZIPIZI,9,102,11.3
+481,contax,2,102,51.0
+482,Spiderman,17,101,5.9
+483,Vintage Bazaar,11,101,9.2
+484,Jägermeister,5,101,20.2
+485,Phildar,2,101,50.5
+486,Oxford,18,100,5.6
+487,Infantino,7,100,14.3
+488,cocktail games,6,100,16.7
+489,Zanotta,4,100,25.0
+490,USM Haller,3,99,33.0
+491,Goliath,22,98,4.5
+492,Sephora,8,98,12.2
+493,Manduca,8,98,12.2
+494,Kaws,7,98,14.0
+495,Sevylor,2,98,49.0
+496,Acer,18,97,5.4
+497,Jumbo,17,97,5.7
+498,Bell,8,97,12.1
+499,C&A,6,97,16.2
+500,Bearbrick,5,97,19.4
+501,Songmics,2,97,48.5
+502,Yo-Kai Watch,5,96,19.2
+503,Indian,4,96,24.0
+504,XP-Pen,3,96,32.0
+505,Calcio,13,95,7.3
+506,aucune,13,95,7.3
+507,Tristar,10,95,9.5
+508,Kérastase,8,95,11.9
+509,No boxing No life,5,95,19.0
+510,Christian Lacroix,2,95,47.5
+511,green stuff world,2,95,47.5
+512,BenQ,10,94,9.4
+513,Beatrix Potter,3,94,31.3
+514,NUK,25,93,3.7
+515,Hachette,19,93,4.9
+516,Handmade Beauty,18,93,5.2
+517,KuKirin,16,93,5.8
+518,Deuter,15,93,6.2
+519,Corsair,15,93,6.2
+520,Bellissima,11,93,8.5
+521,RED,9,93,10.3
+522,One,7,93,13.3
+523,Cleto Reyes,7,93,13.3
+524,luthier,4,93,23.2
+525,ULLENBOOM,3,93,31.0
+526,sans,19,92,4.8
+527,Suunto,8,92,11.5
+528,Boutique Bohéme,5,92,18.4
+529,US divers,4,92,23.0
+530,Moleskine,3,92,30.7
+531,Boutiek,2,92,46.0
+532,Sac,2,92,46.0
+533,No Logo,20,91,4.5
+534,Murano,17,91,5.4
+535,Zara Home,8,91,11.4
+536,Frederic Malle,4,91,22.8
+537,Technics,14,90,6.4
+538,Takara Tomy,5,90,18.0
+539,signature carrere,3,90,30.0
+540,Concept,2,90,45.0
+541,Posca,2,90,45.0
+542,Tous,22,89,4.0
+543,Magic: The Gathering,21,89,4.2
+544,Huda Beauty,11,89,8.1
+545,Tiffany & Co.,10,89,8.9
+546,Audi,8,89,11.1
+547,Wax,4,89,22.2
+548,Tatami,9,88,9.8
+549,Biolane,8,88,11.0
+550,The Noble Collection,6,88,14.7
+551,Printer,5,88,17.6
+552,nvt,2,88,44.0
+553,Valentino,22,87,4.0
+554,Kipling,13,87,6.7
+555,Sega,13,87,6.7
+556,Kingston,10,87,8.7
+557,Diamant,8,87,10.9
+558,Ulysse Nardin,3,87,29.0
+559,Parker,19,86,4.5
+560,Guy Demarle,11,86,7.8
+561,Digital,10,86,8.6
+562,Space Cowboys,9,86,9.6
+563,Jaeger-LeCoultre,7,86,12.3
+564,Takara,4,86,21.5
+565,Ferm Living,2,86,43.0
+566,Metal Boxe,31,85,2.7
+567,Metro,10,85,8.5
+568,Tommy Hilfiger,9,85,9.4
+569,Mauviel,3,85,28.3
+570,Mada,2,85,42.5
+571,Gameboy,2,85,42.5
+572,BMW,20,84,4.2
+573,red castle,14,84,6.0
+574,adopt,11,84,7.6
+575,UHU,7,84,12.0
+576,Vivitar,5,84,16.8
+577,george wilkinson,4,84,21.0
+578,Foto,27,83,3.1
+579,mixed,20,83,4.2
+580,Segway,17,83,4.9
+581,Support,12,83,6.9
+582,air up,11,83,7.5
+583,NORTH,11,83,7.5
+584,Tronic,7,83,11.9
+585,Meißen,6,83,13.8
+586,Super Nintendo,3,83,27.7
+587,H&D,3,83,27.7
+588,alesis,3,83,27.7
+589,Le petit Souk,2,83,41.5
+590,Cars,14,82,5.9
+591,Winmau,11,82,7.5
+592,Sideshow,7,82,11.7
+593,Anker,7,82,11.7
+594,Roba,5,82,16.4
+595,Basil,5,82,16.4
+596,Zoe,3,82,27.3
+597,teac,2,82,41.0
+598,peak hydratation,2,82,41.0
+599,Blunt,2,82,41.0
+600,STIHL,17,81,4.8
+601,Hauck,13,81,6.2
+602,Canaveral,9,81,9.0
+603,Tomy,7,81,11.6
+604,Padd,5,81,16.2
+605,Scooter,19,80,4.2
+606,Kärcher,18,80,4.4
+607,Yves Rocher,17,80,4.7
+608,Bvlgari,15,80,5.3
+609,Stöckli,10,80,8.0
+610,je sais pas,6,80,13.3
+611,Olaplex,5,80,16.0
+612,Artesania,4,80,20.0
+613,Knoll,3,80,26.7
+614,LILLYDOO,2,80,40.0
+615,Ambiano,8,79,9.9
+616,Yara,5,79,15.8
+617,Death Note,3,79,26.3
+618,Bose,16,78,4.9
+619,MIZUNO,14,78,5.6
+620,Carhartt,8,78,9.8
+621,Lino,7,78,11.1
+622,Legno,59,77,1.3
+623,Machine,21,77,3.7
+624,Twins,11,77,7.0
+625,EVADICT,5,77,15.4
+626,Magcubic,3,77,25.7
+627,Preloved,2,77,38.5
+628,Pieces,2,77,38.5
+629,SM Entertainment,2,77,38.5
+630,Plume,2,77,38.5
+631,Maya Delorez,2,77,38.5
+632,Generic,35,76,2.2
+633,Cassina,13,76,5.8
+634,Givenchy,10,76,7.6
+635,Marseille,9,76,8.4
+636,miHoYo,5,76,15.2
+637,Kipsta,27,75,2.8
+638,HIKMicro,22,75,3.4
+639,Tribord,22,75,3.4
+640,Altaya,11,75,6.8
+641,Deryan,6,75,12.5
+642,Pomellato,4,75,18.8
+643,STOCKHOLM,3,75,25.0
+644,ARGAN OIL,2,75,37.5
+645,Happy People,2,75,37.5
+646,Microsoft,20,74,3.7
+647,Munchkin,11,74,6.7
+648,Uno,9,74,8.2
+649,Wizards of the Coast,8,74,9.2
+650,The Lord of the Rings,7,74,10.6
+651,Sophie La Girafe,6,74,12.3
+652,Roland Garros,6,74,12.3
+653,Totsy Baby,5,74,14.8
+654,chefclub,3,74,24.7
+655,Edelrid,2,74,37.0
+656,Renault,13,73,5.6
+657,Kaytan,7,73,10.4
+658,Bundeswehr,5,73,14.6
+659,btbox,4,73,18.2
+660,Pieces & Peace,3,73,24.3
+661,kesslord,2,73,36.5
+662,Cooler Master,2,73,36.5
+663,Xerjoff,17,72,4.2
+664,MESSI,11,72,6.5
+665,Sel&mer,10,72,7.2
+666,Rhode,6,72,12.0
+667,Banpresto,6,72,12.0
+668,CHROME,5,72,14.4
+669,LEGO Duplo,5,72,14.4
+670,amiibo,5,72,14.4
+671,OnePlus,4,72,18.0
+672,Bestron,3,72,24.0
+673,Waterdrop,3,72,24.0
+674,Bois,2,72,36.0
+675,Tonies,18,71,3.9
+676,Fox,14,71,5.1
+677,KIT,12,71,5.9
+678,Tecnifibre,11,71,6.5
+679,Wooden,10,71,7.1
+680,Livarno,8,71,8.9
+681,White,4,71,17.8
+682,Boucheron,3,71,23.7
+683,Tsume-art,3,71,23.7
+684,siku,3,71,23.7
+685,King Jouet,2,71,35.5
+686,Blu-ray,2,71,35.5
+687,GARDEN,21,70,3.3
+688,Larousse,16,70,4.4
+689,Diptyque,10,70,7.0
+690,Minecraft,10,70,7.0
+691,Olympique De Marseille,8,70,8.8
+692,Kobo,7,70,10.0
+693,Moulin Roty,6,70,11.7
+694,Suavinex,6,70,11.7
+695,Vertu,6,70,11.7
+696,Kenner,5,70,14.0
+697,Maison du Monde,5,70,14.0
+698,DEWALT,5,70,14.0
+699,Fenty Beauty,3,70,23.3
+700,Cinderella,3,70,23.3
+701,Superman,2,70,35.0
+702,Filofax,2,70,35.0
+703,CCM,19,69,3.6
+704,Motorola,15,69,4.6
+705,Torero,3,69,23.0
+706,Elya Maje,3,69,23.0
+707,forFit,3,69,23.0
+708,Carnet,2,69,34.5
+709,Napoli,16,68,4.2
+710,ALTRO,12,68,5.7
+711,Ibanez,10,68,6.8
+712,Western,8,68,8.5
+713,Medicom Toy,3,68,22.7
+714,Hunkemöller,2,68,34.0
+715,Messina,2,68,34.0
+716,Gazelle,2,68,34.0
+717,Canyon,14,67,4.8
+718,Space Cowboy,7,67,9.6
+719,Metal,6,67,11.2
+720,QHP,6,67,11.2
+721,VENINI,3,67,22.3
+722,Spot,3,67,22.3
+723,Breguet,2,67,33.5
+724,Alison & Mae,2,67,33.5
+725,sodastream,9,66,7.3
+726,MODEL,9,66,7.3
+727,Patagonia,7,66,9.4
+728,Odyssey,7,66,9.4
+729,Longines,4,66,16.5
+730,Ferrino,4,66,16.5
+731,rocket,3,66,22.0
+732,Godox,3,66,22.0
+733,lacertosus,3,66,22.0
+734,Editions de Parfums Frédéric Malle,2,66,33.0
+735,Gérald Genta,2,66,33.0
+736,Queen,2,66,33.0
+737,Hoverboard,2,66,33.0
+738,SEB,16,65,4.1
+739,TP-Link,14,65,4.6
+740,Loungefly,13,65,5.0
+741,Lancaster,10,65,6.5
+742,Nattou,8,65,8.1
+743,Uniqlo,5,65,13.0
+744,Aroma-Zone,4,65,16.2
+745,Neewer,4,65,16.2
+746,Little Big Change,3,65,21.7
+747,STAUB,3,65,21.7
+748,Sony Ericsson,3,65,21.7
+749,Seven,26,64,2.5
+750,Ideal,20,64,3.2
+751,Cinema,17,64,3.8
+752,Armani,9,64,7.1
+753,Simond,7,64,9.1
+754,inconnue,6,64,10.7
+755,ROYAL ALBERT,6,64,10.7
+756,Marantz,6,64,10.7
+757,Thunder,5,64,12.8
+758,Artengo,23,63,2.7
+759,New Era,21,63,3.0
+760,Mini Brands,12,63,5.2
+761,Facom,10,63,6.3
+762,Polar,10,63,6.3
+763,Enhypen,10,63,6.3
+764,Slazenger,10,63,6.3
+765,Pyrex,7,63,9.0
+766,Rockrider,7,63,9.0
+767,Dynafit,7,63,9.0
+768,Tudor,5,63,12.6
+769,Longboard,4,63,15.8
+770,AVON,3,63,21.0
+771,Capcom,3,63,21.0
+772,Outshock,25,62,2.5
+773,Brother,10,62,6.2
+774,Sandisk,10,62,6.2
+775,SURF,10,62,6.2
+776,Cleveland,8,62,7.8
+777,Sun,7,62,8.9
+778,Taurus,7,62,8.9
+779,DMC,6,62,10.3
+780,Scout,4,62,15.5
+781,Wilton,4,62,15.5
+782,montana boxing,2,62,31.0
+783,Noël,12,61,5.1
+784,Accessorize,10,61,6.1
+785,Lansay,10,61,6.1
+786,Globber,8,61,7.6
+787,Joolz,5,61,12.2
+788,Macrame,5,61,12.2
+789,pocketbook,4,61,15.2
+790,XM studios,3,61,20.3
+791,Miyuki,2,61,30.5
+792,Rossignol,23,60,2.6
+793,sonstiges,16,60,3.8
+794,Harrows,14,60,4.3
+795,Doomoo,12,60,5.0
+796,Demon Slayer,8,60,7.5
+797,999 GAMES,8,60,7.5
+798,Butet,8,60,7.5
+799,Bioviva,7,60,8.6
+800,Minichamps,6,60,10.0
+801,Alinea,5,60,12.0
+802,Paper Mate,4,60,15.0
+803,Pigna,2,60,30.0
+804,Owala,2,60,30.0
+805,BRAWL STARS,16,59,3.7
+806,Speedo,13,59,4.5
+807,Kokadi,11,59,5.4
+808,Handmade,9,59,6.6
+809,Vans,8,59,7.4
+810,Blanco,8,59,7.4
+811,Bershka,7,59,8.4
+812,Gilbert,6,59,9.8
+813,Medicube,5,59,11.8
+814,Powell Peralta,4,59,14.8
+815,Cortina,3,59,19.7
+816,laurence King,3,59,19.7
+817,Biodance,2,59,29.5
+818,Huntrix,2,59,29.5
+819,Joseph Joseph,2,59,29.5
+820,Paperblanks,2,59,29.5
+821,Blackcrows,2,59,29.5
+822,Tennis,12,58,4.8
+823,Giochi Preziosi,12,58,4.8
+824,aliexpress,4,58,14.5
+825,Mikimoto,3,58,19.3
+826,Pablo,2,58,29.0
+827,Bullpadel,26,57,2.2
+828,Firefly,15,57,3.8
+829,Roland,11,57,5.2
+830,Revlon,8,57,7.1
+831,RAZER,8,57,7.1
+832,Intersport,8,57,7.1
+833,konica,4,57,14.2
+834,Frederique Constant,3,57,19.0
+835,Yokkao,3,57,19.0
+836,Celimax,2,57,28.5
+837,Collection Platinium,2,57,28.5
+838,Britney Spears,2,57,28.5
+839,Buttons,2,57,28.5
+840,Running,2,57,28.5
+841,Forestier,22,56,2.5
+842,Black & Decker,15,56,3.7
+843,Beats,9,56,6.2
+844,solar.,8,56,7.0
+845,Seiko,5,56,11.2
+846,Swim Essentials,5,56,11.2
+847,Netflix,4,56,14.0
+848,Thrustmaster,4,56,14.0
+849,Overboard,4,56,14.0
+850,NeeDoh,3,56,18.7
+851,Copic,3,56,18.7
+852,Sarreguemines,3,56,18.7
+853,Nami,3,56,18.7
+854,compositi,2,56,28.0
+855,TEX,17,55,3.2
+856,Märklin,16,55,3.4
+857,badabulle,13,55,4.2
+858,de Berkel,13,55,4.2
+859,Tamiya,12,55,4.6
+860,Frozen,11,55,5.0
+861,Accessoire,9,55,6.1
+862,Masters of The Universe,5,55,11.0
+863,Transformers,4,55,13.8
+864,igi,3,55,18.3
+865,Saint Laurent,3,55,18.3
+866,P&CO,3,55,18.3
+867,Eichholtz,2,55,27.5
+868,Stradivarius,15,54,3.6
+869,Atomic,14,54,3.9
+870,Fortnite,12,54,4.5
+871,ZEISS,10,54,5.4
+872,Toshiba,8,54,6.8
+873,Joy,8,54,6.8
+874,MCM,7,54,7.7
+875,Sweet Pants,6,54,9.0
+876,Wedgwood,6,54,9.0
+877,Saint Seiya,5,54,10.8
+878,ferm,5,54,10.8
+879,Moscot,4,54,13.5
+880,Behringer,4,54,13.5
+881,Blissim,3,54,18.0
+882,Titan,3,54,18.0
+883,La Foir'Fouille,3,54,18.0
+884,Tutto,24,53,2.2
+885,GIANT,17,53,3.1
+886,Leclerc,10,53,5.3
+887,Tann's,8,53,6.6
+888,Joma,7,53,7.6
+889,Maison Francis Kurkdjian,6,53,8.8
+890,G&B,5,53,10.6
+891,pasito a pasito,5,53,10.6
+892,Elephant,4,53,13.2
+893,Back on Track,4,53,13.2
+894,space age,3,53,17.7
+895,Monoprix,2,53,26.5
+896,Ariana Grande,2,53,26.5
+897,onbekend,16,52,3.2
+898,Honor,12,52,4.3
+899,Elvie,10,52,5.2
+900,Acerbis,8,52,6.5
+901,Vera Pelle,5,52,10.4
+902,Tsume,5,52,10.4
+903,teverun,5,52,10.4
+904,Lefant,4,52,13.0
+905,Globe,3,52,17.3
+906,Tendances Fetes,3,52,17.3
+907,Cocopup,3,52,17.3
+908,Barefoot,3,52,17.3
+909,toobur,2,52,26.0
+910,Coopay,2,52,26.0
+911,Courrier-Loisirs,2,52,26.0
+912,Satch,12,51,4.2
+913,Autre Chose,7,51,7.3
+914,Cameleon,7,51,7.3
+915,Fly,7,51,7.3
+916,Loro Piana,5,51,10.2
+917,NBA,4,51,12.8
+918,Avatar,4,51,12.8
+919,Molten,4,51,12.8
+920,Lazartigue,3,51,17.0
+921,IWC Schaffhausen,3,51,17.0
+922,Fornasetti,3,51,17.0
+923,BERGER,3,51,17.0
+924,Festool,3,51,17.0
+925,De Buyer,2,51,25.5
+926,inno-hit,2,51,25.5
+927,Playboy,2,51,25.5
+928,Smart Trike,2,51,25.5
+929,Mambobaby,2,51,25.5
+930,Ralph Lauren,14,50,3.6
+931,Tinèo,11,50,4.5
+932,Equipe,11,50,4.5
+933,La Redoute,10,50,5.0
+934,Cultura,9,50,5.6
+935,Flexi,7,50,7.1
+936,Mickey Mouse,6,50,8.3
+937,Nina Ricci,4,50,12.5
+938,Bernardaud,4,50,12.5
+939,Elgato,4,50,12.5
+940,BR,3,50,16.7
+941,Quirumed,2,50,25.0
+942,Moët & Chandon,2,50,25.0
+943,NHL,2,50,25.0
+944,Bebe,10,49,4.9
+945,Norev,10,49,4.9
+946,Jones,8,49,6.1
+947,Unicorn We Are Legends,6,49,8.2
+948,Azzaro,5,49,9.8
+949,Liu Jo,4,49,12.2
+950,Francoise Saget,4,49,12.2
+951,Devialet,4,49,12.2
+952,Rockstar Games,3,49,16.3
+953,Hugo Ride style,3,49,16.3
+954,Equi-Theme,3,49,16.3
+955,ECHO,2,49,24.5
+956,Oral-B,23,48,2.1
+957,Sonstige,18,48,2.7
+958,DeAgostini,18,48,2.7
+959,Disney Baby,8,48,6.0
+960,Saint Louis,8,48,6.0
+961,Auchan,7,48,6.9
+962,Chloé,6,48,8.0
+963,Vision,6,48,8.0
+964,Nivea,6,48,8.0
+965,D.Franklin,4,48,12.0
+966,Solingen,4,48,12.0
+967,Rouge,4,48,12.0
+968,PLUS,4,48,12.0
+969,Emile Henry,3,48,16.0
+970,Sennheiser,3,48,16.0
+971,Total,2,48,24.0
+972,dossiers criminels,2,48,24.0
+973,Grafika,2,48,24.0
+974,Studio,11,47,4.3
+975,Makita,9,47,5.2
+976,Gertrude,7,47,6.7
+977,Meller,5,47,9.4
+978,Caran d'Ache,5,47,9.4
+979,portmeirion,5,47,9.4
+980,Equilibre,5,47,9.4
+981,Editions Atlas,4,47,11.8
+982,Roborock,4,47,11.8
+983,Pablo Picasso,2,47,23.5
+984,John Lewis,2,47,23.5
+985,AudioSonic,2,47,23.5
+986,Buttinette,2,47,23.5
+987,Exacompta,21,46,2.2
+988,Prince,10,46,4.6
+989,HoMedics,9,46,5.1
+990,OPPO,8,46,5.8
+991,Parfait,7,46,6.6
+992,Bureau Vallée,7,46,6.6
+993,Drop Shot,7,46,6.6
+994,HEYE,6,46,7.7
+995,Mil-Tec,6,46,7.7
+996,Puddle Jumper,6,46,7.7
+997,Covalliero,6,46,7.7
+998,Nobodinoz,5,46,9.2
+999,Karaca,4,46,11.5
+1000,Guy Degrenne,4,46,11.5
+1001,Vae Victis,4,46,11.5
+1002,Wesco,3,46,15.3
+1003,obo,3,46,15.3
+1004,Grant,3,46,15.3
+1005,M&S Mode,2,46,23.0
+1006,Ornella,2,46,23.0
+1007,Van Cleef & Arpels,2,46,23.0
+1008,Selfmade,16,45,2.8
+1009,Tigex,13,45,3.5
+1010,JVC,9,45,5.0
+1011,Bratz,6,45,7.5
+1012,Richard Orlinski,6,45,7.5
+1013,ZTE,6,45,7.5
+1014,Quies,4,45,11.2
+1015,YOGA,4,45,11.2
+1016,Winnie The Pooh,3,45,15.0
+1017,Le Stelle,2,45,22.5
+1018,Lampe,2,45,22.5
+1019,Electro-Harmonix,2,45,22.5
+1020,i9,2,45,22.5
+1021,Orbea,16,44,2.8
+1022,Giorgio Armani,9,44,4.9
+1023,Legrand,9,44,4.9
+1024,Loewe,8,44,5.5
+1025,Real,7,44,6.3
+1026,Qilive,7,44,6.3
+1027,Lalique,6,44,7.3
+1028,Mares,6,44,7.3
+1029,Graco,5,44,8.8
+1030,Keababies,5,44,8.8
+1031,Nescafé,5,44,8.8
+1032,Airfix,5,44,8.8
+1033,PlayStation 5,3,44,14.7
+1034,Chocolate,3,44,14.7
+1035,Skull,3,44,14.7
+1036,Eko,2,44,22.0
+1037,Lowepro,2,44,22.0
+1038,laxasfit,2,44,22.0
+1039,pog,13,43,3.3
+1040,Hohner,12,43,3.6
+1041,Fitbit,9,43,4.8
+1042,Focal,7,43,6.1
+1043,Lionelo,6,43,7.2
+1044,Brunswick,6,43,7.2
+1045,Jacadi,5,43,8.6
+1046,Breitling,5,43,8.6
+1047,PRADY,4,43,10.8
+1048,Mr. Boho,4,43,10.8
+1049,Tula,4,43,10.8
+1050,Camera,4,43,10.8
+1051,Catit,4,43,10.8
+1052,Leander,3,43,14.3
+1053,Swiffer,3,43,14.3
+1054,Mamiya,3,43,14.3
+1055,MINIVERSE,3,43,14.3
+1056,Areej le doré,2,43,21.5
+1057,ORIENT,2,43,21.5
+1058,Charlotte perriand,2,43,21.5
+1059,Eames,2,43,21.5
+1060,La Rochere,2,43,21.5
+1061,Porto,2,43,21.5
+1062,Baofeng,2,43,21.5
+1063,Clickeez,2,43,21.5
+1064,Telefunken,8,42,5.2
+1065,Minnie,7,42,6.0
+1066,Step by Step,7,42,6.0
+1067,Predator,7,42,6.0
+1068,Kiprun,6,42,7.0
+1069,BECO,5,42,8.4
+1070,Altra,5,42,8.4
+1071,ne sais pas,5,42,8.4
+1072,Brandt,4,42,10.5
+1073,AniOne,4,42,10.5
+1074,Itiwit,4,42,10.5
+1075,Riding World,4,42,10.5
+1076,Mademoiselle,3,42,14.0
+1077,Prime 1 studio,3,42,14.0
+1078,Cuivre,3,42,14.0
+1079,crane,3,42,14.0
+1080,Focusrite,3,42,14.0
+1081,Jadore,2,42,21.0
+1082,Pantone,2,42,21.0
+1083,FlowChakra,2,42,21.0
+1084,princeton tec,2,42,21.0
+1085,Quadro,31,41,1.3
+1086,Mai,14,41,2.9
+1087,Flying Tiger,13,41,3.2
+1088,Haba,11,41,3.7
+1089,Gigabyte,11,41,3.7
+1090,Always,10,41,4.1
+1091,Jordan,8,41,5.1
+1092,Twistshake,7,41,5.9
+1093,Mug,7,41,5.9
+1094,Planeta DeAgostini,7,41,5.9
+1095,BUT,6,41,6.8
+1096,abb,6,41,6.8
+1097,Bébé 9,4,41,10.2
+1098,Home Creation,4,41,10.2
+1099,Flipper,4,41,10.2
+1100,Caterpillar,3,41,13.7
+1101,Kid Sleep,3,41,13.7
+1102,NZXT,3,41,13.7
+1103,BlackPink,3,41,13.7
+1104,Coba,3,41,13.7
+1105,YesStyle,2,41,20.5
+1106,Smartmax,2,41,20.5
+1107,Medipartners,2,41,20.5
+1108,Kerbl,2,41,20.5
+1109,ETUI,2,41,20.5
+1110,Antarès,15,40,2.7
+1111,Jellycat,10,40,4.0
+1112,Livoo,9,40,4.4
+1113,Waldhausen,6,40,6.7
+1114,DC,6,40,6.7
+1115,Argent,5,40,8.0
+1116,Good Smile Company,3,40,13.3
+1117,RockJam,3,40,13.3
+1118,terrax,3,40,13.3
+1119,Mystery,2,40,20.0
+1120,jute,2,40,20.0
+1121,K.R.M.,2,40,20.0
+1122,nessuno,19,39,2.1
+1123,LPG,15,39,2.6
+1124,Tutti,14,39,2.8
+1125,Clairefontaine,13,39,3.0
+1126,Weleda,7,39,5.6
+1127,Ekoi,6,39,6.5
+1128,jho,5,39,7.8
+1129,Santoro,4,39,9.8
+1130,Daum,4,39,9.8
+1131,Tiny Love,3,39,13.0
+1132,L'École des loisirs,2,39,19.5
+1133,DreamCatcher,2,39,19.5
+1134,Luveon,2,39,19.5
+1135,Legend,2,39,19.5
+1136,nor tec,2,39,19.5
+1137,Tonor,2,39,19.5
+1138,Srixon,23,38,1.7
+1139,Cotone,8,38,4.8
+1140,IPL,8,38,4.8
+1141,Andy Warhol,6,38,6.3
+1142,Pauline Wingelaar,5,38,7.6
+1143,Daiwa,5,38,7.6
+1144,Green,4,38,9.5
+1145,Baby's Only,4,38,9.5
+1146,Earth,3,38,12.7
+1147,Tomorrowland,3,38,12.7
+1148,Banwood,3,38,12.7
+1149,Issey Miyake,2,38,19.0
+1150,Henry Jacques,2,38,19.0
+1151,Vacheron Constantin,2,38,19.0
+1152,Printemps,2,38,19.0
+1153,Balance,2,38,19.0
+1154,Dorado,2,38,19.0
+1155,shopcha,2,38,19.0
+1156,Temu,9,37,4.1
+1157,El Corte Inglés,6,37,6.2
+1158,Lladró,6,37,6.2
+1159,Arcopal,6,37,6.2
+1160,Master,6,37,6.2
+1161,isfahan,5,37,7.4
+1162,Animal,5,37,7.4
+1163,Z-MAN Games,4,37,9.2
+1164,VISCONTI,3,37,12.3
+1165,Clive Christian,2,37,18.5
+1166,Ganni,2,37,18.5
+1167,démo hunters,2,37,18.5
+1168,Hesperide,2,37,18.5
+1169,CENTURY,2,37,18.5
+1170,ROBLOX,24,36,1.5
+1171,Hyla,18,36,2.0
+1172,Source Unknown,17,36,2.1
+1173,Perfecto,11,36,3.3
+1174,Para,11,36,3.3
+1175,Lexibook,8,36,4.5
+1176,Dainese,7,36,5.1
+1177,Erreplus,7,36,5.1
+1178,G-Shock,5,36,7.2
+1179,F1,5,36,7.2
+1180,Curver,4,36,9.0
+1181,Zoofari,4,36,9.0
+1182,Capita,4,36,9.0
+1183,Byoma,3,36,12.0
+1184,MODA,3,36,12.0
+1185,Pavo,3,36,12.0
+1186,Animalis,3,36,12.0
+1187,Vaseline,2,36,18.0
+1188,Cache Cache,2,36,18.0
+1189,Juliette,2,36,18.0
+1190,Bruder,2,36,18.0
+1191,Williams,2,36,18.0
+1192,Morphée,2,36,18.0
+1193,Kinder,20,35,1.8
+1194,Gillette,17,35,2.1
+1195,Elite,14,35,2.5
+1196,Hamac,13,35,2.7
+1197,Koala Baby,9,35,3.9
+1198,Janod,8,35,4.4
+1199,Conforama,7,35,5.0
+1200,Clearblue,7,35,5.0
+1201,Reusch,7,35,5.0
+1202,Solido,6,35,5.8
+1203,Stranger Things,6,35,5.8
+1204,Too Faced,3,35,11.7
+1205,Paris Hilton,3,35,11.7
+1206,Erreà,3,35,11.7
+1207,Premiere,3,35,11.7
+1208,Aevor,2,35,17.5
+1209,Polène,2,35,17.5
+1210,plusieurs,2,35,17.5
+1211,maison j,2,35,17.5
+1212,Camo,2,35,17.5
+1213,Enagic,11,34,3.1
+1214,HJC,9,34,3.8
+1215,Hisense,9,34,3.8
+1216,CRESSI,9,34,3.8
+1217,Genius,7,34,4.9
+1218,Bemer,6,34,5.7
+1219,Caron,5,34,6.8
+1220,Cabaïa,5,34,6.8
+1221,Nania,5,34,6.8
+1222,Bluey,5,34,6.8
+1223,Alessi,5,34,6.8
+1224,Prata,5,34,6.8
+1225,Greggio,4,34,8.5
+1226,DAEWOO,4,34,8.5
+1227,Afnan,3,34,11.3
+1228,Acqua di Parma,3,34,11.3
+1229,Herschel,3,34,11.3
+1230,Titanic,3,34,11.3
+1231,Orangina,3,34,11.3
+1232,Confetti,3,34,11.3
+1233,SmarTrike,3,34,11.3
+1234,Beauty of Joseon,2,34,17.0
+1235,Dinh Van,2,34,17.0
+1236,Squishmallows,2,34,17.0
+1237,oh happy games,2,34,17.0
+1238,beris,2,34,17.0
+1239,Victor,2,34,17.0
+1240,Juventus,12,33,2.8
+1241,Playtive,9,33,3.7
+1242,Premaman,9,33,3.7
+1243,moto,8,33,4.1
+1244,AC Milan,8,33,4.1
+1245,Pop Mart,7,33,4.7
+1246,Sigma,7,33,4.7
+1247,Monster,6,33,5.5
+1248,Nintendo Switch,5,33,6.6
+1249,Ale-Hop,4,33,8.2
+1250,SteelSeries,4,33,8.2
+1251,Obaïbi,3,33,11.0
+1252,Blaupunkt,3,33,11.0
+1253,neumann,3,33,11.0
+1254,Kalenji,3,33,11.0
+1255,Equestrian Stockholm,3,33,11.0
+1256,Auriol,2,33,16.5
+1257,Forever,2,33,16.5
+1258,DIY,2,33,16.5
+1259,CamelBak,2,33,16.5
+1260,prestige,18,32,1.8
+1261,FC Barcelona,14,32,2.3
+1262,KitchenAid,10,32,3.2
+1263,Tape à l'œil,9,32,3.6
+1264,GYM,9,32,3.6
+1265,Olivetti,8,32,4.0
+1266,Byredo,6,32,5.3
+1267,Koeka,6,32,5.3
+1268,Light,5,32,6.4
+1269,Le Coq Sportif,5,32,6.4
+1270,Toyota,5,32,6.4
+1271,Luxury,5,32,6.4
+1272,mizutani,4,32,8.0
+1273,Polarbox,4,32,8.0
+1274,Jaguar,3,32,10.7
+1275,Balenciaga,3,32,10.7
+1276,prime 1,3,32,10.7
+1277,Fuzeau,3,32,10.7
+1278,POP CORN,3,32,10.7
+1279,nitro,3,32,10.7
+1280,Fifa World Cup,3,32,10.7
+1281,Powell,3,32,10.7
+1282,DDR,2,32,16.0
+1283,evoc,2,32,16.0
+1284,Goyard,2,32,16.0
+1285,la fabrique à puzzles,2,32,16.0
+1286,Abu Garcia,2,32,16.0
+1287,Roberto sport,2,32,16.0
+1288,KOMPERDELL,2,32,16.0
+1289,Duotone,15,31,2.1
+1290,Babylove,11,31,2.8
+1291,Krups,10,31,3.1
+1292,Custommade,9,31,3.4
+1293,CELINE,8,31,3.9
+1294,lapierre,7,31,4.4
+1295,M&M's,6,31,5.2
+1296,Creative,6,31,5.2
+1297,Super U,5,31,6.2
+1298,Formula 1,5,31,6.2
+1299,Angelcab,4,31,7.8
+1300,LUDI,4,31,7.8
+1301,Wiko,4,31,7.8
+1302,Roger & Gallet,3,31,10.3
+1303,vanderfields,3,31,10.3
+1304,Micuna,3,31,10.3
+1305,Fabergé,3,31,10.3
+1306,Wintec,3,31,10.3
+1307,MARVEL AVENGERS,2,31,15.5
+1308,Joone,2,31,15.5
+1309,Riess Email,2,31,15.5
+1310,MUURLA,2,31,15.5
+1311,Bauhaus,2,31,15.5
+1312,Asterix,2,31,15.5
+1313,be quiet!,2,31,15.5
+1314,T&M,2,31,15.5
+1315,Trevell,2,31,15.5
+1316,sin marca,28,30,1.1
+1317,OPATRA,14,30,2.1
+1318,Naruto,11,30,2.7
+1319,EMS,11,30,2.7
+1320,Vileda,9,30,3.3
+1321,Auzou,6,30,5.0
+1322,Princess,6,30,5.0
+1323,Donnay,6,30,5.0
+1324,Windelmanufaktur,5,30,6.0
+1325,Ford,5,30,6.0
+1326,Carré Blanc,4,30,7.5
+1327,Shokz,4,30,7.5
+1328,Vespa,4,30,7.5
+1329,Flightscope,4,30,7.5
+1330,Jean Paul,3,30,10.0
+1331,histoire d'or,3,30,10.0
+1332,MGA Entertainment,3,30,10.0
+1333,Jeune Premier,3,30,10.0
+1334,ONYX,3,30,10.0
+1335,Blokker,3,30,10.0
+1336,Tracer,3,30,10.0
+1337,xtool,2,30,15.0
+1338,TOTEM,2,30,15.0
+1339,Longwy,2,30,15.0
+1340,JML,2,30,15.0
+1341,Flowers,2,30,15.0
+1342,Dolby,2,30,15.0
+1343,Rien,10,29,2.9
+1344,Galaxy,10,29,2.9
+1345,Cath Kidston,9,29,3.2
+1346,MARE,7,29,4.1
+1347,Pepco,6,29,4.8
+1348,OUTDOOR,6,29,4.8
+1349,Prozis,5,29,5.8
+1350,Faber-Castell,5,29,5.8
+1351,Gabby's Dollhouse,4,29,7.2
+1352,la marque en moins,4,29,7.2
+1353,eeBoo,4,29,7.2
+1354,autohome,4,29,7.2
+1355,Boadicea,3,29,9.7
+1356,Moa,3,29,9.7
+1357,Leatt,3,29,9.7
+1358,brocante,3,29,9.7
+1359,Anbernic,3,29,9.7
+1360,Maserati,3,29,9.7
+1361,RidersDeal,3,29,9.7
+1362,Lilly and Ben,2,29,14.5
+1363,Charlie Crane,2,29,14.5
+1364,Easy Life,2,29,14.5
+1365,Gien,2,29,14.5
+1366,Sant Louis,2,29,14.5
+1367,Zelesta,2,29,14.5
+1368,pucca,2,29,14.5
+1369,movia,2,29,14.5
+1370,Subbuteo,16,28,1.8
+1371,Sanitas,9,28,3.1
+1372,Fiat,7,28,4.0
+1373,Daysy,6,28,4.7
+1374,Revell,6,28,4.7
+1375,NECA,6,28,4.7
+1376,Asics,6,28,4.7
+1377,Clarins,5,28,5.6
+1378,Torx,5,28,5.6
+1379,Boutique Parisienne,4,28,7.0
+1380,Mr Wonderful,4,28,7.0
+1381,Fagor,4,28,7.0
+1382,Nash,4,28,7.0
+1383,Lami-Cell,4,28,7.0
+1384,Van Deer,4,28,7.0
+1385,Maison Crivelli,3,28,9.3
+1386,Kids Zone by Jane,3,28,9.3
+1387,Winx,3,28,9.3
+1388,Paris 2024,3,28,9.3
+1389,Artesano,3,28,9.3
+1390,Zooplus,3,28,9.3
+1391,Atomic Mass Games,3,28,9.3
+1392,Jobe,3,28,9.3
+1393,Didymos,2,28,14.0
+1394,Herman Miller,2,28,14.0
+1395,Pogs,2,28,14.0
+1396,RC LENS,2,28,14.0
+1397,Herend,2,28,14.0
+1398,SteamOne,2,28,14.0
+1399,Intel,2,28,14.0
+1400,Lubitel,2,28,14.0
+1401,fabwood,2,28,14.0
+1402,Oxylane,2,28,14.0
+1403,WMF,15,27,1.8
+1404,no brand,14,27,1.9
+1405,Grundig,14,27,1.9
+1406,Inglesina,10,27,2.7
+1407,MB,9,27,3.0
+1408,Uhlsport,7,27,3.9
+1409,Loop,6,27,4.5
+1410,red dragon,6,27,4.5
+1411,Creed,5,27,5.4
+1412,Boadicea the Victorious,5,27,5.4
+1413,National Geographic,5,27,5.4
+1414,Couture,5,27,5.4
+1415,fairtex,5,27,5.4
+1416,French Avenue,4,27,6.8
+1417,Silver cross,4,27,6.8
+1418,Wii,4,27,6.8
+1419,Sabrina Carpenter,3,27,9.0
+1420,Bandai Namco,3,27,9.0
+1421,Holz,3,27,9.0
+1422,SPC,3,27,9.0
+1423,actuel,3,27,9.0
+1424,Attack Shark,3,27,9.0
+1425,kendostar,3,27,9.0
+1426,Balmain,2,27,13.5
+1427,Attakus,2,27,13.5
+1428,Kidzroom,2,27,13.5
+1429,Babycalin,2,27,13.5
+1430,ghb,2,27,13.5
+1431,LILY COOK,2,27,13.5
+1432,Imperial,2,27,13.5
+1433,Energia,2,27,13.5
+1434,Inesis,13,26,2.0
+1435,Cairn,12,26,2.2
+1436,Goldorak,8,26,3.2
+1437,faema,8,26,3.2
+1438,Candide,7,26,3.7
+1439,Go Sport,7,26,3.7
+1440,Ice Watch,6,26,4.3
+1441,Play Doh,5,26,5.2
+1442,Safety,5,26,5.2
+1443,iTS,5,26,5.2
+1444,HTC,5,26,5.2
+1445,5Five,4,26,6.5
+1446,Julius-K9,4,26,6.5
+1447,Ruban,4,26,6.5
+1448,Time Rider,4,26,6.5
+1449,Clinique,3,26,8.7
+1450,Eucerin,3,26,8.7
+1451,Love Moschino,3,26,8.7
+1452,Staedtler,3,26,8.7
+1453,Wahl,3,26,8.7
+1454,Indiba,3,26,8.7
+1455,C'Mon,3,26,8.7
+1456,Perles & Co,3,26,8.7
+1457,La Prairie,2,26,13.0
+1458,Marlù,2,26,13.0
+1459,Pixi,2,26,13.0
+1460,moonkie,2,26,13.0
+1461,Topazio,2,26,13.0
+1462,Blackview,2,26,13.0
+1463,AlphaTheta,2,26,13.0
+1464,maradona,2,26,13.0
+1465,Real Madrid,10,25,2.5
+1466,Lupilu,8,25,3.1
+1467,Trefl,8,25,3.1
+1468,Bburago,7,25,3.6
+1469,Gigaset,6,25,4.2
+1470,Cuesoul,6,25,4.2
+1471,Studio Ghibli,5,25,5.0
+1472,ECHT,4,25,6.2
+1473,Les Deglingos,4,25,6.2
+1474,Vivo,4,25,6.2
+1475,Fluke,4,25,6.2
+1476,GA.MA,4,25,6.2
+1477,Diadora,4,25,6.2
+1478,garlando,4,25,6.2
+1479,Bleu Libellule,3,25,8.3
+1480,Tissot,3,25,8.3
+1481,IRONMAN,3,25,8.3
+1482,Moulin des Loups,3,25,8.3
+1483,Nolan,3,25,8.3
+1484,Lazio,3,25,8.3
+1485,Mixa,2,25,12.5
+1486,Mega Bloks,2,25,12.5
+1487,Les Incollables,2,25,12.5
+1488,Lemax,2,25,12.5
+1489,Thor,2,25,12.5
+1490,Tatonka,2,25,12.5
+1491,Helvetiq,2,25,12.5
+1492,Boya,2,25,12.5
+1493,kalimba,2,25,12.5
+1494,Muramatsu,2,25,12.5
+1495,Aqualung,2,25,12.5
+1496,Aldi,16,24,1.5
+1497,Cube,15,24,1.6
+1498,Cobra,13,24,1.8
+1499,Minions,10,24,2.4
+1500,AMD,10,24,2.4
+1501,Flower,10,24,2.4
+1502,Zeeman,9,24,2.7
+1503,Peg Perego,8,24,3.0
+1504,Deco,8,24,3.0
+1505,Limited Edition,7,24,3.4
+1506,First,7,24,3.4
+1507,"Harry""s Horse",7,24,3.4
+1508,gem,7,24,3.4
+1509,Vichy,6,24,4.0
+1510,opatra london,6,24,4.0
+1511,Natural,6,24,4.0
+1512,DécoTime,6,24,4.0
+1513,Norton,6,24,4.0
+1514,Horze,6,24,4.0
+1515,Blue Sky,5,24,4.8
+1516,Santi,5,24,4.8
+1517,Je Porte Mon Bebe,4,24,6.0
+1518,Poco,4,24,6.0
+1519,Spalding,4,24,6.0
+1520,Jukki,3,24,8.0
+1521,Bulgari,3,24,8.0
+1522,Di Nardo,3,24,8.0
+1523,Lolita Lempicka,2,24,12.0
+1524,Thierry Mugler,2,24,12.0
+1525,The Bridge,2,24,12.0
+1526,fillikid,2,24,12.0
+1527,Square Enix,2,24,12.0
+1528,Ion8,2,24,12.0
+1529,driade,2,24,12.0
+1530,Native,2,24,12.0
+1531,Verbatim,2,24,12.0
+1532,Holdit,2,24,12.0
+1533,Abalone,2,24,12.0
+1534,DANONE,2,24,12.0
+1535,odi,2,24,12.0
+1536,Bon Pilates,2,24,12.0
+1537,SSC Napoli,2,24,12.0
+1538,merkloos,10,23,2.3
+1539,Tiger,9,23,2.6
+1540,Marabout,9,23,2.6
+1541,Power,9,23,2.6
+1542,Zero,7,23,3.3
+1543,Rip Curl,7,23,3.3
+1544,Dragon,6,23,3.8
+1545,Alcatel,6,23,3.8
+1546,Muse,6,23,3.8
+1547,Dujardin,6,23,3.8
+1548,Givi,5,23,4.6
+1549,Babboe,5,23,4.6
+1550,Shure,4,23,5.8
+1551,Grohe,3,23,7.7
+1552,Nutella,3,23,7.7
+1553,equation,3,23,7.7
+1554,ESSELTE,3,23,7.7
+1555,Brunello Cucinelli,3,23,7.7
+1556,Fresh & Rebel,3,23,7.7
+1557,schabak,3,23,7.7
+1558,Cyrillus,2,23,11.5
+1559,Hachette Éducation,2,23,11.5
+1560,Olympic,2,23,11.5
+1561,Curli,2,23,11.5
+1562,Limite Limite,2,23,11.5
+1563,Anatolian,2,23,11.5
+1564,Ridley’s,2,23,11.5
+1565,Ottimo,14,22,1.6
+1566,Pommette,11,22,2.0
+1567,SETA,7,22,3.1
+1568,Nosiboo,7,22,3.1
+1569,Dodie,6,22,3.7
+1570,Vanguard,6,22,3.7
+1571,THERMOBABY,4,22,5.5
+1572,Bout'chou,4,22,5.5
+1573,High-Tech,4,22,5.5
+1574,Imperial Riding,4,22,5.5
+1575,Deruta,3,22,7.3
+1576,Home Maison,3,22,7.3
+1577,Madonna,3,22,7.3
+1578,Savage Gear,3,22,7.3
+1579,Paul Picot,2,22,11.0
+1580,Costes,2,22,11.0
+1581,Philippe Starck,2,22,11.0
+1582,Belgique,2,22,11.0
+1583,Winterling,2,22,11.0
+1584,Abrila,2,22,11.0
+1585,T.K. Maxx,2,22,11.0
+1586,Curta,2,22,11.0
+1587,Travel,2,22,11.0
+1588,VHF,2,22,11.0
+1589,ThinkFun,2,22,11.0
+1590,Halo,2,22,11.0
+1591,Stone Island,2,22,11.0
+1592,Vsett,2,22,11.0
+1593,Jan van Haasteren,13,21,1.6
+1594,Orologio,12,21,1.8
+1595,Bontempi,10,21,2.1
+1596,LOOK,8,21,2.6
+1597,Electrolux,7,21,3.0
+1598,Ultra PRO,7,21,3.0
+1599,Umbro,6,21,3.5
+1600,Illy,6,21,3.5
+1601,Tela,6,21,3.5
+1602,Miraculous,5,21,4.2
+1603,Esquisse,5,21,4.2
+1604,LAVORO,5,21,4.2
+1605,Nakamura,5,21,4.2
+1606,TU,4,21,5.2
+1607,WeatherBeeta,4,21,5.2
+1608,Glantier,3,21,7.0
+1609,Britax Römer,3,21,7.0
+1610,Walker,3,21,7.0
+1611,Delphin,3,21,7.0
+1612,T'nB,3,21,7.0
+1613,Guitare,3,21,7.0
+1614,ALDO,2,21,10.5
+1615,Polti,2,21,10.5
+1616,Govee,2,21,10.5
+1617,Jupiter,2,21,10.5
+1618,Senza,20,20,1.0
+1619,Ergobag,14,20,1.4
+1620,Unico,12,20,1.7
+1621,Magimix,8,20,2.5
+1622,Royal,8,20,2.5
+1623,Pentax,8,20,2.5
+1624,Michelin,5,20,4.0
+1625,Smoby,5,20,4.0
+1626,Waterman,5,20,4.0
+1627,Schneider,5,20,4.0
+1628,Top Vintage,4,20,5.0
+1629,Baby Brezza,4,20,5.0
+1630,Slingshot,4,20,5.0
+1631,ENGLAND,3,20,6.7
+1632,Ridesafer,3,20,6.7
+1633,jo 2024,3,20,6.7
+1634,BASSANO,3,20,6.7
+1635,STC,3,20,6.7
+1636,Flamingo,3,20,6.7
+1637,INIU,3,20,6.7
+1638,Vikteam,3,20,6.7
+1639,Courrèges,2,20,10.0
+1640,Hunter,2,20,10.0
+1641,Marni,2,20,10.0
+1642,Star,2,20,10.0
+1643,ublot,2,20,10.0
+1644,Elvis,2,20,10.0
+1645,Compex,2,20,10.0
+1646,Libellud,2,20,10.0
+1647,kub,2,20,10.0
+1648,Divino Regno,2,20,10.0
+1649,Hit N Move,2,20,10.0
+1650,Primitive,2,20,10.0
+1651,OneWheel,2,20,10.0
+1652,Poedagar,6,19,3.2
+1653,Nero,6,19,3.2
+1654,SINGER,6,19,3.2
+1655,Religion,5,19,3.8
+1656,Magnifique,4,19,4.8
+1657,LittleLife,4,19,4.8
+1658,Airoh,4,19,4.8
+1659,CESA,4,19,4.8
+1660,Montegrappa,4,19,4.8
+1661,Tessuto,4,19,4.8
+1662,Gerard Pasquier,3,19,6.3
+1663,Pelikan,3,19,6.3
+1664,Master Lock,3,19,6.3
+1665,Insta360,3,19,6.3
+1666,Pierre,3,19,6.3
+1667,Mitchell,3,19,6.3
+1668,Anastasia Beverly Hills,2,19,9.5
+1669,L'Oréal Professionnel,2,19,9.5
+1670,Schwarzkopf,2,19,9.5
+1671,Converse,2,19,9.5
+1672,Vogue,2,19,9.5
+1673,Flora,2,19,9.5
+1674,STOF,2,19,9.5
+1675,Trendy,2,19,9.5
+1676,SHABBY,2,19,9.5
+1677,Tea,2,19,9.5
+1678,livre ancien,2,19,9.5
+1679,finger sleeves,2,19,9.5
+1680,Fokky,2,19,9.5
+1681,Gymshark,2,19,9.5
+1682,Arte,11,18,1.6
+1683,Reer,11,18,1.6
+1684,Campagnolo,9,18,2.0
+1685,Avologi,8,18,2.2
+1686,Koala,8,18,2.2
+1687,Carryboo,8,18,2.2
+1688,Treccani,8,18,2.2
+1689,Husqvarna,8,18,2.2
+1690,Tedi,7,18,2.6
+1691,Weber,6,18,3.0
+1692,Mondial Tissus,6,18,3.0
+1693,Artist,6,18,3.0
+1694,CASCO,5,18,3.6
+1695,JSP,5,18,3.6
+1696,longoni,5,18,3.6
+1697,Bohemia,4,18,4.5
+1698,GreenGate,4,18,4.5
+1699,Essentiel,4,18,4.5
+1700,Bowers & Wilkins,4,18,4.5
+1701,Denver,4,18,4.5
+1702,SAX,4,18,4.5
+1703,Le Gaulois,3,18,6.0
+1704,Cacharel,2,18,9.0
+1705,Stance,2,18,9.0
+1706,Bronzini,2,18,9.0
+1707,Jaeger,2,18,9.0
+1708,bluesky,2,18,9.0
+1709,Iron Maiden,2,18,9.0
+1710,Marlboro,2,18,9.0
+1711,tosin,2,18,9.0
+1712,Pulsar,2,18,9.0
+1713,icom,2,18,9.0
+1714,hercules,2,18,9.0
+1715,Rackham,2,18,9.0
+1716,Assassin's Creed,2,18,9.0
+1717,GIG,2,18,9.0
+1718,Gwennhael Spirit,2,18,9.0
+1719,Lightning Bolt,2,18,9.0
+1720,Rainbow,21,17,0.8
+1721,Sports,14,17,1.2
+1722,Chogan,13,17,1.3
+1723,Ariete,13,17,1.3
+1724,Fischer,12,17,1.4
+1725,Angelcare,10,17,1.7
+1726,Puro Lino,9,17,1.9
+1727,Ducati,9,17,1.9
+1728,Delta,7,17,2.4
+1729,Mineralogie,7,17,2.4
+1730,Pikeur,7,17,2.4
+1731,Scalextric,6,17,2.8
+1732,InnovaGoods,6,17,2.8
+1733,POP,5,17,3.4
+1734,Nanny Care,5,17,3.4
+1735,Maxi Zoo,5,17,3.4
+1736,Alfa Romeo,5,17,3.4
+1737,Buffet Crampon,5,17,3.4
+1738,Maison Margiela,4,17,4.2
+1739,Soprano,4,17,4.2
+1740,ancien,4,17,4.2
+1741,Unopiu,4,17,4.2
+1742,Froyak,4,17,4.2
+1743,adidas Originals,4,17,4.2
+1744,Fleischmann,4,17,4.2
+1745,Stade Toulousain,3,17,5.7
+1746,Sage,3,17,5.7
+1747,Artigiano,3,17,5.7
+1748,Casamia,3,17,5.7
+1749,Customized,3,17,5.7
+1750,Active,3,17,5.7
+1751,Exploding Kittens,3,17,5.7
+1752,Penny,3,17,5.7
+1753,walfort,3,17,5.7
+1754,Aqua Sphere,3,17,5.7
+1755,Flex on,3,17,5.7
+1756,Promod,2,17,8.5
+1757,Bright Starts,2,17,8.5
+1758,Moulinsart,2,17,8.5
+1759,Tukan,2,17,8.5
+1760,Almost,2,17,8.5
+1761,vintage 1900,2,17,8.5
+1762,WORKWEAR,2,17,8.5
+1763,Monchhichi,2,17,8.5
+1764,jocatop,2,17,8.5
+1765,Woezel & Pip,2,17,8.5
+1766,MATFER,2,17,8.5
+1767,Shell,2,17,8.5
+1768,Today,2,17,8.5
+1769,Beats By Dre,2,17,8.5
+1770,TYMO,2,17,8.5
+1771,Cluedo,2,17,8.5
+1772,vaughn,2,17,8.5
+1773,Bar,11,16,1.5
+1774,Völkl,8,16,2.0
+1775,Mercedes-Benz,7,16,2.3
+1776,Italiano,7,16,2.3
+1777,Bambino Mio,7,16,2.3
+1778,iRobot,7,16,2.3
+1779,COLNAGO,7,16,2.3
+1780,HV Polo,7,16,2.3
+1781,RIMOWA,6,16,2.7
+1782,ION,6,16,2.7
+1783,kangen,6,16,2.7
+1784,Lotto,6,16,2.7
+1785,BMC,6,16,2.7
+1786,SHR Germany,5,16,3.2
+1787,Billabong,5,16,3.2
+1788,Dunnes Stores,4,16,4.0
+1789,Tanita,4,16,4.0
+1790,Toupie,4,16,4.0
+1791,Smartgyro,4,16,4.0
+1792,Champion,3,16,5.3
+1793,Fleur,3,16,5.3
+1794,Rosa,3,16,5.3
+1795,BabyDan,3,16,5.3
+1796,Topolino,3,16,5.3
+1797,jura,3,16,5.3
+1798,Anders,3,16,5.3
+1799,S.T. Dupont,3,16,5.3
+1800,Gibsons,3,16,5.3
+1801,Rubik's,3,16,5.3
+1802,LALIZAS,3,16,5.3
+1803,activomed,3,16,5.3
+1804,Serge Lutens,2,16,8.0
+1805,Maclaren,2,16,8.0
+1806,LEGO Creator,2,16,8.0
+1807,peltor,2,16,8.0
+1808,Orange,2,16,8.0
+1809,Kitchoun,2,16,8.0
+1810,Rivièra Maison,2,16,8.0
+1811,Sanpellegrino,2,16,8.0
+1812,Mesoestetic,2,16,8.0
+1813,general electric,2,16,8.0
+1814,Henri selmer,2,16,8.0
+1815,Poker,2,16,8.0
+1816,Inoxto,2,16,8.0
+1817,Boomerang,2,16,8.0
+1818,PGA Tour,2,16,8.0
+1819,Horse pilot,2,16,8.0
+1820,FREEJUMP,2,16,8.0
+1821,Aviar,2,16,8.0
+1822,Kruidvat,15,15,1.0
+1823,Antigua,11,15,1.4
+1824,Game,10,15,1.5
+1825,Maped,9,15,1.7
+1826,Mix,9,15,1.7
+1827,RECARO,8,15,1.9
+1828,Bianchi,7,15,2.1
+1829,Bellissimo,6,15,2.5
+1830,DIANA,6,15,2.5
+1831,Citroën,5,15,3.0
+1832,je ne sais plus,5,15,3.0
+1833,Volvik,5,15,3.0
+1834,SMYK,4,15,3.8
+1835,Gazebo,4,15,3.8
+1836,Dali,4,15,3.8
+1837,WOW,4,15,3.8
+1838,Seac,4,15,3.8
+1839,K2,4,15,3.8
+1840,Smith,4,15,3.8
+1841,Renato Balestra,3,15,5.0
+1842,Hesba,3,15,5.0
+1843,Camp,3,15,5.0
+1844,Bamboom,3,15,5.0
+1845,Lékué,3,15,5.0
+1846,Hutschenreuther,3,15,5.0
+1847,Huion,3,15,5.0
+1848,NEC,3,15,5.0
+1849,Bluebird,3,15,5.0
+1850,Schwalbe,3,15,5.0
+1851,Swing,3,15,5.0
+1852,Custom,3,15,5.0
+1853,Roja Parfums,2,15,7.5
+1854,Kevin Murphy,2,15,7.5
+1855,Fruit de Ma Passion,2,15,7.5
+1856,Navaris,2,15,7.5
+1857,Niimo,2,15,7.5
+1858,outiror,2,15,7.5
+1859,SBS,2,15,7.5
+1860,Accuphase,2,15,7.5
+1861,Jazzinc,2,15,7.5
+1862,Paulson,2,15,7.5
+1863,APsport,2,15,7.5
+1864,Sabre,2,15,7.5
+1865,miura,2,15,7.5
+1866,Mercury,11,14,1.3
+1867,Cannondale,10,14,1.4
+1868,THULE,8,14,1.8
+1869,POC,8,14,1.8
+1870,Carolina Herrera,7,14,2.0
+1871,Oura,6,14,2.3
+1872,Tibhar,6,14,2.3
+1873,Anchor,5,14,2.8
+1874,Roche bobois,5,14,2.8
+1875,Vega,5,14,2.8
+1876,Rado,5,14,2.8
+1877,Warrior,5,14,2.8
+1878,Tacx,5,14,2.8
+1879,ABC Design,4,14,3.5
+1880,Johnson,4,14,3.5
+1881,Olimpia,4,14,3.5
+1882,K3,4,14,3.5
+1883,Vilac,4,14,3.5
+1884,Zeus,4,14,3.5
+1885,Charro,3,14,4.7
+1886,Power Rangers,3,14,4.7
+1887,vidaXL,3,14,4.7
+1888,MERCATO,3,14,4.7
+1889,Mes Petits Cailloux,3,14,4.7
+1890,Chipie,3,14,4.7
+1891,Cook Concept,3,14,4.7
+1892,Efteling,3,14,4.7
+1893,Case,3,14,4.7
+1894,XQ Max,3,14,4.7
+1895,Redken,2,14,7.0
+1896,de sieraden,2,14,7.0
+1897,Scotch,2,14,7.0
+1898,Carbone,2,14,7.0
+1899,MTK,2,14,7.0
+1900,ID Italian,2,14,7.0
+1901,Mean Well,2,14,7.0
+1902,Bombyx,2,14,7.0
+1903,lezyne,2,14,7.0
+1904,XLC,2,14,7.0
+1905,Marinepool,2,14,7.0
+1906,Lee,2,14,7.0
+1907,Ride,2,14,7.0
+1908,Lidl,14,13,0.9
+1909,Reebok,8,13,1.6
+1910,Silver,8,13,1.6
+1911,Lavorazione Artigiana,8,13,1.6
+1912,FFF,7,13,1.9
+1913,mamalama,7,13,1.9
+1914,Mondraker,7,13,1.9
+1915,STAR VIE,7,13,1.9
+1916,Hoppediz,6,13,2.2
+1917,Continental,6,13,2.2
+1918,Wacom,6,13,2.2
+1919,FS football grip socks,6,13,2.2
+1920,Lotus,5,13,2.6
+1921,Bavaria,5,13,2.6
+1922,Tempest,5,13,2.6
+1923,SHIVER,5,13,2.6
+1924,core,5,13,2.6
+1925,AtysX,5,13,2.6
+1926,honma,5,13,2.6
+1927,Dynastar,5,13,2.6
+1928,London,4,13,3.2
+1929,Wildride,4,13,3.2
+1930,Rainbow High,4,13,3.2
+1931,Bambino,4,13,3.2
+1932,Caramel & cie,4,13,3.2
+1933,LAZER,4,13,3.2
+1934,Bigben,4,13,3.2
+1935,Jada,4,13,3.2
+1936,EA7 Emporio Armani,4,13,3.2
+1937,CR7,3,13,4.3
+1938,NeoNail,3,13,4.3
+1939,Monet,3,13,4.3
+1940,Petit Bateau,3,13,4.3
+1941,Artigianale,3,13,4.3
+1942,Jungle,3,13,4.3
+1943,SOLA,3,13,4.3
+1944,Laguiole,3,13,4.3
+1945,eufy,3,13,4.3
+1946,Antiquités,3,13,4.3
+1947,Marche,3,13,4.3
+1948,wurlitzer,3,13,4.3
+1949,US,3,13,4.3
+1950,Diamante,2,13,6.5
+1951,Merrachi,2,13,6.5
+1952,Roccobarocco,2,13,6.5
+1953,Tarrington House,2,13,6.5
+1954,Haller,2,13,6.5
+1955,bb italia,2,13,6.5
+1956,mettler toledo,2,13,6.5
+1957,Proline,2,13,6.5
+1958,NOMAR,2,13,6.5
+1959,Luneville,2,13,6.5
+1960,Manu Life,2,13,6.5
+1961,L'incroyable,2,13,6.5
+1962,NCR,2,13,6.5
+1963,Dedon,2,13,6.5
+1964,Arcaplanet,2,13,6.5
+1965,Aiaiai,2,13,6.5
+1966,Stereo,2,13,6.5
+1967,prixton,2,13,6.5
+1968,Heller,2,13,6.5
+1969,fifine,2,13,6.5
+1970,Cratoni,2,13,6.5
+1971,xaequo,2,13,6.5
+1972,InBody,2,13,6.5
+1973,Cargo,2,13,6.5
+1974,SuperStroke,2,13,6.5
+1975,Mathews,2,13,6.5
+1976,Atmosphera,18,12,0.7
+1977,Siemens,12,12,1.0
+1978,Honda,11,12,1.1
+1979,Texas Instruments,10,12,1.2
+1980,CM,8,12,1.5
+1981,Premium,7,12,1.7
+1982,Pool,7,12,1.7
+1983,Mission,7,12,1.7
+1984,Haibike,7,12,1.7
+1985,Meyer,7,12,1.7
+1986,Noukie's,6,12,2.0
+1987,Lady,6,12,2.0
+1988,Nature,5,12,2.4
+1989,Artisan,5,12,2.4
+1990,Terre De Fer,5,12,2.4
+1991,Volvo,5,12,2.4
+1992,RDX,5,12,2.4
+1993,Alien,4,12,3.0
+1994,Norauto,4,12,3.0
+1995,Terraillon,4,12,3.0
+1996,Bollé,4,12,3.0
+1997,Roca,4,12,3.0
+1998,Campingaz,4,12,3.0
+1999,Taylor,4,12,3.0
+2000,Stylo,4,12,3.0
+2001,Les autres,4,12,3.0
+2002,Typology,3,12,4.0
+2003,Upper Deck,3,12,4.0
+2004,AeroMoov,3,12,4.0
+2005,Herpa,3,12,4.0
+2006,My Little Pony,3,12,4.0
+2007,Pearl,3,12,4.0
+2008,Maxima,3,12,4.0
+2009,Alpha,3,12,4.0
+2010,WAGO,3,12,4.0
+2011,Nail,3,12,4.0
+2012,Montar,3,12,4.0
+2013,Space Cow,3,12,4.0
+2014,Ubisoft,3,12,4.0
+2015,Peloton,3,12,4.0
+2016,Bridgestone,3,12,4.0
+2017,scolia,3,12,4.0
+2018,Anon,3,12,4.0
+2019,Parfums de Marly,2,12,6.0
+2020,Blumarine,2,12,6.0
+2021,Quokka,2,12,6.0
+2022,Violetta,2,12,6.0
+2023,Erbesi,2,12,6.0
+2024,Universal Studios,2,12,6.0
+2025,Geuther,2,12,6.0
+2026,Etsy,2,12,6.0
+2027,TotsBots,2,12,6.0
+2028,NANO,2,12,6.0
+2029,Stern,2,12,6.0
+2030,Toei Animation,2,12,6.0
+2031,indesit,2,12,6.0
+2032,Churchill,2,12,6.0
+2033,bruckmann,2,12,6.0
+2034,m.idea,2,12,6.0
+2035,Kuromi,2,12,6.0
+2036,Croci,2,12,6.0
+2037,Alexa,2,12,6.0
+2038,Fanatec,2,12,6.0
+2039,RUIMEN,2,12,6.0
+2040,Momo Design,2,12,6.0
+2041,KISS,2,12,6.0
+2042,Stagg,2,12,6.0
+2043,Amethyste,2,12,6.0
+2044,limmy’s,2,12,6.0
+2045,Rawlings,2,12,6.0
+2046,Si,9,11,1.2
+2047,Bianco,7,11,1.6
+2048,Volkswagen,7,11,1.6
+2049,MODELLO,7,11,1.6
+2050,Martin,7,11,1.6
+2051,niviuk,7,11,1.6
+2052,MOLTO,6,11,1.8
+2053,lady comp,6,11,1.8
+2054,Zenker,6,11,1.8
+2055,Stiga,6,11,1.8
+2056,Mavic,6,11,1.8
+2057,TomTom,6,11,1.8
+2058,Ozone,6,11,1.8
+2059,The Unbranded Brand,5,11,2.2
+2060,Tarmak,5,11,2.2
+2061,ELEGANTE,5,11,2.2
+2062,Sparco,5,11,2.2
+2063,Sonos,5,11,2.2
+2064,Jukebox,5,11,2.2
+2065,Jigsaw,5,11,2.2
+2066,Snauwaert,5,11,2.2
+2067,Kimono,5,11,2.2
+2068,Unicorn,5,11,2.2
+2069,Lodger,4,11,2.8
+2070,Sunrise,4,11,2.8
+2071,Artista,4,11,2.8
+2072,Subea,4,11,2.8
+2073,dhs,4,11,2.8
+2074,Jeep,3,11,3.7
+2075,DC Comics,3,11,3.7
+2076,Vitra,3,11,3.7
+2077,Cam Cam Copenhagen,3,11,3.7
+2078,XO,3,11,3.7
+2079,O'Neill,3,11,3.7
+2080,Signature,3,11,3.7
+2081,The Simpsons,3,11,3.7
+2082,Saphir,3,11,3.7
+2083,Jour de fête,3,11,3.7
+2084,FORCA PORTUGAL,3,11,3.7
+2085,Atari,3,11,3.7
+2086,ldlc,3,11,3.7
+2087,Zygomatic Games,3,11,3.7
+2088,JuCad,3,11,3.7
+2089,Mezz,3,11,3.7
+2090,Rochas,2,11,5.5
+2091,CeraVe,2,11,5.5
+2092,Revolution,2,11,5.5
+2093,WiLD,2,11,5.5
+2094,Kotobukiya,2,11,5.5
+2095,Freitag,2,11,5.5
+2096,sans marques,2,11,5.5
+2097,veo,2,11,5.5
+2098,BRUNO,2,11,5.5
+2099,Orbegozo,2,11,5.5
+2100,no marca,2,11,5.5
+2101,karsten,2,11,5.5
+2102,Tabriz,2,11,5.5
+2103,Bob Marley,2,11,5.5
+2104,atrix,2,11,5.5
+2105,HPE,2,11,5.5
+2106,CASETiFY,2,11,5.5
+2107,Pink Gellac,2,11,5.5
+2108,Ingen,2,11,5.5
+2109,Tarot,2,11,5.5
+2110,KLICKfix,2,11,5.5
+2111,Mistral,2,11,5.5
+2112,NR,2,11,5.5
+2113,Kingz,2,11,5.5
+2114,Choplin,2,11,5.5
+2115,SkiTrab,2,11,5.5
+2116,Madera,15,10,0.7
+2117,Rituals,13,10,0.8
+2118,Olaian,9,10,1.1
+2119,BIBS,8,10,1.2
+2120,Matrix,7,10,1.4
+2121,FootJoy,7,10,1.4
+2122,HKM,6,10,1.7
+2123,LH,5,10,2.0
+2124,Frida,5,10,2.0
+2125,Medisana,5,10,2.0
+2126,Starbucks,5,10,2.0
+2127,Mister Gadget,5,10,2.0
+2128,Bema,5,10,2.0
+2129,Christian Louboutin,4,10,2.5
+2130,Plata,4,10,2.5
+2131,Ultimate Speed,4,10,2.5
+2132,aden + anais,4,10,2.5
+2133,Doogee,4,10,2.5
+2134,NFL,4,10,2.5
+2135,Emma & Noah,3,10,3.3
+2136,Bear,3,10,3.3
+2137,Kenzo,3,10,3.3
+2138,Silēa,3,10,3.3
+2139,Logicom,3,10,3.3
+2140,FUJI,3,10,3.3
+2141,Guinot,3,10,3.3
+2142,Blanc-manger Coco,3,10,3.3
+2143,Digimon,3,10,3.3
+2144,Sport,3,10,3.3
+2145,Scubapro,3,10,3.3
+2146,Spooks,3,10,3.3
+2147,amerigo,3,10,3.3
+2148,Childeric,3,10,3.3
+2149,Custom Saddlery,3,10,3.3
+2150,Elan,3,10,3.3
+2151,Union,3,10,3.3
+2152,Yves,2,10,5.0
+2153,Aimé,2,10,5.0
+2154,Bebe2Luxe,2,10,5.0
+2155,Bally,2,10,5.0
+2156,Boppy,2,10,5.0
+2157,MED,2,10,5.0
+2158,Brandani,2,10,5.0
+2159,Bodum,2,10,5.0
+2160,Rational,2,10,5.0
+2161,FAC,2,10,5.0
+2162,Legallais,2,10,5.0
+2163,Hooligans,2,10,5.0
+2164,Inlandsis,2,10,5.0
+2165,Technica,2,10,5.0
+2166,Linn,2,10,5.0
+2167,National,2,10,5.0
+2168,Blackmagic Design,2,10,5.0
+2169,one for all,2,10,5.0
+2170,Metapen,2,10,5.0
+2171,game ready,2,10,5.0
+2172,montre connecté,2,10,5.0
+2173,Origames,2,10,5.0
+2174,Ya Qu'a,2,10,5.0
+2175,Juduku,2,10,5.0
+2176,victory,2,10,5.0
+2177,Bergère de France,2,10,5.0
+2178,SERT,2,10,5.0
+2179,jig power,2,10,5.0
+2180,Siboasi,2,10,5.0
+2181,Albino Preto,2,10,5.0
+2182,Pro Touch,19,9,0.5
+2183,uvex,11,9,0.8
+2184,Lana,8,9,1.1
+2185,Luxe,6,9,1.5
+2186,Fossil,6,9,1.5
+2187,Energy,6,9,1.5
+2188,Maisto,6,9,1.5
+2189,Timberland,5,9,1.8
+2190,Parfois,5,9,1.8
+2191,My Jewellery,5,9,1.8
+2192,RC,5,9,1.8
+2193,Onkyo,5,9,1.8
+2194,SPA,4,9,2.2
+2195,Costway,4,9,2.2
+2196,Opel,4,9,2.2
+2197,Physiomat,4,9,2.2
+2198,omas,4,9,2.2
+2199,RYOBI,4,9,2.2
+2200,RhinoShield,4,9,2.2
+2201,TWS,4,9,2.2
+2202,cervelo,4,9,2.2
+2203,Biotherm,3,9,3.0
+2204,ABS,3,9,3.0
+2205,Bello,3,9,3.0
+2206,Ynot,3,9,3.0
+2207,Uomo,3,9,3.0
+2208,Vestopazzo,3,9,3.0
+2209,Love and Green,3,9,3.0
+2210,Classic,3,9,3.0
+2211,Pepsi,3,9,3.0
+2212,Jako-o,3,9,3.0
+2213,Trunki,3,9,3.0
+2214,Aurora,3,9,3.0
+2215,IMCO,3,9,3.0
+2216,Suomy,3,9,3.0
+2217,Mark,3,9,3.0
+2218,Rollei,3,9,3.0
+2219,Andrid,3,9,3.0
+2220,Imoshion,3,9,3.0
+2221,Tc electronic,3,9,3.0
+2222,Powerade,3,9,3.0
+2223,fidlock,3,9,3.0
+2224,Riddell,3,9,3.0
+2225,Rammstein,2,9,4.5
+2226,Oceanz,2,9,4.5
+2227,Bijou Brigitte,2,9,4.5
+2228,QUAX,2,9,4.5
+2229,Doudou et Compagnie,2,9,4.5
+2230,Robusta,2,9,4.5
+2231,Herdegen,2,9,4.5
+2232,Levoit,2,9,4.5
+2233,cellublue,2,9,4.5
+2234,Robot Coupe,2,9,4.5
+2235,Smiggle,2,9,4.5
+2236,Spirit,2,9,4.5
+2237,Qwetch,2,9,4.5
+2238,Confiture,2,9,4.5
+2239,Millenium,2,9,4.5
+2240,Salins,2,9,4.5
+2241,Zephyr,2,9,4.5
+2242,DILLE & KAMILLE,2,9,4.5
+2243,Sector,2,9,4.5
+2244,Stilo,2,9,4.5
+2245,Metronic,2,9,4.5
+2246,Wild Flower,2,9,4.5
+2247,Lowrance,2,9,4.5
+2248,B&W,2,9,4.5
+2249,Rane,2,9,4.5
+2250,Mini,2,9,4.5
+2251,Oris,2,9,4.5
+2252,ROSSI,2,9,4.5
+2253,Sheffield,2,9,4.5
+2254,Syncros,2,9,4.5
+2255,hutchinson,2,9,4.5
+2256,TMC,2,9,4.5
+2257,max ranger,2,9,4.5
+2258,Mikasa,2,9,4.5
+2259,Vita,2,9,4.5
+2260,Buddha to Buddha,2,9,4.5
+2261,Bimby,12,8,0.7
+2262,4moms,10,8,0.8
+2263,Milano,9,8,0.9
+2264,keine Marke,6,8,1.3
+2265,Avent,6,8,1.3
+2266,Aura,5,8,1.6
+2267,More,5,8,1.6
+2268,AS Roma,5,8,1.6
+2269,Speedway,5,8,1.6
+2270,marco Moretti,4,8,2.0
+2271,Quiksilver,4,8,2.0
+2272,Banz,4,8,2.0
+2273,Theraline,4,8,2.0
+2274,Russell Hobbs,4,8,2.0
+2275,Bora,4,8,2.0
+2276,Partylite,4,8,2.0
+2277,Benfica,4,8,2.0
+2278,Rcf,4,8,2.0
+2279,oxdog,4,8,2.0
+2280,MIXTE,3,8,2.7
+2281,SIMPLE,3,8,2.7
+2282,Oriflame,3,8,2.7
+2283,Florence,3,8,2.7
+2284,ok,3,8,2.7
+2285,Betty Boop,3,8,2.7
+2286,Hard Rock Café,3,8,2.7
+2287,& Other Stories,3,8,2.7
+2288,jacuzzi,3,8,2.7
+2289,Carriwell,3,8,2.7
+2290,Luminarc,3,8,2.7
+2291,OFFICE,3,8,2.7
+2292,Maison,3,8,2.7
+2293,Extra,3,8,2.7
+2294,Ferrex,3,8,2.7
+2295,Dynamic,3,8,2.7
+2296,Bulls,3,8,2.7
+2297,waterproof,3,8,2.7
+2298,Lobster,3,8,2.7
+2299,Scoot and Ride,3,8,2.7
+2300,minimotors,3,8,2.7
+2301,Guardog,3,8,2.7
+2302,Texas,2,8,4.0
+2303,LXH,2,8,4.0
+2304,Emma,2,8,4.0
+2305,Autour de bébé,2,8,4.0
+2306,Stylex,2,8,4.0
+2307,Rivadouce,2,8,4.0
+2308,Globus,2,8,4.0
+2309,Mamashy,2,8,4.0
+2310,Sailor,2,8,4.0
+2311,Valira,2,8,4.0
+2312,Esperanza,2,8,4.0
+2313,leveluk,2,8,4.0
+2314,Artemide,2,8,4.0
+2315,Cloud7,2,8,4.0
+2316,La Casa de Las Carcasas,2,8,4.0
+2317,manley,2,8,4.0
+2318,Christies,2,8,4.0
+2319,Fitorb,2,8,4.0
+2320,Bambu,2,8,4.0
+2321,JOUEF,2,8,4.0
+2322,age of sigmar,2,8,4.0
+2323,marigaux,2,8,4.0
+2324,Alexander,2,8,4.0
+2325,Lupo,2,8,4.0
+2326,Merida,2,8,4.0
+2327,Dometic,2,8,4.0
+2328,hobie cat,2,8,4.0
+2329,Atlético,2,8,4.0
+2330,Spitfire,2,8,4.0
+2331,ESS,2,8,4.0
+2332,Cover,9,7,0.8
+2333,Thuasne,8,7,0.9
+2334,Puckababy,8,7,0.9
+2335,Trust,8,7,0.9
+2336,Crystal,6,7,1.2
+2337,Aubert,6,7,1.2
+2338,liberty,6,7,1.2
+2339,Super Mario,6,7,1.2
+2340,Cristal,6,7,1.2
+2341,Asmodee,6,7,1.2
+2342,Barca,6,7,1.2
+2343,Lässig,5,7,1.4
+2344,fatto a mano,5,7,1.4
+2345,Bamboo,5,7,1.4
+2346,Silk'n,5,7,1.4
+2347,Zenith,5,7,1.4
+2348,Kayak,5,7,1.4
+2349,Moustache,4,7,1.8
+2350,Rossmann,4,7,1.8
+2351,Seca,4,7,1.8
+2352,Spark,4,7,1.8
+2353,House,4,7,1.8
+2354,Mixer,4,7,1.8
+2355,Calligraphe,4,7,1.8
+2356,Tassimo,4,7,1.8
+2357,Hyundai,4,7,1.8
+2358,pro kennex,4,7,1.8
+2359,fujimae,4,7,1.8
+2360,BAMBOU,4,7,1.8
+2361,Stübben,4,7,1.8
+2362,Wella,3,7,2.3
+2363,Donna,3,7,2.3
+2364,Scholl,3,7,2.3
+2365,westmark,3,7,2.3
+2366,Heineken,3,7,2.3
+2367,Bicycle,3,7,2.3
+2368,Baldan,3,7,2.3
+2369,Class,3,7,2.3
+2370,flysurfer,3,7,2.3
+2371,Premier,2,7,3.5
+2372,Tommy Sport,2,7,3.5
+2373,Relax,2,7,3.5
+2374,Clutch,2,7,3.5
+2375,C&C,2,7,3.5
+2376,FuRyu,2,7,3.5
+2377,G.I. Joe,2,7,3.5
+2378,bebealis,2,7,3.5
+2379,italiana macchi,2,7,3.5
+2380,Babysense,2,7,3.5
+2381,Play & Go,2,7,3.5
+2382,Was,2,7,3.5
+2383,Pradel,2,7,3.5
+2384,Olympique Lyonnais,2,7,3.5
+2385,Eschenbach,2,7,3.5
+2386,Eda,2,7,3.5
+2387,Oceanic,2,7,3.5
+2388,Work,2,7,3.5
+2389,Gasoline,2,7,3.5
+2390,NICOLAS,2,7,3.5
+2391,Le Monde,2,7,3.5
+2392,Soundsation,2,7,3.5
+2393,bontec,2,7,3.5
+2394,johnny hallyday,2,7,3.5
+2395,gottlieb,2,7,3.5
+2396,Fallout,2,7,3.5
+2397,Boxe,2,7,3.5
+2398,topfit,2,7,3.5
+2399,Little Cloud,2,7,3.5
+2400,Evolution,2,7,3.5
+2401,Aviator,2,7,3.5
+2402,kingsley,2,7,3.5
+2403,Custom Saddle,2,7,3.5
+2404,Adam,2,7,3.5
+2405,Burga,9,6,0.7
+2406,M-Made in Italy,7,6,0.9
+2407,Canson,7,6,0.9
+2408,Miele,6,6,1.0
+2409,Advance,6,6,1.0
+2410,King,6,6,1.0
+2411,Noir,6,6,1.0
+2412,Just,5,6,1.2
+2413,Lancel,5,6,1.2
+2414,Nickelodeon,5,6,1.2
+2415,IMETEC,5,6,1.2
+2416,Zodiac,5,6,1.2
+2417,Bonjour,4,6,1.5
+2418,Acero,4,6,1.5
+2419,Origine,4,6,1.5
+2420,Liebherr,4,6,1.5
+2421,Burger King,4,6,1.5
+2422,EZVIZ,4,6,1.5
+2423,Fendt,4,6,1.5
+2424,FILA,4,6,1.5
+2425,Quad Lock,4,6,1.5
+2426,Ultron,4,6,1.5
+2427,eleveight,4,6,1.5
+2428,DM,3,6,2.0
+2429,PRO,3,6,2.0
+2430,bloomea,3,6,2.0
+2431,VERDE,3,6,2.0
+2432,Hard Rock,3,6,2.0
+2433,Junior,3,6,2.0
+2434,Martinelli,3,6,2.0
+2435,Ferrero,3,6,2.0
+2436,BabyGo,3,6,2.0
+2437,Chêne,3,6,2.0
+2438,BENE,3,6,2.0
+2439,Hachette Jeunesse,3,6,2.0
+2440,Blu,3,6,2.0
+2441,Richard,3,6,2.0
+2442,Collectif Aucun,3,6,2.0
+2443,SU,3,6,2.0
+2444,Hitachi,3,6,2.0
+2445,Scania,3,6,2.0
+2446,Bitmain,3,6,2.0
+2447,Muster,3,6,2.0
+2448,Matchbox,3,6,2.0
+2449,Caperlan,3,6,2.0
+2450,Bushnell,3,6,2.0
+2451,Rival,3,6,2.0
+2452,Esthederm,2,6,3.0
+2453,Kilian,2,6,3.0
+2454,Nails Frs,2,6,3.0
+2455,Sēm,2,6,3.0
+2456,Ray,2,6,3.0
+2457,NY Collection,2,6,3.0
+2458,Tesla,2,6,3.0
+2459,McFarlane Toys,2,6,3.0
+2460,merkamueble,2,6,3.0
+2461,Hello Baby,2,6,3.0
+2462,Kave Home,2,6,3.0
+2463,maymom,2,6,3.0
+2464,Ki ET LA,2,6,3.0
+2465,Castello,2,6,3.0
+2466,Belmondo,2,6,3.0
+2467,Severin,2,6,3.0
+2468,Tognana,2,6,3.0
+2469,Pacojet,2,6,3.0
+2470,koziol,2,6,3.0
+2471,Esercito,2,6,3.0
+2472,Albert Heijn,2,6,3.0
+2473,SOIE,2,6,3.0
+2474,V&D,2,6,3.0
+2475,Bianca,2,6,3.0
+2476,Meister,2,6,3.0
+2477,cross,2,6,3.0
+2478,LAB,2,6,3.0
+2479,SAKURA,2,6,3.0
+2480,Redcliffs,2,6,3.0
+2481,Activity,2,6,3.0
+2482,Crucial,2,6,3.0
+2483,Beyerdynamic,2,6,3.0
+2484,dynaudio,2,6,3.0
+2485,Avalon,2,6,3.0
+2486,zemits,2,6,3.0
+2487,plasmapen,2,6,3.0
+2488,alelamps,2,6,3.0
+2489,Ixo Models,2,6,3.0
+2490,U2,2,6,3.0
+2491,Watford,2,6,3.0
+2492,Final Fantasy,2,6,3.0
+2493,Force usa,2,6,3.0
+2494,AGM,2,6,3.0
+2495,A.T.N.,2,6,3.0
+2496,Bonzini,2,6,3.0
+2497,Vice,2,6,3.0
+2498,Forester,2,6,3.0
+2499,Dulton,2,6,3.0
+2500,Effebi,2,6,3.0
+2501,Leki,2,6,3.0
+2502,True,2,6,3.0
+2503,Beauty,10,5,0.5
+2504,KLM,10,5,0.5
+2505,Germany,9,5,0.6
+2506,RAME,8,5,0.6
+2507,Katana,7,5,0.7
+2508,Manucurist,6,5,0.8
+2509,Swind,5,5,1.0
+2510,Giotto,5,5,1.0
+2511,Kellogg's,5,5,1.0
+2512,Match,5,5,1.0
+2513,Galeria Kaufhof,4,5,1.2
+2514,Love,4,5,1.2
+2515,Variadas.,4,5,1.2
+2516,FC Bayern München,4,5,1.2
+2517,HyperX,4,5,1.2
+2518,Sanyo,4,5,1.2
+2519,hhp,4,5,1.2
+2520,Del Prado,4,5,1.2
+2521,Winner,4,5,1.2
+2522,Cébé,4,5,1.2
+2523,Scorpio,3,5,1.7
+2524,di,3,5,1.7
+2525,Beauty Bay,3,5,1.7
+2526,Shiseido,3,5,1.7
+2527,Naturale,3,5,1.7
+2528,Laser,3,5,1.7
+2529,Diamond,3,5,1.7
+2530,Oltre,3,5,1.7
+2531,Trio,3,5,1.7
+2532,KERN,3,5,1.7
+2533,Flow,3,5,1.7
+2534,Marks & Spencer,3,5,1.7
+2535,Fait-Maison,3,5,1.7
+2536,Mulino Bianco,3,5,1.7
+2537,lainox,3,5,1.7
+2538,Beldray,3,5,1.7
+2539,OTTAVIANI,3,5,1.7
+2540,fujikura,3,5,1.7
+2541,Inter,3,5,1.7
+2542,Polistil,3,5,1.7
+2543,Meinl,3,5,1.7
+2544,Ares,3,5,1.7
+2545,Mystic,3,5,1.7
+2546,albion,3,5,1.7
+2547,Innova,3,5,1.7
+2548,Salewa,3,5,1.7
+2549,Hockey,3,5,1.7
+2550,Diane castel,2,5,2.5
+2551,Arabian Oud,2,5,2.5
+2552,Caudalie,2,5,2.5
+2553,Porsche Design,2,5,2.5
+2554,novasonix,2,5,2.5
+2555,Micro Machines,2,5,2.5
+2556,Arm Next,2,5,2.5
+2557,Tippy,2,5,2.5
+2558,Oticon,2,5,2.5
+2559,Seinbiose,2,5,2.5
+2560,Klorane,2,5,2.5
+2561,Sekonda,2,5,2.5
+2562,babycomp,2,5,2.5
+2563,R&B,2,5,2.5
+2564,Hydrogen,2,5,2.5
+2565,Sass & Belle,2,5,2.5
+2566,PLACE,2,5,2.5
+2567,Cristal d'Arques Paris,2,5,2.5
+2568,Brabantia,2,5,2.5
+2569,Intratuin,2,5,2.5
+2570,Kilim,2,5,2.5
+2571,Vincent,2,5,2.5
+2572,Underwood,2,5,2.5
+2573,Mecano,2,5,2.5
+2574,Avec,2,5,2.5
+2575,Thermacell,2,5,2.5
+2576,8BitDo,2,5,2.5
+2577,AMIGA,2,5,2.5
+2578,Hercules Sägemann,2,5,2.5
+2579,Rotel,2,5,2.5
+2580,Medici,2,5,2.5
+2581,Team,2,5,2.5
+2582,Sun cosmetics,2,5,2.5
+2583,Eberhard,2,5,2.5
+2584,What do you meme,2,5,2.5
+2585,Ocio creativo,2,5,2.5
+2586,Ashen Armies,2,5,2.5
+2587,Impression,2,5,2.5
+2588,Txarli factory,2,5,2.5
+2589,Franklin Mint,2,5,2.5
+2590,splendorgems,2,5,2.5
+2591,Brut,2,5,2.5
+2592,Polisport,2,5,2.5
+2593,Urban Iki,2,5,2.5
+2594,Müller,2,5,2.5
+2595,NutriMuscle,2,5,2.5
+2596,Buffalo,2,5,2.5
+2597,Walsh,2,5,2.5
+2598,U turn,2,5,2.5
+2599,F&2,2,5,2.5
+2600,Flyer,2,5,2.5
+2601,Varlion,2,5,2.5
+2602,Foresight Sports,2,5,2.5
+2603,AllStar,2,5,2.5
+2604,Suedwind,2,5,2.5
+2605,Veredus,2,5,2.5
+2606,Wade,2,5,2.5
+2607,H&M,20,4,0.2
+2608,Alvi,16,4,0.2
+2609,GAS,10,4,0.4
+2610,Discmania,10,4,0.4
+2611,ICE,9,4,0.4
+2612,Energetics,9,4,0.4
+2613,KTM,8,4,0.5
+2614,BeSafe,8,4,0.5
+2615,Ghost,7,4,0.6
+2616,Scala,6,4,0.7
+2617,Ariston,6,4,0.7
+2618,Nocibé,5,4,0.8
+2619,Karl Lagerfeld,5,4,0.8
+2620,BOM,5,4,0.8
+2621,MP,5,4,0.8
+2622,Skifidol,5,4,0.8
+2623,Skywalk,5,4,0.8
+2624,F-one,5,4,0.8
+2625,FLIP,5,4,0.8
+2626,Verbaudet,4,4,1.0
+2627,EAGLEMOSS COLLECTIONS,4,4,1.0
+2628,The Range,4,4,1.0
+2629,Cristallo,4,4,1.0
+2630,Ernesto,4,4,1.0
+2631,Holy,4,4,1.0
+2632,Blink,4,4,1.0
+2633,Play,4,4,1.0
+2634,Realme,4,4,1.0
+2635,Music,4,4,1.0
+2636,Wahoo,4,4,1.0
+2637,chivas,4,4,1.0
+2638,Pochoirs,4,4,1.0
+2639,Sommer,4,4,1.0
+2640,Select,4,4,1.0
+2641,Aulion,4,4,1.0
+2642,Discraft,4,4,1.0
+2643,Armaf,3,4,1.3
+2644,Parisienne,3,4,1.3
+2645,Browning,3,4,1.3
+2646,TECH DECK,3,4,1.3
+2647,irancarpet,3,4,1.3
+2648,PESO,3,4,1.3
+2649,Delta Plus,3,4,1.3
+2650,Becken,3,4,1.3
+2651,Mustela,3,4,1.3
+2652,Conquerant,3,4,1.3
+2653,Lavazza,3,4,1.3
+2654,Nova,3,4,1.3
+2655,Stanhome,3,4,1.3
+2656,Honeywell,3,4,1.3
+2657,De,3,4,1.3
+2658,Olympia,3,4,1.3
+2659,Mirka,3,4,1.3
+2660,VB,3,4,1.3
+2661,IASkin,3,4,1.3
+2662,Solar Editions,3,4,1.3
+2663,oneus,3,4,1.3
+2664,Beuchat,3,4,1.3
+2665,XXIO,3,4,1.3
+2666,Sensai,2,4,2.0
+2667,Lee Cooper,2,4,2.0
+2668,Punto Roma,2,4,2.0
+2669,ouro,2,4,2.0
+2670,Pablo Raez,2,4,2.0
+2671,AHM,2,4,2.0
+2672,Zalando,2,4,2.0
+2673,Junama,2,4,2.0
+2674,UPPAbaby,2,4,2.0
+2675,Sesame Street,2,4,2.0
+2676,GRIMM'S,2,4,2.0
+2677,queen studios,2,4,2.0
+2678,molis&co,2,4,2.0
+2679,Buki,2,4,2.0
+2680,babbleroo,2,4,2.0
+2681,homvana,2,4,2.0
+2682,Inogen,2,4,2.0
+2683,Powerboard,2,4,2.0
+2684,Natalys,2,4,2.0
+2685,toute marque,2,4,2.0
+2686,Usborne,2,4,2.0
+2687,Petit Picotin,2,4,2.0
+2688,Esselunga,2,4,2.0
+2689,betzold,2,4,2.0
+2690,Girmi,2,4,2.0
+2691,Aquion,2,4,2.0
+2692,Banania,2,4,2.0
+2693,belibuy,2,4,2.0
+2694,Sculture,2,4,2.0
+2695,Himla,2,4,2.0
+2696,ribimex,2,4,2.0
+2697,Boheme,2,4,2.0
+2698,Disco,2,4,2.0
+2699,Milo,2,4,2.0
+2700,alienware,2,4,2.0
+2701,System,2,4,2.0
+2702,EMT,2,4,2.0
+2703,Phonak,2,4,2.0
+2704,FREE,2,4,2.0
+2705,Grandin,2,4,2.0
+2706,BTL,2,4,2.0
+2707,Philip Watch,2,4,2.0
+2708,Repos Production,2,4,2.0
+2709,Epic,2,4,2.0
+2710,no name,2,4,2.0
+2711,gouds plateel,2,4,2.0
+2712,Maglia,2,4,2.0
+2713,Ridley,2,4,2.0
+2714,e ride pro,2,4,2.0
+2715,iKamper,2,4,2.0
+2716,Bare,2,4,2.0
+2717,Hurricane,2,4,2.0
+2718,Under Armour,2,4,2.0
+2719,Aérobie,2,4,2.0
+2720,cuetec,2,4,2.0
+2721,geen merk,13,3,0.2
+2722,Krämer,9,3,0.3
+2723,Girasól,6,3,0.5
+2724,Alpina,6,3,0.5
+2725,Kasanova,6,3,0.5
+2726,Ballon,6,3,0.5
+2727,UEFA,6,3,0.5
+2728,Hammer,6,3,0.5
+2729,Raphaël Perrier,5,3,0.6
+2730,Dakine,5,3,0.6
+2731,Bottega Veneta,5,3,0.6
+2732,Star Trek,5,3,0.6
+2733,Meyco,5,3,0.6
+2734,Kaiser,5,3,0.6
+2735,Silvergear,5,3,0.6
+2736,Battletron,5,3,0.6
+2737,Cable,5,3,0.6
+2738,Vortex,5,3,0.6
+2739,Boxing,5,3,0.6
+2740,NYX,4,3,0.8
+2741,ICON,4,3,0.8
+2742,Enrico Coveri,4,3,0.8
+2743,Lilliputiens,4,3,0.8
+2744,Miniland,4,3,0.8
+2745,Topomini,4,3,0.8
+2746,Ardo,4,3,0.8
+2747,Brita,4,3,0.8
+2748,SAN REMO,4,3,0.8
+2749,zummo,4,3,0.8
+2750,San Marco,4,3,0.8
+2751,Stahlwerk,4,3,0.8
+2752,XXX,4,3,0.8
+2753,TCL,4,3,0.8
+2754,Coros,4,3,0.8
+2755,Mio,4,3,0.8
+2756,UFO,4,3,0.8
+2757,Dinky Toys,4,3,0.8
+2758,maono,4,3,0.8
+2759,Lucca,4,3,0.8
+2760,Pantene,3,3,1.0
+2761,Beechfield,3,3,1.0
+2762,Mandarina Duck,3,3,1.0
+2763,ABC,3,3,1.0
+2764,Moncler,3,3,1.0
+2765,AM:PM,3,3,1.0
+2766,ceragem,3,3,1.0
+2767,Salter,3,3,1.0
+2768,Engelbert Strauss,3,3,1.0
+2769,Hario,3,3,1.0
+2770,Scentsy,3,3,1.0
+2771,Rothenberger,3,3,1.0
+2772,Mica,3,3,1.0
+2773,laghetto,3,3,1.0
+2774,Konami,3,3,1.0
+2775,Fritzbox,3,3,1.0
+2776,lufthous,3,3,1.0
+2777,healy,3,3,1.0
+2778,Amerigo Vespucci,3,3,1.0
+2779,pink panther,3,3,1.0
+2780,Basso,3,3,1.0
+2781,Vaude,3,3,1.0
+2782,RRD Roberto Ricci Designs,3,3,1.0
+2783,Farabi,3,3,1.0
+2784,iberosattel,3,3,1.0
+2785,Latitude,3,3,1.0
+2786,Mauboussin,2,3,1.5
+2787,BOCH,2,3,1.5
+2788,Mont Blanc,2,3,1.5
+2789,Alfaparf,2,3,1.5
+2790,Laneige,2,3,1.5
+2791,Martinelia,2,3,1.5
+2792,ThermoSalud,2,3,1.5
+2793,Bloomingdale's,2,3,1.5
+2794,Helix,2,3,1.5
+2795,Epoca,2,3,1.5
+2796,Momi,2,3,1.5
+2797,CMS,2,3,1.5
+2798,NINCO,2,3,1.5
+2799,Pali,2,3,1.5
+2800,chorys,2,3,1.5
+2801,HappyPo,2,3,1.5
+2802,x-ray,2,3,1.5
+2803,Gima,2,3,1.5
+2804,Giorgio,2,3,1.5
+2805,Abarth,2,3,1.5
+2806,Blond Amsterdam,2,3,1.5
+2807,Gallimard,2,3,1.5
+2808,Draeger,2,3,1.5
+2809,Rex London,2,3,1.5
+2810,Rancilio,2,3,1.5
+2811,Aotoria,2,3,1.5
+2812,Secret de Gourmet,2,3,1.5
+2813,Amstrad,2,3,1.5
+2814,Seltmann Weiden,2,3,1.5
+2815,PALM,2,3,1.5
+2816,DISEÑO,2,3,1.5
+2817,Ceramic,2,3,1.5
+2818,Microplane,2,3,1.5
+2819,Ardes,2,3,1.5
+2820,COMFEE,2,3,1.5
+2821,Isabelle,2,3,1.5
+2822,Denater,2,3,1.5
+2823,tappeto persiano,2,3,1.5
+2824,SAM,2,3,1.5
+2825,rems,2,3,1.5
+2826,Handy,2,3,1.5
+2827,Ginger Ray,2,3,1.5
+2828,Holland,2,3,1.5
+2829,Pleyel,2,3,1.5
+2830,My,2,3,1.5
+2831,Perfecta,2,3,1.5
+2832,Groove,2,3,1.5
+2833,Seresto,2,3,1.5
+2834,Medion,2,3,1.5
+2835,EMTEC,2,3,1.5
+2836,Freedom,2,3,1.5
+2837,Aiwa,2,3,1.5
+2838,Arti,2,3,1.5
+2839,SKY,2,3,1.5
+2840,nordost,2,3,1.5
+2841,deertime,2,3,1.5
+2842,soft fx,2,3,1.5
+2843,SHR,2,3,1.5
+2844,Momo,2,3,1.5
+2845,Sapphire,2,3,1.5
+2846,Sensor,2,3,1.5
+2847,permobil,2,3,1.5
+2848,Pegasus,2,3,1.5
+2849,metrocard,2,3,1.5
+2850,Pirelli,2,3,1.5
+2851,Warwick,2,3,1.5
+2852,Bach,2,3,1.5
+2853,Oasis,2,3,1.5
+2854,Ultimate Guard,2,3,1.5
+2855,Aprilia,2,3,1.5
+2856,Clash,2,3,1.5
+2857,Sela,2,3,1.5
+2858,Laevo,2,3,1.5
+2859,Hydrorider,2,3,1.5
+2860,Keiser,2,3,1.5
+2861,kyt,2,3,1.5
+2862,Black Diamond,2,3,1.5
+2863,kronenburg,2,3,1.5
+2864,GUL,2,3,1.5
+2865,Ping Pong,2,3,1.5
+2866,Rollerblade,2,3,1.5
+2867,kaabo,2,3,1.5
+2868,currus nf11,2,3,1.5
+2869,Kastaplast,2,3,1.5
+2870,NERF,11,2,0.2
+2871,NOBRAND.PT,8,2,0.2
+2872,Kirby,8,2,0.2
+2873,Boss,7,2,0.3
+2874,Jako,7,2,0.3
+2875,B&M,6,2,0.3
+2876,Acciaio,6,2,0.3
+2877,Lennylamb,5,2,0.4
+2878,Como,5,2,0.4
+2879,Opera,5,2,0.4
+2880,Denon,5,2,0.4
+2881,Montale,4,2,0.5
+2882,Avène,4,2,0.5
+2883,op,4,2,0.5
+2884,Desigual,4,2,0.5
+2885,DoDo,4,2,0.5
+2886,Luigi,4,2,0.5
+2887,carpisa,4,2,0.5
+2888,FOREO,4,2,0.5
+2889,Amazone,4,2,0.5
+2890,Max,4,2,0.5
+2891,testo,4,2,0.5
+2892,Country,4,2,0.5
+2893,optoma,4,2,0.5
+2894,iello,4,2,0.5
+2895,Giro,4,2,0.5
+2896,Pinarello,4,2,0.5
+2897,Neptune,4,2,0.5
+2898,naish,4,2,0.5
+2899,Julbo,4,2,0.5
+2900,GIRL,3,2,0.7
+2901,amaran,3,2,0.7
+2902,AKG,3,2,0.7
+2903,uts,3,2,0.7
+2904,biotek,3,2,0.7
+2905,Tempur,3,2,0.7
+2906,nessun brand,3,2,0.7
+2907,AN,3,2,0.7
+2908,Discovery,3,2,0.7
+2909,Stumble Guys,3,2,0.7
+2910,KW,3,2,0.7
+2911,Moon,3,2,0.7
+2912,dikaslon,3,2,0.7
+2913,Happy Flute,3,2,0.7
+2914,Osram,3,2,0.7
+2915,Fissler,3,2,0.7
+2916,Angel,3,2,0.7
+2917,Graf,3,2,0.7
+2918,DYMO,3,2,0.7
+2919,Petsafe,3,2,0.7
+2920,Edenwood,3,2,0.7
+2921,martin logan,3,2,0.7
+2922,Wasgij,3,2,0.7
+2923,Armada,3,2,0.7
+2924,HEROCLIX,3,2,0.7
+2925,Fanatic,3,2,0.7
+2926,scandalli,3,2,0.7
+2927,Amt.,3,2,0.7
+2928,Corength,3,2,0.7
+2929,Fitgriff,3,2,0.7
+2930,NELO,3,2,0.7
+2931,RRD,3,2,0.7
+2932,mycro,3,2,0.7
+2933,GBS,3,2,0.7
+2934,Moonlight,3,2,0.7
+2935,Malin+Goetz,2,2,1.0
+2936,LR,2,2,1.0
+2937,Estetica,2,2,1.0
+2938,New Collection,2,2,1.0
+2939,Tom Riviera,2,2,1.0
+2940,rm 61,2,2,1.0
+2941,Retro & Icone,2,2,1.0
+2942,Maya,2,2,1.0
+2943,Sur Mesure,2,2,1.0
+2944,Mexx,2,2,1.0
+2945,La Chaise Longue,2,2,1.0
+2946,NoName,2,2,1.0
+2947,Besrey,2,2,1.0
+2948,Fehn,2,2,1.0
+2949,babideal,2,2,1.0
+2950,NeoBulle,2,2,1.0
+2951,Rockit,2,2,1.0
+2952,Buggy,2,2,1.0
+2953,HORNBY,2,2,1.0
+2954,Sweek,2,2,1.0
+2955,bronce,2,2,1.0
+2956,Specchio,2,2,1.0
+2957,Franco,2,2,1.0
+2958,Agatha Ruiz de la Prada,2,2,1.0
+2959,Kenny,2,2,1.0
+2960,Sebra,2,2,1.0
+2961,pawhut,2,2,1.0
+2962,ARGOS,2,2,1.0
+2963,intermarché,2,2,1.0
+2964,Doppler,2,2,1.0
+2965,Adler,2,2,1.0
+2966,Life,2,2,1.0
+2967,BLANC,2,2,1.0
+2968,Interbaby,2,2,1.0
+2969,nutramigen,2,2,1.0
+2970,Elvie Pump,2,2,1.0
+2971,Lanvin,2,2,1.0
+2972,velleda,2,2,1.0
+2973,nutrifresh,2,2,1.0
+2974,Metaltex,2,2,1.0
+2975,fullstar,2,2,1.0
+2976,Okay,2,2,1.0
+2977,infrico,2,2,1.0
+2978,D&G,2,2,1.0
+2979,Zwilling,2,2,1.0
+2980,G3,2,2,1.0
+2981,SARGADELOS,2,2,1.0
+2982,JOHNSON BROTHERS,2,2,1.0
+2983,HC,2,2,1.0
+2984,Leifheit,2,2,1.0
+2985,Champagne,2,2,1.0
+2986,arctic air,2,2,1.0
+2987,My77,2,2,1.0
+2988,Marine,2,2,1.0
+2989,Cantu,2,2,1.0
+2990,persiano,2,2,1.0
+2991,NASA,2,2,1.0
+2992,Fusion,2,2,1.0
+2993,Agip,2,2,1.0
+2994,nadal,2,2,1.0
+2995,bayrol,2,2,1.0
+2996,Savic,2,2,1.0
+2997,COLLAR,2,2,1.0
+2998,Zolux,2,2,1.0
+2999,Ugreen,2,2,1.0
+3000,Vodafone,2,2,1.0
+3001,Inovalley,2,2,1.0
+3002,AMI,2,2,1.0
+3003,HI,2,2,1.0
+3004,Traveller,2,2,1.0
+3005,SK8,2,2,1.0
+3006,Kess,2,2,1.0
+3007,projector,2,2,1.0
+3008,vivlio,2,2,1.0
+3009,Pixpeak,2,2,1.0
+3010,Appel's,2,2,1.0
+3011,Osée,2,2,1.0
+3012,Nubway,2,2,1.0
+3013,Tactic,2,2,1.0
+3014,Collections,2,2,1.0
+3015,Artesania Latina,2,2,1.0
+3016,techmod,2,2,1.0
+3017,Wizkids,2,2,1.0
+3018,MotoGP,2,2,1.0
+3019,McLaren,2,2,1.0
+3020,Elixir,2,2,1.0
+3021,Alba,2,2,1.0
+3022,Serenellini,2,2,1.0
+3023,Van Gogh,2,2,1.0
+3024,Terra,2,2,1.0
+3025,Brompton,2,2,1.0
+3026,Focus,2,2,1.0
+3027,Yeti,2,2,1.0
+3028,M&mr,2,2,1.0
+3029,Shakti,2,2,1.0
+3030,Reset,2,2,1.0
+3031,wfx,2,2,1.0
+3032,life fitness,2,2,1.0
+3033,doréma,2,2,1.0
+3034,BGD,2,2,1.0
+3035,air design,2,2,1.0
+3036,Gong,2,2,1.0
+3037,O’Neills,2,2,1.0
+3038,Cabrinha,2,2,1.0
+3039,Prokennex,2,2,1.0
+3040,MacGregor,2,2,1.0
+3041,Longridge,2,2,1.0
+3042,Silverline,2,2,1.0
+3043,schleese,2,2,1.0
+3044,ikonic,2,2,1.0
+3045,Axiomdiscs,2,2,1.0
+3046,René Pierre,2,2,1.0
+3047,BAUERFEIND,10,1,0.1
+3048,kwon,10,1,0.1
+3049,Folletti,9,1,0.1
+3050,Goya,8,1,0.1
+3051,Carrera,7,1,0.1
+3052,Kappa,7,1,0.1
+3053,LombaMum,7,1,0.1
+3054,SOLO,7,1,0.1
+3055,Me,7,1,0.1
+3056,Ideal Of Sweden,7,1,0.1
+3057,Giordani,6,1,0.2
+3058,Bella,6,1,0.2
+3059,Looney Tunes,6,1,0.2
+3060,SHARP,6,1,0.2
+3061,Kuikma,6,1,0.2
+3062,DKNY,5,1,0.2
+3063,Fashion Jewelry,5,1,0.2
+3064,Merk,5,1,0.2
+3065,DonJoy,5,1,0.2
+3066,DODOT,5,1,0.2
+3067,Medi,5,1,0.2
+3068,Smart games,5,1,0.2
+3069,Techwood,5,1,0.2
+3070,Einhell,5,1,0.2
+3071,Vario,5,1,0.2
+3072,Elkadart,5,1,0.2
+3073,Beau,4,1,0.2
+3074,La Mer,4,1,0.2
+3075,MacDonald,4,1,0.2
+3076,Scarpa,4,1,0.2
+3077,Ergee,4,1,0.2
+3078,Tchibo,4,1,0.2
+3079,808,4,1,0.2
+3080,Atlantic,4,1,0.2
+3081,unknown,4,1,0.2
+3082,ISA,4,1,0.2
+3083,SRAM,4,1,0.2
+3084,Axe,3,1,0.3
+3085,Joop!,3,1,0.3
+3086,Le Labo,3,1,0.3
+3087,Moser,3,1,0.3
+3088,FM WORLD,3,1,0.3
+3089,Ongle24,3,1,0.3
+3090,beauty florence,3,1,0.3
+3091,Jacquemus,3,1,0.3
+3092,Anekke,3,1,0.3
+3093,CAM,3,1,0.3
+3094,os3dasilva,3,1,0.3
+3095,Lisciani,3,1,0.3
+3096,Radica,3,1,0.3
+3097,Nuevo,3,1,0.3
+3098,Biosynex,3,1,0.3
+3099,Lines,3,1,0.3
+3100,Arrow,3,1,0.3
+3101,Hype,3,1,0.3
+3102,Brockhaus,3,1,0.3
+3103,Parlux,3,1,0.3
+3104,Acqua,3,1,0.3
+3105,cimbali,3,1,0.3
+3106,Juego,3,1,0.3
+3107,NORDICA,3,1,0.3
+3108,BTICINO,3,1,0.3
+3109,DTS,3,1,0.3
+3110,Quick,3,1,0.3
+3111,Nilox,3,1,0.3
+3112,AOC,3,1,0.3
+3113,Ultra,3,1,0.3
+3114,Jabra,3,1,0.3
+3115,Harley Davidson,3,1,0.3
+3116,SP,3,1,0.3
+3117,itero,3,1,0.3
+3118,Trivial Pursuit,3,1,0.3
+3119,Mta,3,1,0.3
+3120,L'Équipe,3,1,0.3
+3121,Bugatti,3,1,0.3
+3122,Harley Benton,3,1,0.3
+3123,Drops,3,1,0.3
+3124,Sizzix,3,1,0.3
+3125,Yà92,3,1,0.3
+3126,woom,3,1,0.3
+3127,B&H,3,1,0.3
+3128,Titanium,3,1,0.3
+3129,Berg,3,1,0.3
+3130,EASTON,3,1,0.3
+3131,Pro-Tec,3,1,0.3
+3132,Sting,3,1,0.3
+3133,4711,2,1,0.5
+3134,The Merchant of Venice,2,1,0.5
+3135,Lush,2,1,0.5
+3136,Medico,2,1,0.5
+3137,zero gravity skin,2,1,0.5
+3138,love rocks,2,1,0.5
+3139,Jelly,2,1,0.5
+3140,Coccinelle,2,1,0.5
+3141,Morgan,2,1,0.5
+3142,PrimaDonna,2,1,0.5
+3143,Axkid,2,1,0.5
+3144,iCandy,2,1,0.5
+3145,Altezza,2,1,0.5
+3146,Displate,2,1,0.5
+3147,Disana,2,1,0.5
+3148,la fabrique de Julie,2,1,0.5
+3149,Johnson's,2,1,0.5
+3150,De Dietrich,2,1,0.5
+3151,Georg Jensen,2,1,0.5
+3152,lady comb,2,1,0.5
+3153,FIX,2,1,0.5
+3154,IRIS,2,1,0.5
+3155,dreamegg,2,1,0.5
+3156,TupTam,2,1,0.5
+3157,ABYStyle,2,1,0.5
+3158,Avengers,2,1,0.5
+3159,Sonic the Hedgehog,2,1,0.5
+3160,Fantaisie,2,1,0.5
+3161,TOTO,2,1,0.5
+3162,Rose,2,1,0.5
+3163,dolce gusto,2,1,0.5
+3164,Domo,2,1,0.5
+3165,F&M,2,1,0.5
+3166,Mia,2,1,0.5
+3167,Delhaize,2,1,0.5
+3168,ZUMO,2,1,0.5
+3169,zanussi,2,1,0.5
+3170,Zona,2,1,0.5
+3171,Amati,2,1,0.5
+3172,Hecho En Espana,2,1,0.5
+3173,stosa,2,1,0.5
+3174,Fenix,2,1,0.5
+3175,elica,2,1,0.5
+3176,Villa Volance,2,1,0.5
+3177,Campari,2,1,0.5
+3178,UNICA,2,1,0.5
+3179,Unit,2,1,0.5
+3180,SUSHI,2,1,0.5
+3181,Boulanger,2,1,0.5
+3182,numatic,2,1,0.5
+3183,Vacuum,2,1,0.5
+3184,Novaltec,2,1,0.5
+3185,Haute Pression,2,1,0.5
+3186,inspire,2,1,0.5
+3187,Folio,2,1,0.5
+3188,Dino,2,1,0.5
+3189,DON,2,1,0.5
+3190,Antik Batik,2,1,0.5
+3191,Beaucoup,2,1,0.5
+3192,Colori,2,1,0.5
+3193,SALVAT,2,1,0.5
+3194,smartwares,2,1,0.5
+3195,erbauer,2,1,0.5
+3196,Eve,2,1,0.5
+3197,Rohs,2,1,0.5
+3198,PETZL,2,1,0.5
+3199,SKF,2,1,0.5
+3200,Widmann,2,1,0.5
+3201,FC,2,1,0.5
+3202,MAIN,2,1,0.5
+3203,royal swis,2,1,0.5
+3204,Marina,2,1,0.5
+3205,Dogs Creek,2,1,0.5
+3206,Pets At Home,2,1,0.5
+3207,DOG Copenhagen,2,1,0.5
+3208,ZU,2,1,0.5
+3209,Lorenzo,2,1,0.5
+3210,Commodore,2,1,0.5
+3211,Cisco,2,1,0.5
+3212,Ram,2,1,0.5
+3213,Xenox,2,1,0.5
+3214,Rilakkuma,2,1,0.5
+3215,SELFIE,2,1,0.5
+3216,Zebra,2,1,0.5
+3217,Harman Kardon,2,1,0.5
+3218,merkury optics,2,1,0.5
+3219,Spy,2,1,0.5
+3220,Rio,2,1,0.5
+3221,Becchis,2,1,0.5
+3222,Ambiance,2,1,0.5
+3223,Concerto,2,1,0.5
+3224,Edox,2,1,0.5
+3225,Celly,2,1,0.5
+3226,Ih lufthous,2,1,0.5
+3227,Xtreme,2,1,0.5
+3228,VARTA,2,1,0.5
+3229,Tattoo,2,1,0.5
+3230,markforged,2,1,0.5
+3231,endress + hauser,2,1,0.5
+3232,Lagoon,2,1,0.5
+3233,Hasbro Gaming,2,1,0.5
+3234,Rebel,2,1,0.5
+3235,Riot,2,1,0.5
+3236,LEGO Technic,2,1,0.5
+3237,Altura,2,1,0.5
+3238,Amigo,2,1,0.5
+3239,kinder joy,2,1,0.5
+3240,Taylor Swift,2,1,0.5
+3241,Antiek,2,1,0.5
+3242,Bastei Lübbe,2,1,0.5
+3243,Stamp,2,1,0.5
+3244,Samson,2,1,0.5
+3245,SO,2,1,0.5
+3246,Sergio Tacchini,2,1,0.5
+3247,France,2,1,0.5
+3248,Rubi,2,1,0.5
+3249,Zefal,2,1,0.5
+3250,maxxis,2,1,0.5
+3251,simplon,2,1,0.5
+3252,adris,2,1,0.5
+3253,Wave,2,1,0.5
+3254,CEP,2,1,0.5
+3255,get busy,2,1,0.5
+3256,Speed,2,1,0.5
+3257,i motion,2,1,0.5
+3258,KSP,2,1,0.5
+3259,HORIZON,2,1,0.5
+3260,Ortovox,2,1,0.5
+3261,Phi,2,1,0.5
+3262,Suex,2,1,0.5
+3263,REEDIN,2,1,0.5
+3264,Rofos,2,1,0.5
+3265,Macron,2,1,0.5
+3266,hermelin,2,1,0.5
+3267,USG,2,1,0.5
+3268,FORZA,2,1,0.5
+3269,TUYO,2,1,0.5
+3270,Royal Padel,2,1,0.5
+3271,Joola,2,1,0.5
+3272,Nike Golf,2,1,0.5
+3273,SMAI,2,1,0.5
+3274,paffen sport,2,1,0.5
+3275,ELT,2,1,0.5
+3276,dresch,2,1,0.5
+3277,Roces,2,1,0.5
+3278,Skatedeluxe,2,1,0.5
+3279,REV'IT!,2,1,0.5
+3280,simson,2,1,0.5
+3281,Dynamic Discs,2,1,0.5
+3282,Axis,2,1,0.5
+3283,TechnoPro,2,1,0.5
+3284,folletto,11,0,0.0
+3285,Prénatal,10,0,0.0
+3286,Orliman,8,0,0.0
+3287,Powerslide,8,0,0.0
+3288,Tuc Tuc,7,0,0.0
+3289,Beurer,7,0,0.0
+3290,Dr Brown's,7,0,0.0
+3291,NagaPatches,7,0,0.0
+3292,Julius Zollner,6,0,0.0
+3293,Lily & Dan,6,0,0.0
+3294,Done by Deer,6,0,0.0
+3295,B.box,6,0,0.0
+3296,Comix,6,0,0.0
+3297,hama,6,0,0.0
+3298,preiser,6,0,0.0
+3299,ign,6,0,0.0
+3300,stamina fitness,6,0,0.0
+3301,Levi's,5,0,0.0
+3302,Peggy Sage,5,0,0.0
+3303,Babydream,5,0,0.0
+3304,LEGO Ninjago,5,0,0.0
+3305,Alvär,5,0,0.0
+3306,AEG,5,0,0.0
+3307,Playland,5,0,0.0
+3308,MasterChef,5,0,0.0
+3309,Ecovacs,5,0,0.0
+3310,Super bock,5,0,0.0
+3311,24h Le Mans,5,0,0.0
+3312,Aulos,5,0,0.0
+3313,gervasport,5,0,0.0
+3314,Timex,4,0,0.0
+3315,Furla,4,0,0.0
+3316,Amazonas,4,0,0.0
+3317,Rookie,4,0,0.0
+3318,Foppapedretti,4,0,0.0
+3319,Otre,4,0,0.0
+3320,Infinity,4,0,0.0
+3321,Kosmos,4,0,0.0
+3322,Headu,4,0,0.0
+3323,L.O.L. Surprise,4,0,0.0
+3324,Kindsgut,4,0,0.0
+3325,Luvion,4,0,0.0
+3326,Aerosleep,4,0,0.0
+3327,Brevi,4,0,0.0
+3328,SKIP HOP,4,0,0.0
+3329,Nuvita,4,0,0.0
+3330,Mondo convenienza,4,0,0.0
+3331,Invicta,4,0,0.0
+3332,Quigg,4,0,0.0
+3333,Nanu Nana,4,0,0.0
+3334,Kahla,4,0,0.0
+3335,Mitsubishi,4,0,0.0
+3336,take a plaid,4,0,0.0
+3337,Latino,4,0,0.0
+3338,Met,4,0,0.0
+3339,Majestic,4,0,0.0
+3340,König & Meyer,4,0,0.0
+3341,One2track,4,0,0.0
+3342,White Goblin Games,4,0,0.0
+3343,topla,4,0,0.0
+3344,Megableu,4,0,0.0
+3345,Ilyad Games,4,0,0.0
+3346,nordictrack,4,0,0.0
+3347,Brooklyn,4,0,0.0
+3348,Epplejeck,4,0,0.0
+3349,RidersChoice,4,0,0.0
+3350,Depot,3,0,0.0
+3351,Narciso Rodriguez,3,0,0.0
+3352,IBRAQ,3,0,0.0
+3353,La Rive,3,0,0.0
+3354,Garage,3,0,0.0
+3355,Automatic,3,0,0.0
+3356,Essence,3,0,0.0
+3357,Nacre,3,0,0.0
+3358,Pupa,3,0,0.0
+3359,Cien,3,0,0.0
+3360,Victoria,3,0,0.0
+3361,ASOS,3,0,0.0
+3362,Claire's,3,0,0.0
+3363,Summer,3,0,0.0
+3364,Nuna,3,0,0.0
+3365,Dreambaby,3,0,0.0
+3366,OZ,3,0,0.0
+3367,Bambini,3,0,0.0
+3368,Mushie,3,0,0.0
+3369,Taito,3,0,0.0
+3370,mon joli berceau,3,0,0.0
+3371,Super Wings,3,0,0.0
+3372,Ty,3,0,0.0
+3373,TOPMODEL,3,0,0.0
+3374,Tex Baby,3,0,0.0
+3375,swing2sleep,3,0,0.0
+3376,don demark,3,0,0.0
+3377,Mogano,3,0,0.0
+3378,Sala,3,0,0.0
+3379,Zoggs,3,0,0.0
+3380,Zzzoo,3,0,0.0
+3381,Cambio,3,0,0.0
+3382,Base,3,0,0.0
+3383,Flex,3,0,0.0
+3384,HiPP,3,0,0.0
+3385,Okbaby,3,0,0.0
+3386,MiniCoton,3,0,0.0
+3387,sem marca,3,0,0.0
+3388,Hartmann,3,0,0.0
+3389,Calmosine,3,0,0.0
+3390,TORM,3,0,0.0
+3391,Orgakiddy,3,0,0.0
+3392,Nana,3,0,0.0
+3393,XXXLutz,3,0,0.0
+3394,Moretti,3,0,0.0
+3395,Driver,3,0,0.0
+3396,Alecto,3,0,0.0
+3397,Pocopiano,3,0,0.0
+3398,Alana,3,0,0.0
+3399,Catimini,3,0,0.0
+3400,Élhée,3,0,0.0
+3401,Luc et Léa,3,0,0.0
+3402,Home Accents,3,0,0.0
+3403,Poupée,3,0,0.0
+3404,Strawberry,3,0,0.0
+3405,Alles,3,0,0.0
+3406,Cambridge,3,0,0.0
+3407,Totto,3,0,0.0
+3408,Emoji,3,0,0.0
+3409,SJ,3,0,0.0
+3410,Mitama,3,0,0.0
+3411,Tinta UNITA,3,0,0.0
+3412,Pull & Bear,3,0,0.0
+3413,utet,3,0,0.0
+3414,Dolce,3,0,0.0
+3415,Ideen Welt,3,0,0.0
+3416,Nestlé,3,0,0.0
+3417,Beko,3,0,0.0
+3418,KG,3,0,0.0
+3419,norbert,3,0,0.0
+3420,Domino,3,0,0.0
+3421,Divano,3,0,0.0
+3422,Decoware,3,0,0.0
+3423,NUMWORKS,3,0,0.0
+3424,Zoom,3,0,0.0
+3425,Würth,3,0,0.0
+3426,Ring,3,0,0.0
+3427,Nameless,3,0,0.0
+3428,Dog summer,3,0,0.0
+3429,Ferplast,3,0,0.0
+3430,Tucano,3,0,0.0
+3431,LAB31,3,0,0.0
+3432,AJAZZ,3,0,0.0
+3433,TDK,3,0,0.0
+3434,Lebara,3,0,0.0
+3435,Roseland,3,0,0.0
+3436,Bad bunny,3,0,0.0
+3437,Meliconi,3,0,0.0
+3438,WHOOP,3,0,0.0
+3439,ELEMENTS,3,0,0.0
+3440,On,3,0,0.0
+3441,Grafix,3,0,0.0
+3442,Warner Bros.,3,0,0.0
+3443,hongda,3,0,0.0
+3444,Greenlight,3,0,0.0
+3445,5 majeur,3,0,0.0
+3446,fishman,3,0,0.0
+3447,Røde,3,0,0.0
+3448,wittner,3,0,0.0
+3449,Bleu azur,3,0,0.0
+3450,verschieden,3,0,0.0
+3451,Puig,3,0,0.0
+3452,aucune marque,3,0,0.0
+3453,TOORX,3,0,0.0
+3454,barth,3,0,0.0
+3455,Socks,3,0,0.0
+3456,Derbystar,3,0,0.0
+3457,M&GI,3,0,0.0
+3458,Joya,3,0,0.0
+3459,Daedo,3,0,0.0
+3460,HY EQUESTRIAN,3,0,0.0
+3461,4 Riders,3,0,0.0
+3462,Oxybul,3,0,0.0
+3463,Hudora,3,0,0.0
+3464,Vibram,3,0,0.0
+3465,The Library of Fragrance,2,0,0.0
+3466,Laurent Mazzone,2,0,0.0
+3467,Nihan,2,0,0.0
+3468,borntostandout,2,0,0.0
+3469,marissa zappas,2,0,0.0
+3470,paradis du sens,2,0,0.0
+3471,Davidoff,2,0,0.0
+3472,Scandal,2,0,0.0
+3473,Matiere Premiere,2,0,0.0
+3474,CÂLINE,2,0,0.0
+3475,Police,2,0,0.0
+3476,L'Erbolario,2,0,0.0
+3477,Astra,2,0,0.0
+3478,Trussardi,2,0,0.0
+3479,One Million Bucks,2,0,0.0
+3480,George,2,0,0.0
+3481,BEST,2,0,0.0
+3482,abantera,2,0,0.0
+3483,MANASIK,2,0,0.0
+3484,widex,2,0,0.0
+3485,Tunturi,2,0,0.0
+3486,Bernafon,2,0,0.0
+3487,Mirage,2,0,0.0
+3488,wimed,2,0,0.0
+3489,Maniko,2,0,0.0
+3490,respectueuse,2,0,0.0
+3491,Zoeva,2,0,0.0
+3492,Haruharu,2,0,0.0
+3493,Catrice,2,0,0.0
+3494,e.l.f.,2,0,0.0
+3495,maletti,2,0,0.0
+3496,sun cosmétique,2,0,0.0
+3497,Capelli,2,0,0.0
+3498,biomag,2,0,0.0
+3499,Zagato,2,0,0.0
+3500,Les Deux,2,0,0.0
+3501,MO CASUAL,2,0,0.0
+3502,Casquette,2,0,0.0
+3503,EMP,2,0,0.0
+3504,Grey Wolf,2,0,0.0
+3505,Deabolar,2,0,0.0
+3506,yuezhimeng,2,0,0.0
+3507,pietre dure,2,0,0.0
+3508,vintage sunglasses,2,0,0.0
+3509,Pacha Ibiza,2,0,0.0
+3510,ryanair,2,0,0.0
+3511,Pepe Jeans,2,0,0.0
+3512,Flora & Co,2,0,0.0
+3513,Beton ciré,2,0,0.0
+3514,feuer wear,2,0,0.0
+3515,fatta a mano,2,0,0.0
+3516,Piquadro,2,0,0.0
+3517,H&M Divided,2,0,0.0
+3518,Amparo,2,0,0.0
+3519,Topologie,2,0,0.0
+3520,FOUR Amsterdam,2,0,0.0
+3521,Chronotech,2,0,0.0
+3522,plaqué or,2,0,0.0
+3523,Charmeabijoux,2,0,0.0
+3524,Alviero Martini,2,0,0.0
+3525,Purelei,2,0,0.0
+3526,G-Star,2,0,0.0
+3527,O Bag,2,0,0.0
+3528,Vanessa Bruno,2,0,0.0
+3529,Pinko,2,0,0.0
+3530,Lulu Castagnette,2,0,0.0
+3531,Vero Moda,2,0,0.0
+3532,United Colors of Benetton,2,0,0.0
+3533,MC2 Saint Barth,2,0,0.0
+3534,IKKS,2,0,0.0
+3535,Elegant,2,0,0.0
+3536,Zamboo,2,0,0.0
+3537,Sterntaler,2,0,0.0
+3538,Gllquen Baby,2,0,0.0
+3539,service best,2,0,0.0
+3540,Babylonia,2,0,0.0
+3541,Eichhorn,2,0,0.0
+3542,Love & Carry,2,0,0.0
+3543,Bébécar,2,0,0.0
+3544,FABA,2,0,0.0
+3545,Tender Leaf,2,0,0.0
+3546,Pullip,2,0,0.0
+3547,ohku,2,0,0.0
+3548,Kaloo,2,0,0.0
+3549,Me Contro Te,2,0,0.0
+3550,Tiptoi,2,0,0.0
+3551,Mathilde M,2,0,0.0
+3552,Sigikid,2,0,0.0
+3553,Delta Baby,2,0,0.0
+3554,Kiokids,2,0,0.0
+3555,Babylo,2,0,0.0
+3556,Juguettos,2,0,0.0
+3557,MamaLoes,2,0,0.0
+3558,Xenos,2,0,0.0
+3559,Atelier,2,0,0.0
+3560,Euro Spin,2,0,0.0
+3561,Sandy,2,0,0.0
+3562,Le Petit Prince,2,0,0.0
+3563,Deluxe,2,0,0.0
+3564,xanlite,2,0,0.0
+3565,parete attrezzata,2,0,0.0
+3566,linne furniture,2,0,0.0
+3567,Dexter,2,0,0.0
+3568,babyjem,2,0,0.0
+3569,Baby Bell,2,0,0.0
+3570,MPOW,2,0,0.0
+3571,Clippasafe,2,0,0.0
+3572,Motta,2,0,0.0
+3573,Allshot,2,0,0.0
+3574,Avionaut,2,0,0.0
+3575,inkee,2,0,0.0
+3576,Lorenay,2,0,0.0
+3577,Zwitsal,2,0,0.0
+3578,Bébé-jou,2,0,0.0
+3579,Brico,2,0,0.0
+3580,Bali,2,0,0.0
+3581,Bahnhofsapotheke,2,0,0.0
+3582,ProRhinel,2,0,0.0
+3583,Microlife,2,0,0.0
+3584,GIBAUD,2,0,0.0
+3585,sconosciuto,2,0,0.0
+3586,lulia,2,0,0.0
+3587,Anex,2,0,0.0
+3588,Bizerba,2,0,0.0
+3589,Pearly,2,0,0.0
+3590,Suprema,2,0,0.0
+3591,Chilsuessy,2,0,0.0
+3592,Name It,2,0,0.0
+3593,Ehrenkind,2,0,0.0
+3594,Caramella,2,0,0.0
+3595,HATCH,2,0,0.0
+3596,Kinousses,2,0,0.0
+3597,H&B,2,0,0.0
+3598,Schlummersack,2,0,0.0
+3599,Okaïdi,2,0,0.0
+3600,De Breuyn,2,0,0.0
+3601,Vaillant,2,0,0.0
+3602,pax,2,0,0.0
+3603,Machouyou,2,0,0.0
+3604,hey value,2,0,0.0
+3605,Kissbobo,2,0,0.0
+3606,smash,2,0,0.0
+3607,varias,2,0,0.0
+3608,Worker,2,0,0.0
+3609,Aqua,2,0,0.0
+3610,gmundner,2,0,0.0
+3611,thermo chef,2,0,0.0
+3612,Splash About,2,0,0.0
+3613,Goki,2,0,0.0
+3614,Steiff,2,0,0.0
+3615,Keine,2,0,0.0
+3616,Casterman,2,0,0.0
+3617,Fleurus,2,0,0.0
+3618,Ottobock,2,0,0.0
+3619,Affenzahn,2,0,0.0
+3620,Elba,2,0,0.0
+3621,Little legends,2,0,0.0
+3622,Gormiti,2,0,0.0
+3623,PLANETA,2,0,0.0
+3624,Cosmo,2,0,0.0
+3625,Costo,2,0,0.0
+3626,Stanno,2,0,0.0
+3627,Leitz,2,0,0.0
+3628,Gastroback,2,0,0.0
+3629,Ard time,2,0,0.0
+3630,isotherme,2,0,0.0
+3631,Frog,2,0,0.0
+3632,Prodotto Italiano,2,0,0.0
+3633,techfood,2,0,0.0
+3634,hoshizaki,2,0,0.0
+3635,my chef,2,0,0.0
+3636,Eurochef,2,0,0.0
+3637,Candy,2,0,0.0
+3638,Conway,2,0,0.0
+3639,Fackelmann,2,0,0.0
+3640,Sitram,2,0,0.0
+3641,stap voor stap,2,0,0.0
+3642,Tandem,2,0,0.0
+3643,Absolu Chic,2,0,0.0
+3644,geen,2,0,0.0
+3645,Kasa,2,0,0.0
+3646,Jäger Eisenberg,2,0,0.0
+3647,Panda,2,0,0.0
+3648,Pastis 51,2,0,0.0
+3649,hapkin,2,0,0.0
+3650,Porcelana,2,0,0.0
+3651,Haier,2,0,0.0
+3652,Segmüller,2,0,0.0
+3653,trevi,2,0,0.0
+3654,Argo,2,0,0.0
+3655,AUKEY,2,0,0.0
+3656,OPTIMA,2,0,0.0
+3657,Rhea Flam,2,0,0.0
+3658,EDILKAMIN,2,0,0.0
+3659,si d’eros,2,0,0.0
+3660,Tecnica,2,0,0.0
+3661,Daikin,2,0,0.0
+3662,Lux,2,0,0.0
+3663,Countryfield,2,0,0.0
+3664,Indigo,2,0,0.0
+3665,COOK,2,0,0.0
+3666,Vintage 1935-1940,2,0,0.0
+3667,passion deco,2,0,0.0
+3668,Douceur d'interieur,2,0,0.0
+3669,Occasion,2,0,0.0
+3670,Deconovo,2,0,0.0
+3671,Sun City,2,0,0.0
+3672,Maison du lin,2,0,0.0
+3673,Kylie Minogue,2,0,0.0
+3674,Thalia,2,0,0.0
+3675,Garzanti,2,0,0.0
+3676,POP IT,2,0,0.0
+3677,Paperchase,2,0,0.0
+3678,Original Marines,2,0,0.0
+3679,Fellowes,2,0,0.0
+3680,Reece,2,0,0.0
+3681,Dakota,2,0,0.0
+3682,wowow,2,0,0.0
+3683,USAG,2,0,0.0
+3684,Werckmann,2,0,0.0
+3685,Isabella,2,0,0.0
+3686,lo ignoro,2,0,0.0
+3687,la Cordeline,2,0,0.0
+3688,MT Helmets,2,0,0.0
+3689,Electraline,2,0,0.0
+3690,Uniform,2,0,0.0
+3691,EK,2,0,0.0
+3692,Grès,2,0,0.0
+3693,botanic,2,0,0.0
+3694,Marin,2,0,0.0
+3695,Persona,2,0,0.0
+3696,Kwantum,2,0,0.0
+3697,beaux jours,2,0,0.0
+3698,Hozelock,2,0,0.0
+3699,Dural's,2,0,0.0
+3700,Falcom,2,0,0.0
+3701,CT,2,0,0.0
+3702,Mosa,2,0,0.0
+3703,Eheim,2,0,0.0
+3704,My Own,2,0,0.0
+3705,Cat Mate,2,0,0.0
+3706,Prince and Princess,2,0,0.0
+3707,Ferribiella,2,0,0.0
+3708,starplast,2,0,0.0
+3709,micron,2,0,0.0
+3710,Crafts&Co,2,0,0.0
+3711,Isy,2,0,0.0
+3712,Port Designs,2,0,0.0
+3713,AC,2,0,0.0
+3714,Targus,2,0,0.0
+3715,control techniques,2,0,0.0
+3716,STONES,2,0,0.0
+3717,MIM Amsterdam,2,0,0.0
+3718,OtterBox,2,0,0.0
+3719,MTX,2,0,0.0
+3720,JLAB,2,0,0.0
+3721,Tamron,2,0,0.0
+3722,SFR,2,0,0.0
+3723,Atlas,2,0,0.0
+3724,voplls,2,0,0.0
+3725,JETech,2,0,0.0
+3726,Adeqwat,2,0,0.0
+3727,Bloomy,2,0,0.0
+3728,ProNails,2,0,0.0
+3729,stock lider,2,0,0.0
+3730,T3,2,0,0.0
+3731,Phoenix,2,0,0.0
+3732,milesman,2,0,0.0
+3733,Skin,2,0,0.0
+3734,Seat,2,0,0.0
+3735,VIVANCO,2,0,0.0
+3736,nitecore,2,0,0.0
+3737,your’z,2,0,0.0
+3738,Cellularline,2,0,0.0
+3739,Glory,2,0,0.0
+3740,Toy Universe,2,0,0.0
+3741,Selecta,2,0,0.0
+3742,ASS,2,0,0.0
+3743,Editrice Giochi,2,0,0.0
+3744,Identity Games,2,0,0.0
+3745,Top Trumps,2,0,0.0
+3746,Romagnoli,2,0,0.0
+3747,hello82,2,0,0.0
+3748,Londji,2,0,0.0
+3749,Ludattica,2,0,0.0
+3750,CUBIDI,2,0,0.0
+3751,Precioso,2,0,0.0
+3752,Storia,2,0,0.0
+3753,CORGI,2,0,0.0
+3754,Aeronautica Militare,2,0,0.0
+3755,DFB,2,0,0.0
+3756,vonyx,2,0,0.0
+3757,Thomann,2,0,0.0
+3758,The Weeknd,2,0,0.0
+3759,K&M,2,0,0.0
+3760,Jack,2,0,0.0
+3761,kv2 Audio,2,0,0.0
+3762,Hammond,2,0,0.0
+3763,Chupa Chups,2,0,0.0
+3764,Adrenalyn,2,0,0.0
+3765,Bing,2,0,0.0
+3766,Scheepjes,2,0,0.0
+3767,Wolle,2,0,0.0
+3768,Stardew Valley,2,0,0.0
+3769,Paper,2,0,0.0
+3770,Esmeralda,2,0,0.0
+3771,AL,2,0,0.0
+3772,Arte la Sombra,2,0,0.0
+3773,Joseph Raffael,2,0,0.0
+3774,Feber,2,0,0.0
+3775,Massi,2,0,0.0
+3776,Kettler,2,0,0.0
+3777,Castelli,2,0,0.0
+3778,AGU,2,0,0.0
+3779,Dr. Martens,2,0,0.0
+3780,Flippos,2,0,0.0
+3781,Pastorelli,2,0,0.0
+3782,fitness mad,2,0,0.0
+3783,MSC,2,0,0.0
+3784,Marc Rope,2,0,0.0
+3785,symbiont,2,0,0.0
+3786,power plate,2,0,0.0
+3787,Berkley,2,0,0.0
+3788,Trangoworld,2,0,0.0
+3789,Queshua,2,0,0.0
+3790,Lux Suprema Lex,2,0,0.0
+3791,Berghaus,2,0,0.0
+3792,Suzuki,2,0,0.0
+3793,BDG,2,0,0.0
+3794,Maru,2,0,0.0
+3795,C-Skins,2,0,0.0
+3796,Sprinter,2,0,0.0
+3797,Quatro,2,0,0.0
+3798,Patrick,2,0,0.0
+3799,MCDAVID,2,0,0.0
+3800,Erima,2,0,0.0
+3801,Karakal,2,0,0.0
+3802,Chelsea,2,0,0.0
+3803,devessport,2,0,0.0
+3804,Technifibre,2,0,0.0
+3805,Royalty,2,0,0.0
+3806,ianoni,2,0,0.0
+3807,Proton,2,0,0.0
+3808,Lion,2,0,0.0
+3809,Hirostar,2,0,0.0
+3810,Rumble,2,0,0.0
+3811,Danrho,2,0,0.0
+3812,vps international,2,0,0.0
+3813,Leo,2,0,0.0
+3814,All One,2,0,0.0
+3815,Scapa,2,0,0.0
+3816,Samoa,2,0,0.0
+3817,horse&ropes,2,0,0.0
+3818,JC,2,0,0.0
+3819,Bucas,2,0,0.0
+3820,Horka,2,0,0.0
+3821,Euro-Star,2,0,0.0
+3822,Passier,2,0,0.0
+3823,Urban Glide,2,0,0.0
+3824,triple pad set,2,0,0.0
+3825,No Fear,2,0,0.0
+3826,non lo so,2,0,0.0
+3827,nkx,2,0,0.0
+3828,Hy Skate,2,0,0.0
+3829,Ocean Drive,2,0,0.0
+3830,waveboard,2,0,0.0
+3831,Mini Micro,2,0,0.0
+3832,Ninebot,2,0,0.0
+3833,Streamline,2,0,0.0
+3834,Shot,2,0,0.0
+3835,Deneriaz,2,0,0.0
+3836,Icepeak,2,0,0.0
+3837,Wanabee,2,0,0.0
+3838,Crivit PRO,2,0,0.0
+3839,Mountain Peak,2,0,0.0
+3840,Pieps,2,0,0.0
