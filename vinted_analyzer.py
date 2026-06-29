@@ -36,6 +36,7 @@ import os
 import re
 import socket
 import statistics
+import uuid
 import sys
 import threading
 import time
@@ -461,13 +462,15 @@ def http_get(url: str, retries: int = 3) -> bytes:
 
 # --------------------------------------------------------------------------- #
 # Recherche par IMAGE (nécessite une session CONNECTÉE via VINTED_COOKIE)
-#   1) POST /web/api/images/images (multipart stream + photo_type=query_image)
-#   2) GET  /api/v2/catalog/items?search_by_image_id=<id>
+# Flux réel de Vinted (reverse-engineeré et validé) :
+#   1) génère un temp_uuid (uuid4) ;
+#   2) POST /api/v2/photos  (multipart : photo[type]=item, photo[temp_uuid]=uuid,
+#      photo[file]=<image>) avec en-têtes x-anon-id + x-csrf-token + locale ;
+#   3) GET /api/v2/catalog/items?search_by_image_uuid=<uuid> -> articles
+#      visuellement ressemblants (modèle d'embedding SigLIP de Vinted).
 # --------------------------------------------------------------------------- #
 
-IMAGE_UPLOAD_URL = os.environ.get(
-    "IMAGE_UPLOAD_URL", f"{SITE_ROOT}/web/api/images/images"
-)
+IMAGE_UPLOAD_URL = os.environ.get("IMAGE_UPLOAD_URL", f"{API_ROOT}/photos")
 # Le token est sérialisé (souvent ÉCHAPPÉ) dans le payload Next.js de la home :
 #   \"CSRF_TOKEN\":\"<uuid>\"
 _CSRF_RE = re.compile(r'\\?"CSRF_TOKEN\\?":\\?"([^"\\]+)')
@@ -486,43 +489,55 @@ def _csrf_token() -> str:
     return m.group(1) if m else ""
 
 
-def _multipart_image(image_bytes: bytes, filename: str = "query.jpg") -> tuple[bytes, str]:
-    """Construit un corps multipart (champ 'stream' + photo_type=query_image)."""
-    import uuid as _uuid
-    boundary = "----vinted" + _uuid.uuid4().hex
-    pre = (
+def _anon_id() -> str:
+    """Extrait l'anon_id depuis le cookie de session (en-tête x-anon-id)."""
+    m = re.search(r"anon_id=([0-9a-fA-F\-]+)", VINTED_COOKIE or "")
+    return m.group(1) if m else ""
+
+
+def _multipart_photo(image_bytes: bytes, temp_uuid: str,
+                     filename: str = "query.jpg") -> tuple[bytes, str]:
+    """Corps multipart attendu par /api/v2/photos :
+    photo[type]=item, photo[temp_uuid]=<uuid>, photo[file]=<image jpeg>."""
+    boundary = "----vinted" + uuid.uuid4().hex
+    def field(name: str, value: str) -> bytes:
+        return (f"--{boundary}\r\n"
+                f'Content-Disposition: form-data; name="{name}"\r\n\r\n'
+                f"{value}\r\n").encode()
+    body = field("photo[type]", "item") + field("photo[temp_uuid]", temp_uuid)
+    body += (
         f"--{boundary}\r\n"
-        f'Content-Disposition: form-data; name="stream"; filename="{filename}"\r\n'
+        f'Content-Disposition: form-data; name="photo[file]"; filename="{filename}"\r\n'
         f"Content-Type: image/jpeg\r\n\r\n"
-    ).encode()
-    mid = (
-        f"\r\n--{boundary}\r\n"
-        f'Content-Disposition: form-data; name="photo_type"\r\n\r\nquery_image\r\n'
-        f"--{boundary}--\r\n"
-    ).encode()
-    return pre + image_bytes + mid, boundary
+    ).encode() + image_bytes + f"\r\n--{boundary}--\r\n".encode()
+    return body, boundary
 
 
 def upload_query_image(image_bytes: bytes) -> str:
-    """Upload l'image et renvoie son id (recherche par image). Lève une erreur
-    explicite si la session n'est pas connectée."""
+    """Upload l'image comme requête de recherche et renvoie le temp_uuid à
+    utiliser pour la recherche. Lève une erreur claire si pas de session."""
     if not (VINTED_COOKIE or VINTED_ACCESS_TOKEN):
         raise RuntimeError(
             "Recherche par image : session connectée requise. Renseigne "
             "VINTED_COOKIE (cookie de ton compte Vinted)."
         )
-    body, boundary = _multipart_image(image_bytes)
-    csrf = _csrf_token()
+    temp_uuid = str(uuid.uuid4())
+    body, boundary = _multipart_photo(image_bytes, temp_uuid)
     headers = {
         **_BROWSER_HEADERS,
         "Content-Type": f"multipart/form-data; boundary={boundary}",
         "Accept": "application/json",
+        "Origin": SITE_ROOT,
         "Referer": SITE_ROOT + "/",
+        "locale": "fr-FR",
     }
+    csrf = _csrf_token()
     if csrf:
         headers["X-Csrf-Token"] = csrf
+    anon = _anon_id()
+    if anon:
+        headers["X-Anon-Id"] = anon
 
-    raw = b""
     if HAVE_CFFI:
         r = _session().post(IMAGE_UPLOAD_URL, data=body, headers=headers,
                             timeout=REQUEST_TIMEOUT)
@@ -544,16 +559,14 @@ def upload_query_image(image_bytes: bytes) -> str:
         data = json.loads(raw.decode("utf-8", "replace"))
     except json.JSONDecodeError as err:
         raise RuntimeError(f"upload image: réponse non-JSON ({raw[:120]!r})") from err
-    iid = data.get("id") or (data.get("photo") or {}).get("id") or data.get("image_id")
-    if not iid:
-        raise RuntimeError(f"upload image: id introuvable dans {data}")
-    return str(iid)
+    # Vinted renvoie le temp_uuid qu'on a fourni : c'est lui la clé de recherche.
+    return str(data.get("temp_uuid") or temp_uuid)
 
 
 def search_by_image(image_bytes: bytes, max_pages: int = 2) -> list[dict]:
     """Recherche les articles Vinted ressemblant à l'image fournie."""
-    image_id = upload_query_image(image_bytes)
-    items = _fetch_items({"search_by_image_id": image_id}, max_pages,
+    image_uuid = upload_query_image(image_bytes)
+    items = _fetch_items({"search_by_image_uuid": image_uuid}, max_pages,
                          query="📷 image")
     return items
 
