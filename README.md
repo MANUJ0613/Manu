@@ -12,14 +12,24 @@ Ce dépôt contient deux outils indépendants :
 
 # Analyseur de demande Vinted 🛍️
 
-Deux modes :
+Trois modes (`MODE`) :
 
 - **`categories` (par défaut)** — scanne **toutes les catégories Vinted sauf les
   vêtements** et liste les **produits récents (postés ≤ 7 jours) qui ont le plus
   de favoris**. C'est *le* mode pour repérer ce qui buzz en ce moment, par
   catégorie, sans rien présupposer.
+- **`brands`** — classe les **marques** les plus demandées d'une/des catégorie(s)
+  (favoris cumulés, nombre d'annonces, favoris/annonce). Par défaut sur **toute
+  l'offre active** ; mets `BRAND_DAYS_WINDOW=7` pour les marques qui montent **ces
+  7 derniers jours**. Ex : `MODE=brands VINTED_CATEGORIES=1499` (jouets).
 - **`watchlist`** — pour une liste de recherches précises (produits/marques),
   classe ce qui est le plus recherché et donne le **prix médian** de revente.
+
+> ⏱️ **Dates des favoris.** Le `favourite_count` d'une annonce est **cumulé
+> depuis sa mise en ligne** (tout l'historique de l'annonce), pas une fenêtre
+> glissante. Le mode `categories` ne garde que les annonces postées ≤ `DAYS_WINDOW`
+> jours ; le mode `brands` compte par défaut **toute l'offre active** (mets
+> `BRAND_DAYS_WINDOW` pour restreindre au récent).
 
 Mesure de demande = nombre de **favoris (likes)** ; les **vues** ne sont
 récupérables qu'avec une session connectée (voir plus bas).
@@ -113,7 +123,10 @@ et envoie le digest. Ajoute tes secrets dans **Settings → Secrets and variable
 
 | Variable | Défaut | Rôle |
 |----------|--------|------|
-| `MODE` | `categories` | `categories` (scan hors vêtements) ou `watchlist` |
+| `MODE` | `categories` | `categories` (hors vêtements), `brands` (top marques) ou `watchlist` |
+| `BRAND_DAYS_WINDOW` | `0` | Mode `brands` : `0` = offre active, `N` = postées ≤ N jours |
+| `TOP_BRANDS` | `40` | Mode `brands` : nombre de marques affichées |
+| `BRAND_MIN_LISTINGS` | `3` | Mode `brands` : minimum d'annonces pour retenir une marque |
 | `DAYS_WINDOW` | `7` | Fenêtre de fraîcheur : articles postés depuis N jours |
 | `RANK_BY` | `hotness` | `hotness` (favoris/jour, le + frais) ou `favourites` (favoris totaux) |
 | `TOP_PER_CATEGORY` | `15` | Nombre d'articles listés par sous-catégorie |

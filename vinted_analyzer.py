@@ -141,6 +141,36 @@ HISTORY_FILE = os.environ.get("HISTORY_FILE", "state/vinted_history.json")
 HISTORY_MAX_RUNS = int(os.environ.get("HISTORY_MAX_RUNS", "60"))
 TOP_TRENDS = int(os.environ.get("TOP_TRENDS", "12"))  # tendances montantes affichées
 
+# --- Mode "brands" : classement des MARQUES d'une/des catégorie(s) ---
+# Plusieurs tris pour dépasser le plafond ~960 résultats/requête.
+BRAND_ORDERS = [
+    o.strip()
+    for o in os.environ.get(
+        "BRAND_ORDERS",
+        "relevance,newest_first,price_high_to_low,price_low_to_high",
+    ).split(",")
+    if o.strip()
+]
+BRAND_MIN_LISTINGS = int(os.environ.get("BRAND_MIN_LISTINGS", "3"))
+# Filtre de fraîcheur du mode marques :
+#   0  -> toute l'offre active (favoris cumulés depuis la mise en ligne) ;
+#   N  -> ne compter que les annonces postées depuis N jours (tendance récente).
+BRAND_DAYS_WINDOW = float(os.environ.get("BRAND_DAYS_WINDOW", "0"))
+TOP_BRANDS = int(os.environ.get("TOP_BRANDS", "40"))
+BRANDS_JSON = os.environ.get("BRANDS_JSON", "state/vinted_brands.json")
+BRANDS_CSV = os.environ.get("BRANDS_CSV", "state/vinted_brands.csv")
+# "Marques" qui n'en sont pas (bruit de saisie) — exclues du classement.
+BRAND_NOISE = {
+    s.strip().lower()
+    for s in (
+        "inconnu,diverse,divers,amazon,jeu,sans marque,pas de marque,"
+        "je ne sais pas,aucun,ohne,unbekannt,collection,collezione,accessories,"
+        "accessoires,baby,piano,excellent,peluche,great toys,reborn,fait main,"
+        "hecho a mano,handarbeit,diamond painting,kpop,autre,other,na,no,"
+        "sansnom.,various,rare,neuf,marque,vinted"
+    ).split(",")
+}
+
 CONCURRENCY = int(os.environ.get("CONCURRENCY", "4"))
 REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "20"))
 
@@ -1301,6 +1331,176 @@ def track_trends(items: list[dict]) -> None:
     save_history(hist)
 
 
+# --------------------------------------------------------------------------- #
+# Mode "brands" : classement des MARQUES les plus demandées d'une catégorie
+# --------------------------------------------------------------------------- #
+
+def scan_brands_in(cat: dict) -> dict:
+    """Agrège les marques d'une catégorie : {marque: [n_annonces, favoris]}.
+    Boucle sur plusieurs tris pour dépasser le plafond ~960 résultats."""
+    agg: dict[str, list[int]] = {}
+    seen: set = set()
+    for order in BRAND_ORDERS:
+        for page in range(1, CATEGORY_MAX_PAGES + 1):
+            params = {
+                "catalog_ids": cat["id"], "page": page, "per_page": PER_PAGE,
+                "order": order, "currency": CURRENCY,
+            }
+            url = f"{API_ROOT}/catalog/items?" + urllib.parse.urlencode(params)
+            try:
+                data = http_get_json(url)
+            except Exception:  # noqa: BLE001
+                break
+            raw = data.get("items") or []
+            if not raw:
+                break
+            for it in raw:
+                iid = it.get("id")
+                if iid in seen:
+                    continue
+                seen.add(iid)
+                b = (it.get("brand_title") or "").strip()
+                if not b or b.lower() in BRAND_NOISE or len(b) < 2:
+                    continue
+                if BRAND_DAYS_WINDOW > 0:
+                    ts = _posted_ts(it)
+                    if ts is None or (time.time() - ts) / 86400.0 > BRAND_DAYS_WINDOW:
+                        continue  # hors fenêtre de fraîcheur
+                row = agg.setdefault(b, [0, 0])
+                row[0] += 1
+                row[1] += int(it.get("favourite_count") or 0)
+    return agg
+
+
+def run_brands() -> int:
+    """Classe les marques les plus demandées des catégories ciblées."""
+    now = datetime.now(timezone.utc)
+    print(f"== Top marques Vinted == {now.isoformat()} — {VINTED_DOMAIN}")
+    try:
+        cats = list_scan_categories()
+    except Exception as err:  # noqa: BLE001
+        print(f"[catégories] impossible de lister: {err}", file=sys.stderr)
+        return 1
+    if not cats:
+        print("Aucune catégorie à scanner.", file=sys.stderr)
+        return 1
+    fenetre = (f"postées ≤ {BRAND_DAYS_WINDOW:.0f}j"
+               if BRAND_DAYS_WINDOW > 0 else "toute l'offre active")
+    print(f"{len(cats)} catégorie(s), {fenetre}, tris: {', '.join(BRAND_ORDERS)}")
+
+    # Agrégat global (toutes catégories) : marque -> [n, favoris].
+    total: dict[str, list[int]] = {}
+    with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
+        futs = {pool.submit(scan_brands_in, c): c for c in cats}
+        done = 0
+        for fut in as_completed(futs):
+            c = futs[fut]
+            for b, (n, f) in fut.result().items():
+                row = total.setdefault(b, [0, 0])
+                row[0] += n
+                row[1] += f
+            done += 1
+            print(f"  • [{done}/{len(cats)}] {c['title']}")
+            sd_notify("WATCHDOG=1")
+
+    rows = [
+        {"brand": b, "listings": n, "favourites": f,
+         "fav_per_listing": round(f / n, 1)}
+        for b, (n, f) in total.items()
+        if n >= BRAND_MIN_LISTINGS
+    ]
+    if not rows:
+        print("Aucune marque trouvée.", file=sys.stderr)
+        return 1
+    by_demand = sorted(rows, key=lambda r: (-r["favourites"], -r["listings"]))
+    by_intensity = sorted(
+        [r for r in rows if r["listings"] >= max(BRAND_MIN_LISTINGS, 5)],
+        key=lambda r: -r["fav_per_listing"],
+    )
+
+    print("\n" + "=" * 80)
+    print(f"TOP {TOP_BRANDS} MARQUES PAR DEMANDE (favoris cumulés) — {len(rows)} marques")
+    print("=" * 80)
+    print(f"{'#':>3}  {'marque':<28}{'annonces':>9}{'favoris':>9}{'fav/ann':>9}")
+    for i, r in enumerate(by_demand[:TOP_BRANDS], 1):
+        print(f"{i:>3}  {r['brand'][:28]:<28}{r['listings']:>9}"
+              f"{r['favourites']:>9}{r['fav_per_listing']:>9.1f}")
+    print("\n" + "-" * 80)
+    print(f"TOP {TOP_BRANDS} MARQUES PAR DÉSIR (favoris/annonce, min 5 annonces)")
+    print("-" * 80)
+    for i, r in enumerate(by_intensity[:TOP_BRANDS], 1):
+        print(f"{i:>3}  {r['brand'][:28]:<28}{r['listings']:>9}"
+              f"{r['favourites']:>9}{r['fav_per_listing']:>9.1f}")
+    print("=" * 80 + "\n")
+
+    _write_brands(by_demand)
+    _send_brands_digest(by_demand, by_intensity)
+    return 0
+
+
+def _write_brands(rows: list[dict]) -> None:
+    try:
+        os.makedirs(os.path.dirname(BRANDS_JSON) or ".", exist_ok=True)
+        with open(BRANDS_JSON, "w", encoding="utf-8") as fh:
+            json.dump(
+                {"generated_at": datetime.now(timezone.utc).isoformat(),
+                 "domain": VINTED_DOMAIN, "n_brands": len(rows), "brands": rows},
+                fh, ensure_ascii=False, indent=2,
+            )
+        print(f"[marques] JSON écrit -> {BRANDS_JSON}")
+    except OSError as err:
+        print(f"[marques] JSON échec: {err}", file=sys.stderr)
+    try:
+        os.makedirs(os.path.dirname(BRANDS_CSV) or ".", exist_ok=True)
+        with open(BRANDS_CSV, "w", encoding="utf-8", newline="") as fh:
+            w = csv.writer(fh)
+            w.writerow(["rang", "marque", "annonces", "favoris", "fav_par_annonce"])
+            for i, r in enumerate(rows, 1):
+                w.writerow([i, r["brand"], r["listings"], r["favourites"],
+                            r["fav_per_listing"]])
+        print(f"[marques] CSV écrit -> {BRANDS_CSV}")
+    except OSError as err:
+        print(f"[marques] CSV échec: {err}", file=sys.stderr)
+
+
+def _send_brands_digest(by_demand: list[dict], by_intensity: list[dict]) -> None:
+    top = by_demand[:TOP_BRANDS]
+    dem = "\n".join(
+        f"**{i}.** {r['brand']} — ❤{r['favourites']} ({r['listings']} ann., "
+        f"{r['fav_per_listing']:.0f}/ann)"
+        for i, r in enumerate(top[:20], 1)
+    )
+    inten = "\n".join(
+        f"**{i}.** {r['brand']} — {r['fav_per_listing']:.0f} fav/ann (❤{r['favourites']})"
+        for i, r in enumerate(by_intensity[:12], 1)
+    )
+    if DRY_RUN:
+        print("[DRY_RUN] digest marques:\n" + dem)
+        return
+    if DISCORD_WEBHOOK_URL:
+        embeds = [
+            {"title": "🏷️ Top marques par DEMANDE (favoris)", "description": dem[:4000],
+             "color": 0x09B1BA},
+            {"title": "🔥 Top marques par DÉSIR (favoris/annonce)",
+             "description": inten[:4000], "color": 0xF1C40F,
+             "footer": {"text": "Vinted — top marques"}},
+        ]
+        try:
+            _http_post_json(DISCORD_WEBHOOK_URL, {"embeds": embeds})
+        except Exception as err:  # noqa: BLE001
+            print(f"[discord] échec marques: {err}", file=sys.stderr)
+    if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
+        try:
+            _http_post_json(
+                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                {"chat_id": TELEGRAM_CHAT_ID,
+                 "text": ("🏷️ Top marques (demande)\n" + dem).replace("**", "")[:4000],
+                 "parse_mode": "Markdown", "disable_web_page_preview": True},
+            )
+        except Exception as err:  # noqa: BLE001
+            print(f"[telegram] échec marques: {err}", file=sys.stderr)
+
+
 def run_categories() -> int:
     """Scanne toutes les catégories (hors vêtements) et liste les produits
     récents les plus likés."""
@@ -1398,9 +1598,11 @@ def run_watchlist() -> int:
 
 
 def run_once() -> int:
-    """Choisit le mode : scan catégories (défaut) ou watchlist."""
+    """Choisit le mode : scan catégories (défaut), watchlist ou brands."""
     if MODE == "watchlist":
         return run_watchlist()
+    if MODE == "brands":
+        return run_brands()
     return run_categories()
 
 
