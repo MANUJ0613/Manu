@@ -65,37 +65,54 @@ def _bar(score: int) -> str:
 def check_embed(r: dict) -> discord.Embed:
     v = r["verdict"]
     score = r.get("score", 0)
+    p = r.get("score_parts") or {}
+    # En-tête : verdict + score + barre + conseil concret.
     e = discord.Embed(
         title=f"{v['emoji']} {r['query']} — {v['label']}"[:256],
-        description=f"**Score revente : {score}/100**  `{_bar(score)}`",
+        description=(
+            f"**Score revente : {score}/100**  `{_bar(score)}`\n"
+            f"_{r.get('advice', '')}_"
+        ),
         color=_color(v["emoji"]),
     )
-    vel = (f"≈ **{r['velocity']:.0f}** annonces/jour\n(rythme de vente estimé)"
+    # Détail du score : d'où viennent les points.
+    e.add_field(
+        name="⭐ Comment se calcule le score",
+        value=(
+            f"❤️ **Demande** {p.get('demand', 0)}/60 — à quel point les gens le veulent (favoris)\n"
+            f"🔁 **Écoulement** {p.get('speed', 0)}/30 — à quelle vitesse ça se vend\n"
+            f"📈 **Ampleur** {p.get('breadth', 0)}/10 — beaucoup d'articles likés, pas qu'un seul"
+        ),
+        inline=False,
+    )
+    vel = (f"≈ **{r['velocity']:.0f}** annonces postées/jour\n"
+           f"(≈ rythme de vente)"
            if r.get("velocity") else "indéterminé")
     e.add_field(name="📦 Offre (concurrence)",
-                value=f"**{va._fmt_total(r['n_total'])}** annonces\n_{v['note']}_",
+                value=f"**{va._fmt_total(r['n_total'])}** annonces en vente\n_{v['note']}_",
                 inline=True)
-    e.add_field(name="🔁 Écoulement", value=vel, inline=True)
+    e.add_field(name="🔁 Vitesse d'écoulement", value=vel, inline=True)
     e.add_field(
-        name="❤️ Demande",
+        name="❤️ Demande des acheteurs",
         value=(f"**{(r['avg_favourites'] or 0):.1f}** favoris/annonce\n"
-               f"max {r['max_favourites']} · {r.get('pct_hot', 0)}% à >10 ❤"),
+               f"top article {r['max_favourites']} ❤ · "
+               f"{r.get('pct_hot', 0)}% des annonces ont +10 ❤"),
         inline=True,
     )
     e.add_field(
-        name="💰 Prix : achat → revente",
-        value=(f"Achat malin **{va._euro(r.get('p25_price'))}**\n"
-               f"Revente (médian) **{va._euro(r['median_price'])}**\n"
-               f"Haut de marché {va._euro(r.get('p75_price'))}\n"
-               f"➡️ marge potentielle **~{va._euro(r.get('margin'))}**"),
+        name="💰 Prix : à quel prix acheter / revendre",
+        value=(f"🟢 Acheter sous **{va._euro(r.get('p25_price'))}** (bas du marché)\n"
+               f"🎯 Revendre vers **{va._euro(r['median_price'])}** (prix médian)\n"
+               f"⬆️ Haut du marché : {va._euro(r.get('p75_price'))}\n"
+               f"➡️ marge potentielle **~{va._euro(r.get('margin'))}** par pièce"),
         inline=False,
     )
     conds = r.get("conditions") or {}
     if conds:
         e.add_field(
-            name="📦 Par état",
+            name="📦 Prix selon l'état",
             value="\n".join(
-                f"**{c}** — {d['n']} ann. · méd. {va._euro(d['median'])}"
+                f"**{c}** — {d['n']} annonces · prix médian {va._euro(d['median'])}"
                 for c, d in list(conds.items())[:4]
             )[:1024],
             inline=False,
@@ -103,14 +120,14 @@ def check_embed(r: dict) -> discord.Embed:
     top = sorted(r.get("all_items") or [], key=lambda i: i["favourites"], reverse=True)[:5]
     if top:
         e.add_field(
-            name="🔝 Les plus likées (la cote du marché)",
+            name="🔝 Les plus likées (ce qui fait envie au marché)",
             value="\n".join(
                 f"❤{it['favourites']} · {va._euro(it['price'])} — "
                 f"[{it['title'][:38]}]({it['url']})" for it in top
             )[:1024],
             inline=False,
         )
-    e.set_footer(text="Vinted — vérif revente · score = demande + écoulement")
+    e.set_footer(text="Vinted — vérif revente · plus le score est haut, plus c'est facile à revendre")
     return e
 
 
