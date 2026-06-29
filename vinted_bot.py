@@ -121,21 +121,38 @@ def check_embed(r: dict) -> discord.Embed:
             )[:1024],
             inline=False,
         )
-    top = sorted(r.get("all_items") or [], key=lambda i: i["favourites"], reverse=True)[:5]
+    is_img = r.get("is_image")
+    if is_img:
+        # Recherche image : on garde l'ORDRE DE RESSEMBLANCE de Vinted (le 1er
+        # article = le plus proche de la photo = ton produit). On ne re-trie PAS
+        # par favoris, sinon on ferait remonter des articles populaires hors sujet.
+        top = (r.get("top_items") or [])[:5]
+        name = "🔎 Les plus ressemblantes (classées par Vinted, la 1re = ta photo)"
+    else:
+        top = sorted(r.get("all_items") or [], key=lambda i: i["favourites"], reverse=True)[:5]
+        name = "🔝 Les plus likées (ce qui fait envie au marché)"
     if top:
         e.add_field(
-            name="🔝 Les plus likées (ce qui fait envie au marché)",
+            name=name,
             value="\n".join(
                 f"❤{it['favourites']} · {va._euro(it['price'])} — "
                 f"[{it['title'][:38]}]({it['url']})" for it in top
             )[:1024],
             inline=False,
         )
-    e.set_footer(
-        text=(f"🎯 Pertinence {r.get('match_pct', 0)}% "
-              f"({r.get('n_listings', 0)}/{r.get('n_scanned', 0)} annonces collent à tes mots) "
-              f"· plus le score est haut, plus c'est facile à revendre")
-    )
+    if is_img:
+        e.set_footer(
+            text=(f"📷 Recherche par image : stats calculées sur les "
+                  f"{r.get('n_listings', 0)} articles les plus ressemblants "
+                  f"(sur {r.get('n_scanned', 0)} trouvés). ⚠️ Si le 1er article "
+                  f"ci-dessus n'est pas ton produit, tape plutôt /vinted <nom>.")
+        )
+    else:
+        e.set_footer(
+            text=(f"🎯 Pertinence {r.get('match_pct', 0)}% "
+                  f"({r.get('n_listings', 0)}/{r.get('n_scanned', 0)} annonces collent à tes mots) "
+                  f"· plus le score est haut, plus c'est facile à revendre")
+        )
     return e
 
 

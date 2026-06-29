@@ -584,8 +584,12 @@ def upload_query_image(image_bytes: bytes) -> str:
     return str(data.get("temp_uuid") or temp_uuid)
 
 
-def search_by_image(image_bytes: bytes, max_pages: int = 2) -> list[dict]:
-    """Recherche les articles Vinted ressemblant à l'image fournie."""
+def search_by_image(image_bytes: bytes, max_pages: int = 1) -> list[dict]:
+    """Recherche les articles Vinted ressemblant à l'image fournie.
+
+    IMPORTANT : Vinted renvoie les résultats CLASSÉS du plus ressemblant au moins
+    ressemblant (embedding visuel). On préserve donc cet ordre tel quel : le
+    produit exact de la photo se trouve en TÊTE de liste."""
     image_uuid = upload_query_image(image_bytes)
     items = _fetch_items({"search_by_image_uuid": image_uuid}, max_pages,
                          query="📷 image")
@@ -1186,23 +1190,36 @@ def velocity_from_items(items: list[dict]) -> float | None:
     return round(len(ts) / span, 1) if span > 0 else None
 
 
+# Nombre d'articles les PLUS RESSEMBLANTS (tête du classement Vinted) sur lequel
+# on calcule les stats. On ne moyenne PAS toute la traîne thématique : seuls les
+# meilleurs matchs visuels (= ton produit) comptent.
+IMAGE_TOP_MATCHES = int(os.environ.get("IMAGE_TOP_MATCHES", "24"))
+
+
 def analyze_image(image_bytes: bytes, label: str = "📷 Recherche par image") -> dict | None:
-    """Analyse de revente à partir d'une IMAGE (mêmes indicateurs que par texte)."""
-    items = search_by_image(image_bytes)
-    if not items:
+    """Analyse de revente à partir d'une IMAGE.
+
+    On s'appuie sur le classement par ressemblance de Vinted : on ne garde que la
+    TÊTE de liste (les vrais matchs visuels = le produit de la photo) et on
+    calcule les indicateurs là-dessus, dans l'ordre de ressemblance — pas sur les
+    centaines d'articles vaguement similaires qui suivent."""
+    found = search_by_image(image_bytes)
+    if not found:
         return None
-    for it in items:
+    # core = les articles les plus ressemblants, DANS l'ordre de Vinted.
+    core = found[:IMAGE_TOP_MATCHES]
+    for it in core:
         it["score"] = round(demand_score(it), 2)
-    prices = [i["price"] for i in items]
-    favs = [i["favourites"] for i in items]
+    prices = [i["price"] for i in core]
+    favs = [i["favourites"] for i in core]
     sp = sorted(p for p in prices if p is not None and p > 0)
     avg_fav = _mean(favs)
     pct_hot = round(100 * sum(1 for f in favs if f > 10) / len(favs)) if favs else 0
-    velocity = velocity_from_items(items)
+    velocity = velocity_from_items(core)
     p25 = _percentile(sp, 0.25)
     median_price = _median(prices)
     conds: dict[str, list] = {}
-    for it in items:
+    for it in core:
         c = (it.get("status") or "").strip()
         if c and it.get("price"):
             conds.setdefault(c, []).append(it["price"])
@@ -1211,14 +1228,16 @@ def analyze_image(image_bytes: bytes, label: str = "📷 Recherche par image") -
         for c, v in sorted(conds.items(), key=lambda kv: -len(kv[1]))
     }
     parts = resale_breakdown(avg_fav or 0, velocity, pct_hot)
+    # Titre = les 3 articles les PLUS RESSEMBLANTS (ordre Vinted), pas les + likés.
     titles = ", ".join(dict.fromkeys(
-        (it.get("title") or "").split(" - ")[0][:24] for it in
-        sorted(items, key=lambda i: i["favourites"], reverse=True)[:3]
+        (it.get("title") or "").split(" - ")[0][:24] for it in core[:3]
     ))
     result = {
         "query": f"{label} ({titles})" if titles else label,
-        "n_total": len(items), "n_listings": len(items), "n_scanned": len(items),
-        "match_pct": 100, "strict_match": True,
+        "is_image": True,
+        "n_total": len(core), "n_listings": len(core), "n_scanned": len(found),
+        "match_pct": round(100 * len(core) / len(found)) if found else 0,
+        "strict_match": True,
         "total_favourites": sum(favs), "avg_favourites": avg_fav,
         "max_favourites": max(favs) if favs else 0,
         "with_fav_pct": round(100 * sum(1 for f in favs if f > 0) / len(favs)) if favs else 0,
@@ -1230,9 +1249,10 @@ def analyze_image(image_bytes: bytes, label: str = "📷 Recherche par image") -
         "margin": round(median_price - p25, 2) if (median_price and p25) else None,
         "conditions": conditions, "demand_index": round(avg_fav or 0, 2),
         "score": parts["total"], "score_parts": parts,
-        "verdict": verdict_revente(len(items), avg_fav, len(items)),
-        "top_items": sorted(items, key=lambda i: i["favourites"], reverse=True)[:10],
-        "all_items": items,
+        "verdict": verdict_revente(len(core), avg_fav, len(core)),
+        # Affichés DANS L'ORDRE DE RESSEMBLANCE de Vinted (le 1er = ton produit).
+        "top_items": core[:10],
+        "all_items": core,
     }
     result["advice"] = advice_revente(result)
     return result
