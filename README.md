@@ -22,6 +22,12 @@ Trois modes (`MODE`) :
   (favoris cumulés, nombre d'annonces, favoris/annonce). Par défaut sur **toute
   l'offre active** ; mets `BRAND_DAYS_WINDOW=7` pour les marques qui montent **ces
   7 derniers jours**. Ex : `MODE=brands VINTED_CATEGORIES=1499` (jouets).
+- **`deals`** — **scanner d'affaires** : pour chaque catégorie, calcule le prix
+  de marché par **marque + modèle** et alerte (Discord/Telegram) sur les annonces
+  récentes **nettement sous le marché** (deals à sniper pour la revente). Filtre
+  les cassés / pièces / boîtes vides / téléphones bloqués, et ne compare jamais
+  un accessoire (coque, housse…) à l'appareil complet. Ex :
+  `MODE=deals DEAL_THRESHOLD=0.40`.
 - **`watchlist`** — pour une liste de recherches précises (produits/marques),
   classe ce qui est le plus recherché et donne le **prix médian** de revente.
 
@@ -123,7 +129,12 @@ et envoie le digest. Ajoute tes secrets dans **Settings → Secrets and variable
 
 | Variable | Défaut | Rôle |
 |----------|--------|------|
-| `MODE` | `categories` | `categories` (hors vêtements), `brands` (top marques) ou `watchlist` |
+| `MODE` | `categories` | `categories`, `brands`, `deals` (affaires) ou `watchlist` |
+| `DEAL_THRESHOLD` | `0.40` | Mode `deals` : seuil sous le marché (0.40 = -40%) |
+| `DEAL_MAX_AGE_DAYS` | `2` | Mode `deals` : n'évaluer que les annonces postées ≤ N jours |
+| `DEAL_MIN_COMPARABLES` | `5` | Mode `deals` : nb mini d'annonces comparables pour estimer le marché |
+| `DEAL_MIN_SHARED_TOKENS` | `2` | Mode `deals` : mots de modèle communs requis pour comparer |
+| `DEAL_MIN_PRICE` | `5` | Mode `deals` : ignore les annonces sous ce prix |
 | `BRAND_DAYS_WINDOW` | `0` | Mode `brands` : `0` = offre active, `N` = postées ≤ N jours |
 | `TOP_BRANDS` | `40` | Mode `brands` : nombre de marques affichées |
 | `BRAND_MIN_LISTINGS` | `3` | Mode `brands` : minimum d'annonces pour retenir une marque |

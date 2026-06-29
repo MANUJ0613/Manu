@@ -171,6 +171,32 @@ BRAND_NOISE = {
     ).split(",")
 }
 
+# --- Mode "deals" : scanner d'affaires (annonces sous le prix du marché) ---
+# Seuil de réduction vs prix médian du marché pour déclencher une alerte.
+DEAL_THRESHOLD = float(os.environ.get("DEAL_THRESHOLD", "0.40"))  # -40%
+# Un candidat doit être posté depuis <= N jours (deal frais à sniper).
+DEAL_MAX_AGE_DAYS = float(os.environ.get("DEAL_MAX_AGE_DAYS", "2"))
+# Pages pour bâtir la distribution de prix (relevance) et trouver les candidats (newest).
+DEAL_REF_PAGES = int(os.environ.get("DEAL_REF_PAGES", "4"))
+DEAL_NEW_PAGES = int(os.environ.get("DEAL_NEW_PAGES", "2"))
+# Nombre minimum d'annonces comparables pour estimer un prix de marché fiable.
+DEAL_MIN_COMPARABLES = int(os.environ.get("DEAL_MIN_COMPARABLES", "5"))
+DEAL_MIN_PRICE = float(os.environ.get("DEAL_MIN_PRICE", "5"))  # ignore les micro-prix
+# Mots de modèle communs requis pour considérer 2 annonces comparables (>=2 évite
+# de comparer une "manette switch" à une "console switch").
+DEAL_MIN_SHARED_TOKENS = int(os.environ.get("DEAL_MIN_SHARED_TOKENS", "2"))
+DEAL_STATE_FILE = os.environ.get("DEAL_STATE_FILE", "state/vinted_deals_state.json")
+# Annonces à ignorer : cassées / pour pièces / boîtes (vides) / bloquées iCloud
+# (multilingue : FR/EN/IT/ES/PT/DE — Vinted est paneuropéen).
+_DEAL_SKIP_RE = re.compile(
+    r"\b(hs|cass[ée]e?|pour ?pi[èe]ces|d[ée]fectueux|defekt|da riparare|broken|"
+    r"not working|ne fonctionne|en panne|faulty|kaputt|rotto|guasto|averiado|"
+    r"r[ée]paration|repair|"
+    r"bo[îi]te ?vide|boite|caja|caixa|scatola|vuota|leer|leere|ovp|"
+    r"icloud|verrouill|locked|bloqu|blacklist|blocc)\b",
+    re.IGNORECASE,
+)
+
 CONCURRENCY = int(os.environ.get("CONCURRENCY", "4"))
 REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "20"))
 
@@ -1501,6 +1527,211 @@ def _send_brands_digest(by_demand: list[dict], by_intensity: list[dict]) -> None
             print(f"[telegram] échec marques: {err}", file=sys.stderr)
 
 
+# --------------------------------------------------------------------------- #
+# Mode "deals" : scanner d'affaires (annonces sous le prix du marché)
+# --------------------------------------------------------------------------- #
+
+_DEAL_STOP = set(
+    "de la le les un une et ou pour en the and per con des du avec sans new neuf "
+    "neuve neufs taille size lot set état etat tres très bon comme pz gr cm mit "
+    "und nur sur dans plus mini maxi style nuovo nuova vintage pour avec".split()
+)
+
+
+def _model_tokens(it: dict) -> set[str]:
+    """Mots significatifs d'un titre (modèle), hors marque et mots vides.
+    Sert à ne comparer que des annonces du MÊME produit."""
+    brand_toks = {w for w in re.findall(r"[a-zà-ÿ0-9']+", (it.get("brand") or "").lower())}
+    out = set()
+    for w in re.findall(r"[a-zà-ÿ0-9']{3,}", (it.get("title") or "").lower()):
+        if w in _DEAL_STOP or w in brand_toks or w.isdigit():
+            continue
+        out.add(w)
+    return out
+
+
+# Accessoires & pièces détachées : à ne comparer QU'entre eux (jamais à
+# l'appareil complet). Multilingue (FR/EN/IT/ES/PT/DE), racines + pluriels.
+_ACCESSORY_RE = re.compile(
+    r"\b(coque|housse|étui|etui|custodia|cover|case|capa|capinha|funda|schutz|"
+    r"pochette|protect|verre|vitre|vetro|pellicola|cristal|chargeur|c[âa]ble|"
+    r"adaptat|adapter|support|stand|dock|grip|sticker|autocollant|bumper|"
+    r"sacoche|cam[ée]ra|batter|akku|[ée]cran|display|schermo|pantalla|tampa|"
+    r"scocca|t[ée]l[ée]command|telecomando|joystick)\w*",
+    re.IGNORECASE,
+)
+# Mots composés (collés) fréquents en DE/NL/etc.
+_ACCESSORY_SUB = ("hülle", "hulle", "schutzfolie", "verpackung")
+
+
+def _is_accessory(it: dict) -> bool:
+    t = (it.get("title") or "").lower()
+    return bool(_ACCESSORY_RE.search(t)) or any(s in t for s in _ACCESSORY_SUB)
+
+
+def find_deals_in_category(cat: dict) -> list[dict]:
+    """Trouve les annonces récentes nettement sous le prix du marché.
+
+    - Distribution de prix : annonces 'relevance' (offre représentative).
+    - Candidats : annonces 'newest_first' postées depuis <= DEAL_MAX_AGE_DAYS.
+    - Comparaison : même marque + au moins un mot-clé de modèle en commun.
+    """
+    try:
+        pool = _fetch_items({"catalog_ids": cat["id"]}, DEAL_REF_PAGES,
+                            category=cat["title"], order="relevance")
+        pool += _fetch_items({"catalog_ids": cat["id"]}, DEAL_NEW_PAGES,
+                             category=cat["title"], order="newest_first")
+    except Exception as err:  # noqa: BLE001
+        print(f"[deals] {cat['title']}: {err}", file=sys.stderr)
+        return []
+
+    # Dédup + index par marque (prix > 0 uniquement).
+    by_id: dict = {}
+    for it in pool:
+        if it.get("id") is not None and it.get("price"):
+            by_id.setdefault(it["id"], it)
+    items = list(by_id.values())
+    by_brand: dict[str, list[dict]] = {}
+    for it in items:
+        b = (it.get("brand") or "").strip().lower()
+        if b and b not in BRAND_NOISE:
+            by_brand.setdefault(b, []).append(it)
+
+    deals = []
+    for cand in items:
+        if (cand.get("age_days") is None or cand["age_days"] > DEAL_MAX_AGE_DAYS
+                or cand["price"] < DEAL_MIN_PRICE):
+            continue
+        if _DEAL_SKIP_RE.search(cand.get("title") or ""):
+            continue  # cassé / pièces / boîte vide -> pas un vrai deal
+        b = (cand.get("brand") or "").strip().lower()
+        mates = by_brand.get(b)
+        if not mates or len(mates) < DEAL_MIN_COMPARABLES + 1:
+            continue
+        toks = _model_tokens(cand)
+        if len(toks) < DEAL_MIN_SHARED_TOKENS:
+            continue  # titre trop pauvre pour comparer fiablement
+        cand_acc = _is_accessory(cand)
+        # Comparables = même marque + même nature (accessoire/appareil) +
+        # >= N mots de modèle en commun (produit identique).
+        comps = [
+            m for m in mates
+            if m["id"] != cand["id"]
+            and _is_accessory(m) == cand_acc
+            and len(_model_tokens(m) & toks) >= DEAL_MIN_SHARED_TOKENS
+        ]
+        if len(comps) < DEAL_MIN_COMPARABLES:
+            continue
+        prices = sorted(m["price"] for m in comps)
+        med = statistics.median(prices)
+        if med <= 0 or cand["price"] > med * (1 - DEAL_THRESHOLD):
+            continue
+        cand = dict(cand)
+        cand["market"] = round(med, 2)
+        cand["discount"] = round(1 - cand["price"] / med, 2)
+        cand["n_comps"] = len(comps)
+        deals.append(cand)
+    return deals
+
+
+def _load_deal_state() -> dict:
+    try:
+        with open(DEAL_STATE_FILE, "r", encoding="utf-8") as fh:
+            return json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {"seen": {}}
+
+
+def _save_deal_state(st: dict) -> None:
+    os.makedirs(os.path.dirname(DEAL_STATE_FILE) or ".", exist_ok=True)
+    # borne la taille (garde les 5000 derniers vus)
+    seen = st.get("seen", {})
+    if len(seen) > 5000:
+        st["seen"] = dict(list(seen.items())[-5000:])
+    with open(DEAL_STATE_FILE, "w", encoding="utf-8") as fh:
+        json.dump(st, fh, ensure_ascii=False)
+
+
+def _send_deal(v: dict) -> None:
+    pct = int(v["discount"] * 100)
+    title = v["title"][:200]
+    desc = (
+        f"**{_euro(v['price'])}**  ~~{_euro(v['market'])}~~   •   **-{pct}%** "
+        f"sous le marché\n"
+        f"🏷 {v.get('brand') or '—'} · 📦 {v.get('status') or '—'} · "
+        f"⏱ {_age_label(v.get('age_days'))} · 📊 {v['n_comps']} comparables"
+    )
+    if DRY_RUN:
+        print(f"[DRY_RUN][deal -{pct}%] {_euro(v['price'])} (marché {_euro(v['market'])}) "
+              f"{title} — {v['url']}")
+        return
+    if DISCORD_WEBHOOK_URL:
+        embed = {
+            "title": f"💸 -{pct}% · {title}"[:256],
+            "url": v["url"],
+            "description": desc,
+            "color": 0xE74C3C if pct >= 50 else 0xE67E22,
+            "footer": {"text": "Vinted — affaire détectée"},
+        }
+        if v.get("image"):
+            embed["thumbnail"] = {"url": v["image"]}
+        try:
+            _http_post_json(DISCORD_WEBHOOK_URL, {"embeds": [embed]})
+        except Exception as err:  # noqa: BLE001
+            print(f"[discord] échec deal: {err}", file=sys.stderr)
+    if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
+        txt = (f"💸 -{pct}% sous le marché\n{title}\n{_euro(v['price'])} "
+               f"(marché {_euro(v['market'])})\n{v['url']}")
+        try:
+            _http_post_json(
+                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                {"chat_id": TELEGRAM_CHAT_ID, "text": txt, "disable_web_page_preview": False},
+            )
+        except Exception as err:  # noqa: BLE001
+            print(f"[telegram] échec deal: {err}", file=sys.stderr)
+
+
+def run_deals() -> int:
+    """Scanne les catégories et alerte sur les annonces sous le prix du marché."""
+    now = datetime.now(timezone.utc)
+    print(f"== Scanner d'affaires Vinted == {now.isoformat()} — {VINTED_DOMAIN}")
+    try:
+        cats = list_scan_categories()
+    except Exception as err:  # noqa: BLE001
+        print(f"[deals] catégories: {err}", file=sys.stderr)
+        return 1
+    if not cats:
+        print("Aucune catégorie à scanner.", file=sys.stderr)
+        return 1
+    print(f"{len(cats)} catégorie(s) · seuil -{int(DEAL_THRESHOLD*100)}% · "
+          f"candidats postés ≤ {DEAL_MAX_AGE_DAYS:.0f}j")
+
+    state = _load_deal_state()
+    seen = state.setdefault("seen", {})
+    found = 0
+    with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
+        futs = {pool.submit(find_deals_in_category, c): c for c in cats}
+        done = 0
+        for fut in as_completed(futs):
+            for v in fut.result():
+                key = str(v["id"])
+                prev = seen.get(key)
+                # alerte si jamais vu, ou si le prix a encore baissé
+                if prev is not None and v["price"] >= float(prev):
+                    continue
+                _send_deal(v)
+                seen[key] = v["price"]
+                found += 1
+            done += 1
+            if done % 10 == 0:
+                print(f"  • {done}/{len(cats)} catégories scannées, {found} affaire(s)")
+            sd_notify("WATCHDOG=1")
+
+    _save_deal_state(state)
+    print(f"Terminé : {found} affaire(s) détectée(s).")
+    return 0
+
+
 def run_categories() -> int:
     """Scanne toutes les catégories (hors vêtements) et liste les produits
     récents les plus likés."""
@@ -1603,6 +1834,8 @@ def run_once() -> int:
         return run_watchlist()
     if MODE == "brands":
         return run_brands()
+    if MODE == "deals":
+        return run_deals()
     return run_categories()
 
 
