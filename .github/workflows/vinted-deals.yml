@@ -1,29 +1,29 @@
-name: Vinted demand analyzer
+name: Vinted deals scanner
 
-# Scanne toutes les catégories Vinted SAUF les vêtements, et publie le top des
-# produits RÉCENTS (postés ≤ 7 jours) ayant le PLUS DE FAVORIS. Tourne toutes
-# les 6 heures, écrit le rapport dans state/ et (option) envoie un digest
-# Discord/Telegram.
+# Scanne les catégories Vinted (hors vêtements & chaussures) et alerte sur les
+# annonces récentes nettement SOUS le prix du marché (deals à sniper).
+# NB : pour du vrai sniping (deals partis en minutes), un VPS en boucle
+# (LOOP_ENABLED) avec proxy résidentiel est plus réactif que ce cron.
 
 on:
   schedule:
-    - cron: "0 */6 * * *" # toutes les 6 heures
+    - cron: "0 */2 * * *" # toutes les 2 heures
   workflow_dispatch:
     inputs:
-      days_window:
-        description: "Fenêtre de fraîcheur en jours"
+      threshold:
+        description: "Seuil de réduction sous le marché (0.40 = -40%)"
         type: string
-        default: "7"
+        default: "0.40"
 
 permissions:
-  contents: write # committer le rapport dans state/
+  contents: write # committer l'état (dédup des deals déjà alertés)
 
 concurrency:
-  group: vinted-demand
+  group: vinted-deals
   cancel-in-progress: false
 
 jobs:
-  analyze:
+  scan:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -38,29 +38,28 @@ jobs:
       - name: Installer les dépendances
         run: pip install -r requirements.txt
 
-      - name: Scanner les catégories Vinted (hors vêtements)
+      - name: Scanner les affaires Vinted (hors vêtements & chaussures)
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL || secrets.VINTED_WEBHOOK }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          MODE: "categories"
-          DAYS_WINDOW: ${{ github.event.inputs.days_window || '7' }}
-          RANK_BY: "hotness"
-          TOP_PER_CATEGORY: "15"
-          CATEGORY_MAX_PAGES: "3"
+          MODE: "deals"
+          EXCLUDE_PATTERNS: "vêtement,vetement,chaussure,créateur,createur"
+          DEAL_THRESHOLD: ${{ github.event.inputs.threshold || '0.40' }}
+          DEAL_MAX_AGE_DAYS: "2"
           CONCURRENCY: "4"
         run: python3 vinted_analyzer.py
 
-      - name: Sauvegarder le rapport
+      - name: Sauvegarder l'état (dédup des deals)
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git pull --rebase --autostash origin "${GITHUB_REF_NAME}" || true
-          git add state/vinted_report.json state/vinted_report.csv state/vinted_history.json
+          git add state/vinted_deals_state.json
           if git diff --cached --quiet; then
-            echo "Aucun changement de rapport à committer."
+            echo "Aucun changement d'état."
           else
-            git commit -m "chore: rapport + historique tendances Vinted [skip ci]"
+            git commit -m "chore: état deals Vinted [skip ci]"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi

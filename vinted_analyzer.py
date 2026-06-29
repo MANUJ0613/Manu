@@ -141,6 +141,62 @@ HISTORY_FILE = os.environ.get("HISTORY_FILE", "state/vinted_history.json")
 HISTORY_MAX_RUNS = int(os.environ.get("HISTORY_MAX_RUNS", "60"))
 TOP_TRENDS = int(os.environ.get("TOP_TRENDS", "12"))  # tendances montantes affichées
 
+# --- Mode "brands" : classement des MARQUES d'une/des catégorie(s) ---
+# Plusieurs tris pour dépasser le plafond ~960 résultats/requête.
+BRAND_ORDERS = [
+    o.strip()
+    for o in os.environ.get(
+        "BRAND_ORDERS",
+        "relevance,newest_first,price_high_to_low,price_low_to_high",
+    ).split(",")
+    if o.strip()
+]
+BRAND_MIN_LISTINGS = int(os.environ.get("BRAND_MIN_LISTINGS", "3"))
+# Filtre de fraîcheur du mode marques :
+#   0  -> toute l'offre active (favoris cumulés depuis la mise en ligne) ;
+#   N  -> ne compter que les annonces postées depuis N jours (tendance récente).
+BRAND_DAYS_WINDOW = float(os.environ.get("BRAND_DAYS_WINDOW", "0"))
+TOP_BRANDS = int(os.environ.get("TOP_BRANDS", "40"))
+BRANDS_JSON = os.environ.get("BRANDS_JSON", "state/vinted_brands.json")
+BRANDS_CSV = os.environ.get("BRANDS_CSV", "state/vinted_brands.csv")
+# "Marques" qui n'en sont pas (bruit de saisie) — exclues du classement.
+BRAND_NOISE = {
+    s.strip().lower()
+    for s in (
+        "inconnu,diverse,divers,amazon,jeu,sans marque,pas de marque,"
+        "je ne sais pas,aucun,ohne,unbekannt,collection,collezione,accessories,"
+        "accessoires,baby,piano,excellent,peluche,great toys,reborn,fait main,"
+        "hecho a mano,handarbeit,diamond painting,kpop,autre,other,na,no,"
+        "sansnom.,various,rare,neuf,marque,vinted"
+    ).split(",")
+}
+
+# --- Mode "deals" : scanner d'affaires (annonces sous le prix du marché) ---
+# Seuil de réduction vs prix médian du marché pour déclencher une alerte.
+DEAL_THRESHOLD = float(os.environ.get("DEAL_THRESHOLD", "0.40"))  # -40%
+# Un candidat doit être posté depuis <= N jours (deal frais à sniper).
+DEAL_MAX_AGE_DAYS = float(os.environ.get("DEAL_MAX_AGE_DAYS", "2"))
+# Pages pour bâtir la distribution de prix (relevance) et trouver les candidats (newest).
+DEAL_REF_PAGES = int(os.environ.get("DEAL_REF_PAGES", "4"))
+DEAL_NEW_PAGES = int(os.environ.get("DEAL_NEW_PAGES", "2"))
+# Nombre minimum d'annonces comparables pour estimer un prix de marché fiable.
+DEAL_MIN_COMPARABLES = int(os.environ.get("DEAL_MIN_COMPARABLES", "5"))
+DEAL_MIN_PRICE = float(os.environ.get("DEAL_MIN_PRICE", "5"))  # ignore les micro-prix
+# Mots de modèle communs requis pour considérer 2 annonces comparables (>=2 évite
+# de comparer une "manette switch" à une "console switch").
+DEAL_MIN_SHARED_TOKENS = int(os.environ.get("DEAL_MIN_SHARED_TOKENS", "2"))
+DEAL_STATE_FILE = os.environ.get("DEAL_STATE_FILE", "state/vinted_deals_state.json")
+# Annonces à ignorer : cassées / pour pièces / boîtes (vides) / bloquées iCloud
+# (multilingue : FR/EN/IT/ES/PT/DE — Vinted est paneuropéen).
+_DEAL_SKIP_RE = re.compile(
+    r"\b(hs|cass[ée]e?|pour ?pi[èe]ces|d[ée]fectueux|defekt|da riparare|broken|"
+    r"not working|ne fonctionne|en panne|faulty|kaputt|rotto|guasto|averiado|"
+    r"r[ée]paration|repair|"
+    r"bo[îi]te ?vide|boite|caja|caixa|scatola|vuota|leer|leere|ovp|"
+    r"icloud|verrouill|locked|bloqu|blacklist|blocc)\b",
+    re.IGNORECASE,
+)
+
 CONCURRENCY = int(os.environ.get("CONCURRENCY", "4"))
 REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "20"))
 
@@ -1301,6 +1357,381 @@ def track_trends(items: list[dict]) -> None:
     save_history(hist)
 
 
+# --------------------------------------------------------------------------- #
+# Mode "brands" : classement des MARQUES les plus demandées d'une catégorie
+# --------------------------------------------------------------------------- #
+
+def scan_brands_in(cat: dict) -> dict:
+    """Agrège les marques d'une catégorie : {marque: [n_annonces, favoris]}.
+    Boucle sur plusieurs tris pour dépasser le plafond ~960 résultats."""
+    agg: dict[str, list[int]] = {}
+    seen: set = set()
+    for order in BRAND_ORDERS:
+        for page in range(1, CATEGORY_MAX_PAGES + 1):
+            params = {
+                "catalog_ids": cat["id"], "page": page, "per_page": PER_PAGE,
+                "order": order, "currency": CURRENCY,
+            }
+            url = f"{API_ROOT}/catalog/items?" + urllib.parse.urlencode(params)
+            try:
+                data = http_get_json(url)
+            except Exception:  # noqa: BLE001
+                break
+            raw = data.get("items") or []
+            if not raw:
+                break
+            for it in raw:
+                iid = it.get("id")
+                if iid in seen:
+                    continue
+                seen.add(iid)
+                b = (it.get("brand_title") or "").strip()
+                if not b or b.lower() in BRAND_NOISE or len(b) < 2:
+                    continue
+                if BRAND_DAYS_WINDOW > 0:
+                    ts = _posted_ts(it)
+                    if ts is None or (time.time() - ts) / 86400.0 > BRAND_DAYS_WINDOW:
+                        continue  # hors fenêtre de fraîcheur
+                row = agg.setdefault(b, [0, 0])
+                row[0] += 1
+                row[1] += int(it.get("favourite_count") or 0)
+    return agg
+
+
+def run_brands() -> int:
+    """Classe les marques les plus demandées des catégories ciblées."""
+    now = datetime.now(timezone.utc)
+    print(f"== Top marques Vinted == {now.isoformat()} — {VINTED_DOMAIN}")
+    try:
+        cats = list_scan_categories()
+    except Exception as err:  # noqa: BLE001
+        print(f"[catégories] impossible de lister: {err}", file=sys.stderr)
+        return 1
+    if not cats:
+        print("Aucune catégorie à scanner.", file=sys.stderr)
+        return 1
+    fenetre = (f"postées ≤ {BRAND_DAYS_WINDOW:.0f}j"
+               if BRAND_DAYS_WINDOW > 0 else "toute l'offre active")
+    print(f"{len(cats)} catégorie(s), {fenetre}, tris: {', '.join(BRAND_ORDERS)}")
+
+    # Agrégat global (toutes catégories) : marque -> [n, favoris].
+    total: dict[str, list[int]] = {}
+    with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
+        futs = {pool.submit(scan_brands_in, c): c for c in cats}
+        done = 0
+        for fut in as_completed(futs):
+            c = futs[fut]
+            for b, (n, f) in fut.result().items():
+                row = total.setdefault(b, [0, 0])
+                row[0] += n
+                row[1] += f
+            done += 1
+            print(f"  • [{done}/{len(cats)}] {c['title']}")
+            sd_notify("WATCHDOG=1")
+
+    rows = [
+        {"brand": b, "listings": n, "favourites": f,
+         "fav_per_listing": round(f / n, 1)}
+        for b, (n, f) in total.items()
+        if n >= BRAND_MIN_LISTINGS
+    ]
+    if not rows:
+        print("Aucune marque trouvée.", file=sys.stderr)
+        return 1
+    by_demand = sorted(rows, key=lambda r: (-r["favourites"], -r["listings"]))
+    by_intensity = sorted(
+        [r for r in rows if r["listings"] >= max(BRAND_MIN_LISTINGS, 5)],
+        key=lambda r: -r["fav_per_listing"],
+    )
+
+    print("\n" + "=" * 80)
+    print(f"TOP {TOP_BRANDS} MARQUES PAR DEMANDE (favoris cumulés) — {len(rows)} marques")
+    print("=" * 80)
+    print(f"{'#':>3}  {'marque':<28}{'annonces':>9}{'favoris':>9}{'fav/ann':>9}")
+    for i, r in enumerate(by_demand[:TOP_BRANDS], 1):
+        print(f"{i:>3}  {r['brand'][:28]:<28}{r['listings']:>9}"
+              f"{r['favourites']:>9}{r['fav_per_listing']:>9.1f}")
+    print("\n" + "-" * 80)
+    print(f"TOP {TOP_BRANDS} MARQUES PAR DÉSIR (favoris/annonce, min 5 annonces)")
+    print("-" * 80)
+    for i, r in enumerate(by_intensity[:TOP_BRANDS], 1):
+        print(f"{i:>3}  {r['brand'][:28]:<28}{r['listings']:>9}"
+              f"{r['favourites']:>9}{r['fav_per_listing']:>9.1f}")
+    print("=" * 80 + "\n")
+
+    _write_brands(by_demand)
+    _send_brands_digest(by_demand, by_intensity)
+    return 0
+
+
+def _write_brands(rows: list[dict]) -> None:
+    try:
+        os.makedirs(os.path.dirname(BRANDS_JSON) or ".", exist_ok=True)
+        with open(BRANDS_JSON, "w", encoding="utf-8") as fh:
+            json.dump(
+                {"generated_at": datetime.now(timezone.utc).isoformat(),
+                 "domain": VINTED_DOMAIN, "n_brands": len(rows), "brands": rows},
+                fh, ensure_ascii=False, indent=2,
+            )
+        print(f"[marques] JSON écrit -> {BRANDS_JSON}")
+    except OSError as err:
+        print(f"[marques] JSON échec: {err}", file=sys.stderr)
+    try:
+        os.makedirs(os.path.dirname(BRANDS_CSV) or ".", exist_ok=True)
+        with open(BRANDS_CSV, "w", encoding="utf-8", newline="") as fh:
+            w = csv.writer(fh)
+            w.writerow(["rang", "marque", "annonces", "favoris", "fav_par_annonce"])
+            for i, r in enumerate(rows, 1):
+                w.writerow([i, r["brand"], r["listings"], r["favourites"],
+                            r["fav_per_listing"]])
+        print(f"[marques] CSV écrit -> {BRANDS_CSV}")
+    except OSError as err:
+        print(f"[marques] CSV échec: {err}", file=sys.stderr)
+
+
+def _send_brands_digest(by_demand: list[dict], by_intensity: list[dict]) -> None:
+    top = by_demand[:TOP_BRANDS]
+    dem = "\n".join(
+        f"**{i}.** {r['brand']} — ❤{r['favourites']} ({r['listings']} ann., "
+        f"{r['fav_per_listing']:.0f}/ann)"
+        for i, r in enumerate(top[:20], 1)
+    )
+    inten = "\n".join(
+        f"**{i}.** {r['brand']} — {r['fav_per_listing']:.0f} fav/ann (❤{r['favourites']})"
+        for i, r in enumerate(by_intensity[:12], 1)
+    )
+    if DRY_RUN:
+        print("[DRY_RUN] digest marques:\n" + dem)
+        return
+    if DISCORD_WEBHOOK_URL:
+        embeds = [
+            {"title": "🏷️ Top marques par DEMANDE (favoris)", "description": dem[:4000],
+             "color": 0x09B1BA},
+            {"title": "🔥 Top marques par DÉSIR (favoris/annonce)",
+             "description": inten[:4000], "color": 0xF1C40F,
+             "footer": {"text": "Vinted — top marques"}},
+        ]
+        try:
+            _http_post_json(DISCORD_WEBHOOK_URL, {"embeds": embeds})
+        except Exception as err:  # noqa: BLE001
+            print(f"[discord] échec marques: {err}", file=sys.stderr)
+    if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
+        try:
+            _http_post_json(
+                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                {"chat_id": TELEGRAM_CHAT_ID,
+                 "text": ("🏷️ Top marques (demande)\n" + dem).replace("**", "")[:4000],
+                 "parse_mode": "Markdown", "disable_web_page_preview": True},
+            )
+        except Exception as err:  # noqa: BLE001
+            print(f"[telegram] échec marques: {err}", file=sys.stderr)
+
+
+# --------------------------------------------------------------------------- #
+# Mode "deals" : scanner d'affaires (annonces sous le prix du marché)
+# --------------------------------------------------------------------------- #
+
+_DEAL_STOP = set(
+    "de la le les un une et ou pour en the and per con des du avec sans new neuf "
+    "neuve neufs taille size lot set état etat tres très bon comme pz gr cm mit "
+    "und nur sur dans plus mini maxi style nuovo nuova vintage pour avec".split()
+)
+
+
+def _model_tokens(it: dict) -> set[str]:
+    """Mots significatifs d'un titre (modèle), hors marque et mots vides.
+    Sert à ne comparer que des annonces du MÊME produit."""
+    brand_toks = {w for w in re.findall(r"[a-zà-ÿ0-9']+", (it.get("brand") or "").lower())}
+    out = set()
+    for w in re.findall(r"[a-zà-ÿ0-9']{3,}", (it.get("title") or "").lower()):
+        if w in _DEAL_STOP or w in brand_toks or w.isdigit():
+            continue
+        out.add(w)
+    return out
+
+
+# Accessoires & pièces détachées : à ne comparer QU'entre eux (jamais à
+# l'appareil complet). Multilingue (FR/EN/IT/ES/PT/DE), racines + pluriels.
+_ACCESSORY_RE = re.compile(
+    r"\b(coque|housse|étui|etui|custodia|cover|case|capa|capinha|funda|schutz|"
+    r"pochette|protect|verre|vitre|vetro|pellicola|cristal|chargeur|c[âa]ble|"
+    r"adaptat|adapter|support|stand|dock|grip|sticker|autocollant|bumper|"
+    r"sacoche|cam[ée]ra|batter|akku|[ée]cran|display|schermo|pantalla|tampa|"
+    r"scocca|t[ée]l[ée]command|telecomando|joystick)\w*",
+    re.IGNORECASE,
+)
+# Mots composés (collés) fréquents en DE/NL/etc.
+_ACCESSORY_SUB = ("hülle", "hulle", "schutzfolie", "verpackung")
+
+
+def _is_accessory(it: dict) -> bool:
+    t = (it.get("title") or "").lower()
+    return bool(_ACCESSORY_RE.search(t)) or any(s in t for s in _ACCESSORY_SUB)
+
+
+def find_deals_in_category(cat: dict) -> list[dict]:
+    """Trouve les annonces récentes nettement sous le prix du marché.
+
+    - Distribution de prix : annonces 'relevance' (offre représentative).
+    - Candidats : annonces 'newest_first' postées depuis <= DEAL_MAX_AGE_DAYS.
+    - Comparaison : même marque + au moins un mot-clé de modèle en commun.
+    """
+    try:
+        pool = _fetch_items({"catalog_ids": cat["id"]}, DEAL_REF_PAGES,
+                            category=cat["title"], order="relevance")
+        pool += _fetch_items({"catalog_ids": cat["id"]}, DEAL_NEW_PAGES,
+                             category=cat["title"], order="newest_first")
+    except Exception as err:  # noqa: BLE001
+        print(f"[deals] {cat['title']}: {err}", file=sys.stderr)
+        return []
+
+    # Dédup + index par marque (prix > 0 uniquement).
+    by_id: dict = {}
+    for it in pool:
+        if it.get("id") is not None and it.get("price"):
+            by_id.setdefault(it["id"], it)
+    items = list(by_id.values())
+    by_brand: dict[str, list[dict]] = {}
+    for it in items:
+        b = (it.get("brand") or "").strip().lower()
+        if b and b not in BRAND_NOISE:
+            by_brand.setdefault(b, []).append(it)
+
+    deals = []
+    for cand in items:
+        if (cand.get("age_days") is None or cand["age_days"] > DEAL_MAX_AGE_DAYS
+                or cand["price"] < DEAL_MIN_PRICE):
+            continue
+        if _DEAL_SKIP_RE.search(cand.get("title") or ""):
+            continue  # cassé / pièces / boîte vide -> pas un vrai deal
+        b = (cand.get("brand") or "").strip().lower()
+        mates = by_brand.get(b)
+        if not mates or len(mates) < DEAL_MIN_COMPARABLES + 1:
+            continue
+        toks = _model_tokens(cand)
+        if len(toks) < DEAL_MIN_SHARED_TOKENS:
+            continue  # titre trop pauvre pour comparer fiablement
+        cand_acc = _is_accessory(cand)
+        # Comparables = même marque + même nature (accessoire/appareil) +
+        # >= N mots de modèle en commun (produit identique).
+        comps = [
+            m for m in mates
+            if m["id"] != cand["id"]
+            and _is_accessory(m) == cand_acc
+            and len(_model_tokens(m) & toks) >= DEAL_MIN_SHARED_TOKENS
+        ]
+        if len(comps) < DEAL_MIN_COMPARABLES:
+            continue
+        prices = sorted(m["price"] for m in comps)
+        med = statistics.median(prices)
+        if med <= 0 or cand["price"] > med * (1 - DEAL_THRESHOLD):
+            continue
+        cand = dict(cand)
+        cand["market"] = round(med, 2)
+        cand["discount"] = round(1 - cand["price"] / med, 2)
+        cand["n_comps"] = len(comps)
+        deals.append(cand)
+    return deals
+
+
+def _load_deal_state() -> dict:
+    try:
+        with open(DEAL_STATE_FILE, "r", encoding="utf-8") as fh:
+            return json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {"seen": {}}
+
+
+def _save_deal_state(st: dict) -> None:
+    os.makedirs(os.path.dirname(DEAL_STATE_FILE) or ".", exist_ok=True)
+    # borne la taille (garde les 5000 derniers vus)
+    seen = st.get("seen", {})
+    if len(seen) > 5000:
+        st["seen"] = dict(list(seen.items())[-5000:])
+    with open(DEAL_STATE_FILE, "w", encoding="utf-8") as fh:
+        json.dump(st, fh, ensure_ascii=False)
+
+
+def _send_deal(v: dict) -> None:
+    pct = int(v["discount"] * 100)
+    title = v["title"][:200]
+    desc = (
+        f"**{_euro(v['price'])}**  ~~{_euro(v['market'])}~~   •   **-{pct}%** "
+        f"sous le marché\n"
+        f"🏷 {v.get('brand') or '—'} · 📦 {v.get('status') or '—'} · "
+        f"⏱ {_age_label(v.get('age_days'))} · 📊 {v['n_comps']} comparables"
+    )
+    if DRY_RUN:
+        print(f"[DRY_RUN][deal -{pct}%] {_euro(v['price'])} (marché {_euro(v['market'])}) "
+              f"{title} — {v['url']}")
+        return
+    if DISCORD_WEBHOOK_URL:
+        embed = {
+            "title": f"💸 -{pct}% · {title}"[:256],
+            "url": v["url"],
+            "description": desc,
+            "color": 0xE74C3C if pct >= 50 else 0xE67E22,
+            "footer": {"text": "Vinted — affaire détectée"},
+        }
+        if v.get("image"):
+            embed["thumbnail"] = {"url": v["image"]}
+        try:
+            _http_post_json(DISCORD_WEBHOOK_URL, {"embeds": [embed]})
+        except Exception as err:  # noqa: BLE001
+            print(f"[discord] échec deal: {err}", file=sys.stderr)
+    if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
+        txt = (f"💸 -{pct}% sous le marché\n{title}\n{_euro(v['price'])} "
+               f"(marché {_euro(v['market'])})\n{v['url']}")
+        try:
+            _http_post_json(
+                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                {"chat_id": TELEGRAM_CHAT_ID, "text": txt, "disable_web_page_preview": False},
+            )
+        except Exception as err:  # noqa: BLE001
+            print(f"[telegram] échec deal: {err}", file=sys.stderr)
+
+
+def run_deals() -> int:
+    """Scanne les catégories et alerte sur les annonces sous le prix du marché."""
+    now = datetime.now(timezone.utc)
+    print(f"== Scanner d'affaires Vinted == {now.isoformat()} — {VINTED_DOMAIN}")
+    try:
+        cats = list_scan_categories()
+    except Exception as err:  # noqa: BLE001
+        print(f"[deals] catégories: {err}", file=sys.stderr)
+        return 1
+    if not cats:
+        print("Aucune catégorie à scanner.", file=sys.stderr)
+        return 1
+    print(f"{len(cats)} catégorie(s) · seuil -{int(DEAL_THRESHOLD*100)}% · "
+          f"candidats postés ≤ {DEAL_MAX_AGE_DAYS:.0f}j")
+
+    state = _load_deal_state()
+    seen = state.setdefault("seen", {})
+    found = 0
+    with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
+        futs = {pool.submit(find_deals_in_category, c): c for c in cats}
+        done = 0
+        for fut in as_completed(futs):
+            for v in fut.result():
+                key = str(v["id"])
+                prev = seen.get(key)
+                # alerte si jamais vu, ou si le prix a encore baissé
+                if prev is not None and v["price"] >= float(prev):
+                    continue
+                _send_deal(v)
+                seen[key] = v["price"]
+                found += 1
+            done += 1
+            if done % 10 == 0:
+                print(f"  • {done}/{len(cats)} catégories scannées, {found} affaire(s)")
+            sd_notify("WATCHDOG=1")
+
+    _save_deal_state(state)
+    print(f"Terminé : {found} affaire(s) détectée(s).")
+    return 0
+
+
 def run_categories() -> int:
     """Scanne toutes les catégories (hors vêtements) et liste les produits
     récents les plus likés."""
@@ -1398,9 +1829,13 @@ def run_watchlist() -> int:
 
 
 def run_once() -> int:
-    """Choisit le mode : scan catégories (défaut) ou watchlist."""
+    """Choisit le mode : scan catégories (défaut), watchlist ou brands."""
     if MODE == "watchlist":
         return run_watchlist()
+    if MODE == "brands":
+        return run_brands()
+    if MODE == "deals":
+        return run_deals()
     return run_categories()
 
 

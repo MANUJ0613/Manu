@@ -12,14 +12,30 @@ Ce dépôt contient deux outils indépendants :
 
 # Analyseur de demande Vinted 🛍️
 
-Deux modes :
+Trois modes (`MODE`) :
 
 - **`categories` (par défaut)** — scanne **toutes les catégories Vinted sauf les
   vêtements** et liste les **produits récents (postés ≤ 7 jours) qui ont le plus
   de favoris**. C'est *le* mode pour repérer ce qui buzz en ce moment, par
   catégorie, sans rien présupposer.
+- **`brands`** — classe les **marques** les plus demandées d'une/des catégorie(s)
+  (favoris cumulés, nombre d'annonces, favoris/annonce). Par défaut sur **toute
+  l'offre active** ; mets `BRAND_DAYS_WINDOW=7` pour les marques qui montent **ces
+  7 derniers jours**. Ex : `MODE=brands VINTED_CATEGORIES=1499` (jouets).
+- **`deals`** — **scanner d'affaires** : pour chaque catégorie, calcule le prix
+  de marché par **marque + modèle** et alerte (Discord/Telegram) sur les annonces
+  récentes **nettement sous le marché** (deals à sniper pour la revente). Filtre
+  les cassés / pièces / boîtes vides / téléphones bloqués, et ne compare jamais
+  un accessoire (coque, housse…) à l'appareil complet. Ex :
+  `MODE=deals DEAL_THRESHOLD=0.40`.
 - **`watchlist`** — pour une liste de recherches précises (produits/marques),
   classe ce qui est le plus recherché et donne le **prix médian** de revente.
+
+> ⏱️ **Dates des favoris.** Le `favourite_count` d'une annonce est **cumulé
+> depuis sa mise en ligne** (tout l'historique de l'annonce), pas une fenêtre
+> glissante. Le mode `categories` ne garde que les annonces postées ≤ `DAYS_WINDOW`
+> jours ; le mode `brands` compte par défaut **toute l'offre active** (mets
+> `BRAND_DAYS_WINDOW` pour restreindre au récent).
 
 Mesure de demande = nombre de **favoris (likes)** ; les **vues** ne sont
 récupérables qu'avec une session connectée (voir plus bas).
@@ -113,7 +129,15 @@ et envoie le digest. Ajoute tes secrets dans **Settings → Secrets and variable
 
 | Variable | Défaut | Rôle |
 |----------|--------|------|
-| `MODE` | `categories` | `categories` (scan hors vêtements) ou `watchlist` |
+| `MODE` | `categories` | `categories`, `brands`, `deals` (affaires) ou `watchlist` |
+| `DEAL_THRESHOLD` | `0.40` | Mode `deals` : seuil sous le marché (0.40 = -40%) |
+| `DEAL_MAX_AGE_DAYS` | `2` | Mode `deals` : n'évaluer que les annonces postées ≤ N jours |
+| `DEAL_MIN_COMPARABLES` | `5` | Mode `deals` : nb mini d'annonces comparables pour estimer le marché |
+| `DEAL_MIN_SHARED_TOKENS` | `2` | Mode `deals` : mots de modèle communs requis pour comparer |
+| `DEAL_MIN_PRICE` | `5` | Mode `deals` : ignore les annonces sous ce prix |
+| `BRAND_DAYS_WINDOW` | `0` | Mode `brands` : `0` = offre active, `N` = postées ≤ N jours |
+| `TOP_BRANDS` | `40` | Mode `brands` : nombre de marques affichées |
+| `BRAND_MIN_LISTINGS` | `3` | Mode `brands` : minimum d'annonces pour retenir une marque |
 | `DAYS_WINDOW` | `7` | Fenêtre de fraîcheur : articles postés depuis N jours |
 | `RANK_BY` | `hotness` | `hotness` (favoris/jour, le + frais) ou `favourites` (favoris totaux) |
 | `TOP_PER_CATEGORY` | `15` | Nombre d'articles listés par sous-catégorie |
