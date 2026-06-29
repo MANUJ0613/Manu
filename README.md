@@ -28,8 +28,14 @@ Trois modes (`MODE`) :
   les cassés / pièces / boîtes vides / téléphones bloqués, et ne compare jamais
   un accessoire (coque, housse…) à l'appareil complet. Ex :
   `MODE=deals DEAL_THRESHOLD=0.40`.
-- **`watchlist`** — pour une liste de recherches précises (produits/marques),
-  classe ce qui est le plus recherché et donne le **prix médian** de revente.
+- **`watchlist`** — **vérif revente d'un produit** : tu donnes un ou des
+  mot(s)-clé(s) (`VINTED_QUERIES`), le bot renvoie pour chacun le **nombre
+  d'annonces** (l'offre), les **favoris/annonce** (la demande), le **prix médian**
+  de revente, et un **verdict** 🟢 ACHÈTE / 🟡 PRUDENCE / 🔴 ÉVITE. Pratique pour
+  décider d'acheter ou non avant de sourcer. Workflow dédié
+  [`vinted-check.yml`](.github/workflows/vinted-check.yml) : entre ton produit
+  dans **Actions → Vinted check produit → Run workflow** et reçois la fiche sur
+  Discord.
 
 > ⏱️ **Dates des favoris.** Le `favourite_count` d'une annonce est **cumulé
 > depuis sa mise en ligne** (tout l'historique de l'annonce), pas une fenêtre

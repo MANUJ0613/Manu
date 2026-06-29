@@ -738,6 +738,51 @@ def _mean(values: list[float]) -> float | None:
     return round(statistics.fmean(vals), 2) if vals else None
 
 
+def get_total_listings(query: str) -> int | None:
+    """Nombre TOTAL d'annonces actives sur Vinted pour ce mot-clé (l'offre /
+    la concurrence), lu via pagination.total_entries."""
+    params = {"search_text": query, "page": 1, "per_page": 1, "currency": CURRENCY}
+    if PRICE_FROM:
+        params["price_from"] = PRICE_FROM
+    if PRICE_TO:
+        params["price_to"] = PRICE_TO
+    try:
+        data = http_get_json(f"{API_ROOT}/catalog/items?" + urllib.parse.urlencode(params))
+        return int((data.get("pagination") or {}).get("total_entries") or 0)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def verdict_revente(n_total: int | None, avg_fav: float | None,
+                    n_sample: int) -> dict:
+    """Verdict achat-revente à partir de la demande (favoris/annonce) et de
+    l'offre (nombre d'annonces). favoris/annonce = appétit des acheteurs."""
+    a = avg_fav or 0
+    if a >= 10:
+        emoji, label = "🟢", "ACHÈTE — très recherché"
+    elif a >= 4:
+        emoji, label = "🟡", "PRUDENCE — demande moyenne"
+    else:
+        emoji, label = "🔴", "ÉVITE — peu recherché"
+    # Nuances sur l'offre.
+    note = ""
+    if n_total is not None:
+        if n_total < 30:
+            note = "offre rare (niche, peu de concurrence)"
+        elif n_total >= 950:
+            note = "offre très large (beaucoup de concurrence)"
+        else:
+            note = "marché liquide"
+    return {"emoji": emoji, "label": label, "avg_fav": round(a, 1), "note": note}
+
+
+def _fmt_total(n: int | None) -> str:
+    """Affiche le nombre d'annonces (Vinted plafonne le compteur à ~960)."""
+    if n is None:
+        return "—"
+    return "900+" if n >= 950 else str(n)
+
+
 def analyze_query(query: str) -> dict | None:
     """Scanne une recherche et calcule ses indicateurs de demande."""
     try:
@@ -770,20 +815,28 @@ def analyze_query(query: str) -> dict | None:
     favs = [i["favourites"] for i in items]
     views_known = [i["views"] for i in items if i["views"] is not None]
     ranked = sorted(items, key=lambda i: i["score"], reverse=True)
+    avg_fav = _mean(favs)
+    n_total = get_total_listings(query)
 
     return {
         "query": query,
-        "n_listings": len(items),
+        "n_total": n_total,             # offre réelle sur Vinted
+        "n_listings": len(items),       # échantillon analysé
         "total_favourites": sum(favs),
-        "avg_favourites": _mean(favs),
+        "avg_favourites": avg_fav,
         "max_favourites": max(favs) if favs else 0,
+        "with_fav_pct": round(100 * sum(1 for f in favs if f > 0) / len(favs)) if favs else 0,
         "avg_views": _mean(views_known) if views_known else None,
         "total_views": sum(views_known) if views_known else None,
         "median_price": _median(prices),
         "min_price": round(min([p for p in prices if p is not None]), 2)
         if any(p is not None for p in prices)
         else None,
+        "max_price": round(max([p for p in prices if p is not None]), 2)
+        if any(p is not None for p in prices)
+        else None,
         "demand_index": round(_mean([i["score"] for i in items]) or 0, 2),
+        "verdict": verdict_revente(n_total, avg_fav, len(items)),
         "top_items": ranked[: max(TOP_VIEWS, 10)],
         "all_items": items,
     }
@@ -1822,10 +1875,66 @@ def run_watchlist() -> int:
         print("Aucun résultat exploitable.", file=sys.stderr)
         return 1
 
-    print_report(results)
+    print_checks(results)
     write_reports(results)
-    send_digest(results)
+    send_checks(results)
     return 0
+
+
+def _check_lines(r: dict) -> list[str]:
+    v = r["verdict"]
+    return [
+        f"{v['emoji']} **{r['query'].upper()}** — {v['label']}",
+        f"📦 Annonces sur Vinted : **{_fmt_total(r['n_total'])}**  ({v['note']})",
+        f"❤️ Favoris : **{(r['avg_favourites'] or 0):.1f}/annonce** en moyenne · "
+        f"max {r['max_favourites']} · {r['with_fav_pct']}% des annonces ont des likes",
+        f"💶 Prix revente : médian **{_euro(r['median_price'])}** "
+        f"(de {_euro(r['min_price'])} à {_euro(r['max_price'])})",
+    ]
+
+
+def print_checks(results: list[dict]) -> None:
+    print("\n" + "=" * 70)
+    print("VÉRIFICATION REVENTE VINTED")
+    print("=" * 70)
+    for r in results:
+        print("\n" + "\n".join(l.replace("**", "") for l in _check_lines(r)))
+    print("\n" + "=" * 70 + "\n")
+
+
+def send_checks(results: list[dict]) -> None:
+    """Un embed Discord par mot-clé, avec le verdict revente."""
+    if DRY_RUN:
+        for r in results:
+            print("[DRY_RUN] " + " | ".join(l.replace("**", "") for l in _check_lines(r)))
+        return
+    if DISCORD_WEBHOOK_URL:
+        embeds = []
+        for r in results:
+            v = r["verdict"]
+            color = (0x2ECC71 if v["emoji"] == "🟢"
+                     else 0xF1C40F if v["emoji"] == "🟡" else 0xE74C3C)
+            embeds.append({
+                "title": f"{v['emoji']} {r['query']} — {v['label']}"[:256],
+                "description": "\n".join(_check_lines(r)[1:])[:4000],
+                "color": color,
+                "footer": {"text": "Vinted — vérif revente"},
+            })
+        try:
+            _post_discord_embeds(embeds)
+        except Exception as err:  # noqa: BLE001
+            print(f"[discord] échec check: {err}", file=sys.stderr)
+    if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
+        for r in results:
+            try:
+                _http_post_json(
+                    f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                    {"chat_id": TELEGRAM_CHAT_ID,
+                     "text": "\n".join(_check_lines(r)).replace("**", ""),
+                     "parse_mode": "Markdown", "disable_web_page_preview": True},
+                )
+            except Exception as err:  # noqa: BLE001
+                print(f"[telegram] échec check: {err}", file=sys.stderr)
 
 
 def run_once() -> int:
