@@ -264,9 +264,30 @@ _BROWSER_HEADERS = {
     "Accept": "application/json, text/plain, */*",
     "Accept-Language": "fr-FR,fr;q=0.9",
 }
-# Session connectée facultative : débloque les VUES (sinon API anonyme).
-if VINTED_COOKIE:
-    _BROWSER_HEADERS["Cookie"] = VINTED_COOKIE
+# Session connectée facultative : débloque les VUES + la recherche par image.
+# On stocke les cookies dans un dict MUTABLE pour pouvoir les rafraîchir
+# automatiquement (renouvellement de l'access_token via le refresh_token).
+def _parse_cookie_str(s: str) -> dict:
+    out: dict[str, str] = {}
+    for part in (s or "").split(";"):
+        part = part.strip()
+        if "=" in part:
+            k, v = part.split("=", 1)
+            out[k.strip()] = v.strip()
+    return out
+
+
+_COOKIES: dict[str, str] = _parse_cookie_str(VINTED_COOKIE)
+_cookie_lock = threading.Lock()
+
+
+def _cookie_header() -> str:
+    with _cookie_lock:
+        return "; ".join(f"{k}={v}" for k, v in _COOKIES.items())
+
+
+if _COOKIES:
+    _BROWSER_HEADERS["Cookie"] = _cookie_header()
 if VINTED_ACCESS_TOKEN:
     _BROWSER_HEADERS["Authorization"] = f"Bearer {VINTED_ACCESS_TOKEN}"
 
@@ -569,6 +590,98 @@ def search_by_image(image_bytes: bytes, max_pages: int = 2) -> list[dict]:
     items = _fetch_items({"search_by_image_uuid": image_uuid}, max_pages,
                          query="📷 image")
     return items
+
+
+# --------------------------------------------------------------------------- #
+# Rafraîchissement automatique de la session (renouvelle l'access_token via le
+# refresh_token) — POST /web/api/auth/refresh, met à jour les cookies en mémoire.
+# --------------------------------------------------------------------------- #
+
+REFRESH_URL = os.environ.get("REFRESH_URL", f"{SITE_ROOT}/web/api/auth/refresh")
+
+
+def _apply_set_cookies(set_cookie_values: list[str]) -> int:
+    """Met à jour _COOKIES depuis des en-têtes Set-Cookie. Renvoie le nb maj."""
+    n = 0
+    with _cookie_lock:
+        for sc in set_cookie_values:
+            first = sc.split(";", 1)[0].strip()
+            if "=" in first:
+                k, v = first.split("=", 1)
+                k = k.strip()
+                if k and v:
+                    _COOKIES[k] = v.strip()
+                    n += 1
+        _BROWSER_HEADERS["Cookie"] = "; ".join(f"{a}={b}" for a, b in _COOKIES.items())
+    # Force la recréation des sessions curl_cffi (pour repartir avec le cookie neuf).
+    _tls.s = None
+    _urllib_opener_holder[0] = None
+    return n
+
+
+def refresh_session() -> bool:
+    """Renouvelle l'access_token Vinted via le refresh_token. True si succès."""
+    if not _COOKIES.get("refresh_token_web"):
+        return False
+    headers = {
+        **_BROWSER_HEADERS,
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Origin": SITE_ROOT,
+        "Referer": SITE_ROOT + "/",
+        "locale": "fr-FR",
+    }
+    csrf = _csrf_token()
+    if csrf:
+        headers["X-Csrf-Token"] = csrf
+    anon = _anon_id()
+    if anon:
+        headers["X-Anon-Id"] = anon
+    try:
+        if HAVE_CFFI:
+            r = _session().post(REFRESH_URL, json={}, headers=headers,
+                                timeout=REQUEST_TIMEOUT)
+            if r.status_code >= 400:
+                print(f"[refresh] HTTP {r.status_code}", file=sys.stderr)
+                return False
+            # curl_cffi expose les cookies posés par la réponse.
+            try:
+                updated = {k: v for k, v in r.cookies.items()}
+                if updated:
+                    with _cookie_lock:
+                        _COOKIES.update(updated)
+                        _BROWSER_HEADERS["Cookie"] = "; ".join(
+                            f"{a}={b}" for a, b in _COOKIES.items())
+                    _tls.s = None
+            except Exception:  # noqa: BLE001
+                pass
+            print("[refresh] session renouvelée (curl_cffi)")
+            return True
+        opener = _urllib_opener()
+        req = urllib.request.Request(REFRESH_URL, data=b"{}", headers=headers,
+                                     method="POST")
+        with opener.open(req, timeout=REQUEST_TIMEOUT) as resp:
+            resp.read()
+            sc = resp.headers.get_all("Set-Cookie") or []
+        n = _apply_set_cookies(sc)
+        print(f"[refresh] session renouvelée ({n} cookie(s) mis à jour)")
+        return True
+    except urllib.error.HTTPError as err:
+        print(f"[refresh] échec HTTP {err.code}", file=sys.stderr)
+        return False
+    except Exception as err:  # noqa: BLE001
+        print(f"[refresh] échec: {err}", file=sys.stderr)
+        return False
+
+
+def session_account_id() -> str | None:
+    """Renvoie l'id de compte si une session connectée est active (sinon None).
+    Sert au bot pour vérifier que le cookie est valide."""
+    try:
+        data = http_get_json(f"{API_ROOT}/users/current")
+        return str((data.get("user") or {}).get("id") or data.get("id") or "") or None
+    except Exception:  # noqa: BLE001
+        return None
 
 
 # --------------------------------------------------------------------------- #

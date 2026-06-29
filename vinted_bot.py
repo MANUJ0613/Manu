@@ -34,7 +34,7 @@ import sys
 
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 import vinted_analyzer as va
 
@@ -245,6 +245,20 @@ async def photo_cmd(ctx: commands.Context):
     await ctx.reply(embed=check_embed(r))
 
 
+# Rafraîchit la session Vinted (access_token) toutes les 45 min pour que la
+# recherche par image continue de marcher sans remettre le cookie à la main.
+@tasks.loop(minutes=45)
+async def keep_session_alive():
+    ok = await _run(va.refresh_session)
+    if ok:
+        print("🔄 Session Vinted rafraîchie.")
+
+
+@keep_session_alive.before_loop
+async def _before_refresh():
+    await bot.wait_until_ready()
+
+
 @bot.event
 async def on_ready():
     try:
@@ -256,7 +270,14 @@ async def on_ready():
             await bot.tree.sync()
     except Exception as err:  # noqa: BLE001
         print(f"[sync] échec: {err}", file=sys.stderr)
-    print(f"✅ Bot connecté en tant que {bot.user} — tape /vinted <produit>")
+    # Démarre le rafraîchissement auto si une session est configurée.
+    if va.VINTED_COOKIE and not keep_session_alive.is_running():
+        await _run(va.refresh_session)  # 1er refresh immédiat
+        keep_session_alive.start()
+        acc = await _run(va.session_account_id)
+        print(f"🔑 Session Vinted active (compte {acc}) — refresh auto activé."
+              if acc else "🔑 Session Vinted configurée (refresh auto activé).")
+    print(f"✅ Bot connecté en tant que {bot.user} — /vinted, /photo, /marques")
 
 
 def main() -> int:
