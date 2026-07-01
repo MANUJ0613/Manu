@@ -28,15 +28,21 @@ CRIT_HEURES = float(os.environ.get("REPUB_CRIT_HEURES", "168"))   # 7 j -> rouge
 
 JOURS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
 
-# Créneaux par défaut (fort trafic acheteurs Vinted/Leboncoin), utilisés tant
-# qu'on n'a pas assez de ventes pour personnaliser. (jour 0=lundi..6=dimanche, heure)
+# Créneaux par défaut = meilleurs créneaux France (guide Vinted 2026), utilisés
+# tant qu'on n'a pas assez de ventes pour personnaliser.
+# (jour 0=lundi..6=dimanche, heure). Sources convergentes : mer/jeu 18-20h,
+# dimanche soir 18-22h, samedi 9-11h, lundi/mardi soir 20-22h.
 CRENEAUX_DEFAUT = [
-    (6, 20),  # dimanche soir
-    (6, 11),  # dimanche midi
-    (2, 21),  # mercredi soir
-    (0, 20),  # lundi soir
-    (4, 19),  # vendredi soir
+    (2, 19),  # mercredi ~18h30-19h : meilleur créneau régulier
+    (6, 20),  # dimanche soir : trafic +25 %
+    (3, 19),  # jeudi soir
+    (5, 10),  # samedi 9-11h
+    (1, 21),  # mardi soir (retour de week-end)
 ]
+
+# Anti-spam : Vinted détecte les doublons ; au-delà de 1 relist/jour et surtout
+# au 2e-3e repost identique, la visibilité chute de 40-60 %.
+RELIST_MIN_HEURES = float(os.environ.get("RELIST_MIN_HEURES", "24"))
 
 
 def statut_annonce(annonce: dict, maintenant: float | None = None) -> dict:
@@ -114,3 +120,14 @@ def est_bon_creneau(creneaux: list[dict], maintenant: datetime | None = None,
         if c["jour"] == maintenant.weekday() and abs(c["heure"] - maintenant.hour) <= tolerance_h:
             return True
     return False
+
+
+def republication_trop_recente(annonce: dict, maintenant: float | None = None) -> bool:
+    """Vrai si l'annonce a déjà été republiée il y a moins de RELIST_MIN_HEURES.
+
+    Sert de garde-fou anti-spam : republier plusieurs fois par jour la même fiche
+    fait chuter la visibilité (détection de doublons Vinted).
+    """
+    maintenant = maintenant or time.time()
+    ref = annonce.get("date_republication") or 0
+    return (maintenant - ref) < RELIST_MIN_HEURES * 3600

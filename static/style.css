@@ -47,6 +47,16 @@ button{font-family:inherit}
 .copiable{padding:11px 12px;white-space:pre-wrap;word-break:break-word}
 .copiable.multi{font-size:.92rem}
 
+.attributs-grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.attr{background:var(--carte2);border:1px solid var(--bord);border-radius:8px;padding:7px 10px;font-size:.85rem}
+.attr .k{color:var(--muted);display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.03em}
+.attr .v{font-weight:600}
+.conseils{margin:12px 0;background:var(--carte2);border:1px solid var(--bord);border-radius:10px;padding:4px 12px}
+.conseils summary{cursor:pointer;padding:8px 0;font-weight:600;font-size:.9rem}
+.conseils ul{margin:4px 0 12px;padding-left:20px;font-size:.85rem;color:var(--muted)}
+.conseils li{margin:3px 0}
+.conseils strong{color:var(--txt)}
+
 .info{color:var(--muted);font-size:.88rem;margin-bottom:8px}
 .alerte{background:#3a2323;border:1px solid var(--rouge);color:#ffb4b4;padding:10px 12px;border-radius:9px;margin-bottom:10px;font-size:.9rem}
 

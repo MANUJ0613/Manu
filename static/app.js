@@ -91,9 +91,32 @@ function afficherAnnonce(d) {
   $("lc-titre").textContent = a.titre_court || "—";
   const len = (a.titre_court || "").length;
   $("lc-titre-len").textContent = len + "/50" + (len > 50 ? " ⚠️" : "");
+
   $("v-titre").textContent = a.titre_vinted || "—";
+  const vlen = (a.titre_vinted || "").length;
+  // Cible Vinted : 50-60 caractères.
+  const vok = vlen >= 45 && vlen <= 60;
+  $("v-titre-len").textContent = vlen + " car." + (vok ? " ✓" : " (visez 50-60)");
+
   $("desc").textContent = a.description || "—";
-  $("hashtags").textContent = (a.hashtags || []).map((h) => "#" + h.replace(/^#/, "")).join(" ") || "—";
+  $("hashtags").textContent = (a.hashtags || []).slice(0, 5).map((h) => "#" + h.replace(/^#/, "")).join(" ") || "—";
+  afficherAttributs(a.attributs);
+}
+
+function afficherAttributs(attrs) {
+  const bloc = $("bloc-attributs");
+  if (!attrs) { bloc.classList.add("cachee"); return; }
+  const libelles = {
+    marque: "Marque", taille: "Taille", couleur: "Couleur",
+    matiere: "Matière", etat: "État", categorie_precise: "Catégorie",
+  };
+  const cases = Object.entries(libelles)
+    .filter(([k]) => attrs[k])
+    .map(([k, lib]) => `<div class="attr"><span class="k">${lib}</span><span class="v">${attrs[k]}</span></div>`)
+    .join("");
+  if (!cases) { bloc.classList.add("cachee"); return; }
+  $("attributs").innerHTML = `<div class="attributs-grille">${cases}</div>`;
+  bloc.classList.remove("cachee");
 }
 
 function afficherSeo(seo) {
@@ -220,7 +243,13 @@ async function chargerAnnonces() {
     box.appendChild(el);
   });
   box.querySelectorAll("[data-rep]").forEach((b) => b.addEventListener("click", async () => {
-    await api(`/api/annonces/${b.dataset.rep}/republier`, { method: "POST" });
+    const id = b.dataset.rep;
+    let r = await api(`/api/annonces/${id}/republier`, { method: "POST", body: {} });
+    if (r.avertissement) {
+      // Anti-spam Vinted : on confirme avant de forcer.
+      if (!confirm(r.avertissement)) return;
+      r = await api(`/api/annonces/${id}/republier`, { method: "POST", body: { force: true } });
+    }
     toast("Marqué republié 🔄"); chargerAnnonces();
   }));
   box.querySelectorAll("[data-vendu]").forEach((b) => b.addEventListener("click", async () => {

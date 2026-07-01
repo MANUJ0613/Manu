@@ -76,6 +76,7 @@
 
     <div class="bloc-copie">
       <div class="entete-copie"><strong>Titre Vinted</strong>
+        <span id="v-titre-len" class="compteur"></span>
         <button class="copier" data-cible="v-titre">Copier</button>
       </div>
       <div id="v-titre" class="copiable"></div>
@@ -89,11 +90,27 @@
     </div>
 
     <div class="bloc-copie">
-      <div class="entete-copie"><strong>Hashtags</strong>
+      <div class="entete-copie"><strong>Hashtags (3-5, en fin de description)</strong>
         <button class="copier" data-cible="hashtags">Copier</button>
       </div>
       <div id="hashtags" class="copiable"></div>
     </div>
+
+    <div id="bloc-attributs" class="bloc-copie cachee">
+      <div class="entete-copie"><strong>Attributs à remplir (filtres Vinted/Leboncoin)</strong></div>
+      <div id="attributs" class="copiable"></div>
+    </div>
+
+    <details class="conseils">
+      <summary>💡 Rappels SEO Vinted 2026</summary>
+      <ul>
+        <li>Le <strong>texte</strong> et la <strong>fraîcheur</strong> priment sur les hashtags (non indexés).</li>
+        <li><strong>5-8 photos</strong> nettes, fond neutre, 1ʳᵉ = vue d'ensemble (facteur n°1 du clic).</li>
+        <li>Remplis <strong>tous les attributs</strong> + catégorie la plus précise.</li>
+        <li>Prix vérifié sur les <strong>« Vendus »</strong>, aligné ou -10 % (astuce : X,99 €).</li>
+        <li>Republie aux <strong>heures de pointe</strong> (mer/jeu 18-20h, dim soir), 1×/jour max.</li>
+      </ul>
+    </details>
 
     <button id="btn-suivre" class="secondaire">📌 Suivre cette annonce (republication)</button>
   </section>

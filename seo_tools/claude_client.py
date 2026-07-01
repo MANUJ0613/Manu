@@ -1,13 +1,24 @@
 """Génération de l'annonce (titre + description) via l'API Claude.
 
-On demande à Claude une sortie JSON structurée, adaptée à la revente sur
-Leboncoin et Vinted :
+Le prompt applique les bonnes pratiques SEO Vinted / Leboncoin 2026 :
+- Vinted est un MOTEUR DE RECHERCHE par mots-clés : le titre et la description
+  pèsent beaucoup plus que les hashtags (non cliquables, comptés comme du texte).
+- Titre 50-60 caractères : marque + type + détail distinctif, mots-clés en tête,
+  jamais de MAJUSCULES criardes ni « URGENT/PROMO !!! ».
+- Description 80-150 mots, en 3 blocs (accroche / détails techniques / conditions),
+  mots-clés longue traîne + synonymes (baskets/sneakers…), en langage naturel
+  (les annonces Vinted sont indexées par Google depuis 2024).
+- 3 à 5 hashtags MAX, uniquement en toute fin de description.
+- Remplir TOUS les attributs (marque, taille, couleur, matière, état) : facteur
+  direct de visibilité dans les filtres.
+
+Sortie JSON structurée :
 - titre_court     : ≤ 50 caractères (limite du titre Leboncoin)
-- titre_vinted    : titre accrocheur optimisé pour la recherche Vinted
-- description     : description prête à coller, avec les mots-clés placés
-                    naturellement
-- hashtags        : mots-dièse pour Vinted (sans le #, on l'ajoute côté UI)
-- mots_cles_places: mots-clés SEO réellement intégrés
+- titre_vinted    : 50-60 caractères, optimisé recherche Vinted
+- description     : 80-150 mots, 3 blocs, hashtags à la fin
+- hashtags        : 3 à 5 (sans le #, ajouté côté UI)
+- mots_cles_places: mots-clés SEO longue traîne réellement intégrés
+- attributs       : valeurs à recopier dans les champs Vinted/Leboncoin
 
 Le modèle par défaut est claude-opus-4-8 (surchargeable via ANNONCES_MODEL).
 """
@@ -28,28 +39,55 @@ SCHEMA = {
     "type": "object",
     "properties": {
         "titre_court": {"type": "string", "description": "Titre <= 50 caractères pour Leboncoin"},
-        "titre_vinted": {"type": "string", "description": "Titre accrocheur optimisé recherche Vinted"},
-        "description": {"type": "string", "description": "Description prête à coller"},
-        "hashtags": {"type": "array", "items": {"type": "string"}},
+        "titre_vinted": {"type": "string", "description": "Titre 50-60 car. : marque + type + détail distinctif, mots-clés en tête"},
+        "description": {"type": "string", "description": "80-150 mots, 3 blocs, langage naturel, 3-5 hashtags à la toute fin"},
+        "hashtags": {"type": "array", "items": {"type": "string"}, "description": "3 à 5 hashtags ciblés, sans le #"},
         "mots_cles_places": {"type": "array", "items": {"type": "string"}},
+        "attributs": {
+            "type": "object",
+            "description": "Valeurs à recopier dans les champs Vinted/Leboncoin (chaîne vide si inconnu)",
+            "properties": {
+                "marque": {"type": "string"},
+                "taille": {"type": "string"},
+                "couleur": {"type": "string"},
+                "matiere": {"type": "string"},
+                "etat": {"type": "string"},
+                "categorie_precise": {"type": "string"},
+            },
+            "required": ["marque", "taille", "couleur", "matiere", "etat", "categorie_precise"],
+            "additionalProperties": False,
+        },
     },
-    "required": ["titre_court", "titre_vinted", "description", "hashtags", "mots_cles_places"],
+    "required": ["titre_court", "titre_vinted", "description", "hashtags", "mots_cles_places", "attributs"],
     "additionalProperties": False,
 }
 
 SYSTEME = (
-    "Tu es un expert de la revente d'occasion sur Leboncoin et Vinted en France. "
-    "Tu rédiges des annonces qui se vendent vite : titres accrocheurs et riches en "
-    "mots-clés que les acheteurs tapent réellement, descriptions honnêtes, concrètes "
-    "et rassurantes. Tu écris en français, sans superlatifs creux ni fautes. "
-    "Tu places naturellement les mots-clés SEO fournis, sans bourrage. "
-    "Le titre court fait 50 caractères maximum (contrainte Leboncoin). "
-    "Tu adaptes le ton à la plateforme cible."
+    "Tu es un expert de la revente d'occasion sur Vinted et Leboncoin en France. "
+    "Tu connais l'algorithme 2026 : Vinted est un MOTEUR DE RECHERCHE par mots-clés, "
+    "donc le titre et la description pèsent bien plus que les hashtags (qui ne sont "
+    "ni cliquables ni indexés, comptés comme du texte ordinaire).\n\n"
+    "Règles impératives :\n"
+    "- titre_vinted : 50 à 60 caractères, structure « marque + type + détail distinctif "
+    "(taille/couleur/état) », les mots-clés les plus recherchés EN TÊTE. Interdits : "
+    "MAJUSCULES criardes, « URGENT », « PROMO !!! », ponctuation spammée, mots génériques seuls.\n"
+    "- titre_court : version <= 50 caractères pour Leboncoin.\n"
+    "- description : 80 à 150 mots, en 3 blocs — (1) accroche 1-2 phrases sur ce qui rend "
+    "l'article spécial, (2) détails techniques (marque, dimensions/mesures, couleur exacte, "
+    "matière, état précis), (3) conditions (envoi rapide, lots, négociation). "
+    "Utilise des mots-clés LONGUE TRAÎNE (ce que l'acheteur tape vraiment) et des SYNONYMES "
+    "(ex. baskets/sneakers, canapé/sofa) pour capter plusieurs requêtes. Écris en LANGAGE "
+    "NATUREL (les annonces Vinted sont indexées par Google). Description UNIQUE, sans bourrage "
+    "de mots-clés. Termine par 3 à 5 hashtags ciblés.\n"
+    "- hashtags : 3 à 5 maximum, pertinents (marque, taille, style, matière/état), jamais dans le titre.\n"
+    "- attributs : propose les valeurs exactes à cocher dans les champs (marque, taille, couleur, "
+    "matière, état, catégorie la plus précise) car remplir tous les champs = apparaître dans les filtres.\n"
+    "Français correct, ton factuel et rassurant, aucune promesse mensongère."
 )
 
 
 def _prompt(produit: dict, mots_cles: list[str]) -> str:
-    lignes = ["Crée une annonce de revente à partir de ces informations :", ""]
+    lignes = ["Crée une annonce de revente optimisée à partir de ces informations :", ""]
     libelles = {
         "nom": "Produit",
         "marque": "Marque",
@@ -70,9 +108,9 @@ def _prompt(produit: dict, mots_cles: list[str]) -> str:
                       + ", ".join(mots_cles))
     lignes.append("")
     lignes.append(
-        "Consignes : titre_court <= 50 caractères ; titre_vinted plus riche en mots-clés ; "
-        "description structurée (état réel, caractéristiques, pourquoi acheter, modalités) ; "
-        "5 à 10 hashtags Vinted pertinents ; reste factuel."
+        "Applique strictement les règles Vinted 2026 : titre 50-60 car. (marque + type + détail, "
+        "mots-clés en tête, aucune majuscule criarde) ; description 80-150 mots en 3 blocs, longue "
+        "traîne + synonymes, langage naturel ; 3-5 hashtags en fin de description ; attributs à remplir."
     )
     return "\n".join(lignes)
 

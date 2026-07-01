@@ -171,8 +171,21 @@ def api_creer_annonce():
 
 @app.post("/api/annonces/<int:aid>/republier")
 def api_republier(aid: int):
-    if not db.get_annonce(aid):
+    a = db.get_annonce(aid)
+    if not a:
         return jsonify({"erreur": "introuvable"}), 404
+    data = request.get_json(force=True, silent=True) or {}
+    # Garde-fou anti-spam : Vinted pénalise les reposts trop rapprochés.
+    # Ne s'applique qu'après une vraie republication (pas au 1er bump après création).
+    if not data.get("force") and a["nb_republications"] >= 1 and slots.republication_trop_recente(a):
+        return jsonify({
+            "avertissement": (
+                "Déjà republiée il y a moins de 24 h. Republier trop souvent la même "
+                "fiche fait chuter la visibilité (détection de doublons Vinted). "
+                "Confirme si tu veux quand même republier."
+            ),
+            "annonce": slots.statut_annonce(a),
+        }), 409
     db.republier(aid)
     return jsonify(slots.statut_annonce(db.get_annonce(aid)))
 

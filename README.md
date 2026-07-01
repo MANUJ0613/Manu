@@ -18,9 +18,11 @@ Ce dépôt contient trois outils indépendants :
 Un **serveur Flask 24/7** (pensé pour un VPS) qui t'aide à revendre plus vite.
 Tu décris ton produit dans l'interface web, et l'outil :
 
-- **génère titre + description optimisés** via l'**API Claude** (titre court
-  Leboncoin ≤ 50 caractères, titre Vinted riche en mots-clés, description,
-  hashtags) ;
+- **génère titre + description optimisés** via l'**API Claude**, en appliquant
+  les **règles SEO Vinted 2026** (le texte prime sur les hashtags) : titre
+  Vinted 50-60 car. (marque + type + détail), titre court Leboncoin ≤ 50,
+  description 80-150 mots en 3 blocs avec mots-clés longue traîne + synonymes,
+  3-5 hashtags en fin de description, et suggestion des **attributs à remplir** ;
 - récupère les **vrais volumes de recherche Google** de tes mots-clés via
   **DataForSEO** (pour prioriser ceux que les acheteurs tapent vraiment) ;
 - calcule le **prix conseillé et la marge nette** (frais Vinted/Leboncoin
