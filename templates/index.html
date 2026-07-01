@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Revente SEO · Leboncoin &amp; Vinted</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header>
+  <h1>🛍️ Revente SEO</h1>
+  <p class="sous-titre">Génère l'annonce, cale le prix, republie au bon moment — Leboncoin &amp; Vinted</p>
+  <div id="etat" class="etat"></div>
+</header>
+
+<nav class="onglets">
+  <button class="onglet actif" data-vue="generer">✍️ Générer une annonce</button>
+  <button class="onglet" data-vue="suivi">📋 Mes annonces</button>
+  <button class="onglet" data-vue="creneaux">⏰ Créneaux &amp; alertes</button>
+</nav>
+
+<!-- =================== VUE : GÉNÉRER =================== -->
+<main id="vue-generer" class="vue active">
+  <section class="carte">
+    <h2>Décris ton produit</h2>
+    <div class="grille">
+      <label>Nom / modèle *<input id="nom" placeholder="Ex : Sac à main cuir, iPhone 12, Jean Levi's 501"></label>
+      <label>Marque<input id="marque" placeholder="Ex : Nike, Zara, Sony"></label>
+      <label>Catégorie
+        <input id="categorie" list="cats" placeholder="Ex : vêtement, jeux vidéo…">
+        <datalist id="cats">
+          <option>Vêtement</option><option>Chaussures</option><option>Sac / maroquinerie</option>
+          <option>High-tech</option><option>Jeux vidéo</option><option>Console</option>
+          <option>Puériculture</option><option>Maison / déco</option><option>Livre</option>
+        </datalist>
+      </label>
+      <label>État
+        <select id="etat">
+          <option value="">—</option>
+          <option>Neuf avec étiquette</option><option>Neuf sans étiquette</option>
+          <option>Très bon état</option><option>Bon état</option><option>Satisfaisant</option>
+        </select>
+      </label>
+      <label>Taille<input id="taille" placeholder="Ex : M, 42, 40 EU"></label>
+      <label>Couleur<input id="couleur" placeholder="Ex : noir, bleu marine"></label>
+      <label>Plateforme cible
+        <select id="plateforme">
+          <option value="vinted">Vinted</option>
+          <option value="leboncoin">Leboncoin</option>
+          <option value="les-deux">Les deux</option>
+        </select>
+      </label>
+      <label>Prix d'achat (€)<input id="prix_achat" type="number" step="0.5" placeholder="Ex : 8"></label>
+      <label>Réf. prix marché (€)<input id="reference_marche" type="number" step="0.5" placeholder="ex. médiane eBay vendus"></label>
+    </div>
+    <label class="pleine">Détails / défauts / accessoires
+      <textarea id="details" rows="2" placeholder="Ex : petite tache au dos, boîte d'origine incluse, jamais porté"></textarea>
+    </label>
+    <label class="pleine">Mots-clés à privilégier (optionnel, séparés par des virgules)
+      <input id="mots_cles" placeholder="Ex : vintage, streetwear, collector">
+    </label>
+    <button id="btn-generer" class="principal">✨ Générer l'annonce</button>
+  </section>
+
+  <section id="resultats" class="carte cachee">
+    <h2>Annonce générée</h2>
+    <div id="erreur-claude" class="alerte cachee"></div>
+
+    <div class="bloc-copie">
+      <div class="entete-copie"><strong>Titre court (Leboncoin ≤ 50)</strong>
+        <span id="lc-titre-len" class="compteur"></span>
+        <button class="copier" data-cible="lc-titre">Copier</button>
+      </div>
+      <div id="lc-titre" class="copiable"></div>
+    </div>
+
+    <div class="bloc-copie">
+      <div class="entete-copie"><strong>Titre Vinted</strong>
+        <button class="copier" data-cible="v-titre">Copier</button>
+      </div>
+      <div id="v-titre" class="copiable"></div>
+    </div>
+
+    <div class="bloc-copie">
+      <div class="entete-copie"><strong>Description</strong>
+        <button class="copier" data-cible="desc">Copier</button>
+      </div>
+      <div id="desc" class="copiable multi"></div>
+    </div>
+
+    <div class="bloc-copie">
+      <div class="entete-copie"><strong>Hashtags</strong>
+        <button class="copier" data-cible="hashtags">Copier</button>
+      </div>
+      <div id="hashtags" class="copiable"></div>
+    </div>
+
+    <button id="btn-suivre" class="secondaire">📌 Suivre cette annonce (republication)</button>
+  </section>
+
+  <section id="bloc-seo" class="carte cachee">
+    <h2>📊 Volumes de mots-clés (Google · DataForSEO)</h2>
+    <div id="seo-info" class="info"></div>
+    <table id="seo-table" class="tableau"><thead>
+      <tr><th>Mot-clé</th><th>Volume / mois</th><th>Concurrence</th><th>CPC</th></tr>
+    </thead><tbody></tbody></table>
+  </section>
+
+  <section id="bloc-prix" class="carte cachee">
+    <h2>💰 Prix &amp; marge</h2>
+    <div class="curseur-marge">
+      <label>Marge cible : <span id="marge-val">60</span> %
+        <input id="marge-slider" type="range" min="0" max="200" value="60">
+      </label>
+      <div id="prix-live" class="prix-live"></div>
+    </div>
+    <div id="paliers" class="paliers"></div>
+  </section>
+
+  <section id="bloc-liens" class="carte cachee">
+    <h2>🔎 Caler le prix</h2>
+    <div class="boutons-liens">
+      <a id="lien-ebay" class="bouton-lien ebay" target="_blank" rel="noopener">🏷️ eBay — prix vendus</a>
+      <a id="lien-lens" class="bouton-lien lens" target="_blank" rel="noopener">📷 Google Lens</a>
+      <a id="lien-gemini" class="bouton-lien gemini" target="_blank" rel="noopener">✦ Gemini (estimer)</a>
+      <button id="btn-copier-prompt" class="bouton-lien">📋 Copier le prompt Gemini</button>
+    </div>
+  </section>
+</main>
+
+<!-- =================== VUE : SUIVI =================== -->
+<main id="vue-suivi" class="vue">
+  <section class="carte">
+    <h2>Mes annonces suivies</h2>
+    <div id="resume-statuts" class="resume"></div>
+    <div id="liste-annonces"></div>
+    <p class="aide">🟢 fraîche · 🟠 à republier bientôt · 🔴 republie maintenant. Clique « Republié » à chaque remontée/repost.</p>
+  </section>
+</main>
+
+<!-- =================== VUE : CRÉNEAUX =================== -->
+<main id="vue-creneaux" class="vue">
+  <section class="carte">
+    <h2>⏰ Tes meilleurs créneaux</h2>
+    <div id="creneaux-info" class="info"></div>
+    <div id="liste-creneaux"></div>
+  </section>
+  <section class="carte">
+    <h2>Enregistrer une vente</h2>
+    <p class="aide">Chaque vente enregistrée affine la détection de tes meilleurs créneaux.</p>
+    <div class="grille">
+      <label>Date &amp; heure<input id="v-date" type="datetime-local"></label>
+      <label>Montant (€)<input id="v-montant" type="number" step="0.5"></label>
+      <label>Plateforme
+        <select id="v-plateforme"><option value="vinted">Vinted</option><option value="leboncoin">Leboncoin</option></select>
+      </label>
+    </div>
+    <button id="btn-vente" class="secondaire">➕ Enregistrer la vente</button>
+  </section>
+  <section class="carte">
+    <h2>🔔 Alertes ntfy</h2>
+    <div id="ntfy-info" class="info"></div>
+    <button id="btn-test-ntfy" class="secondaire">Envoyer une notif de test</button>
+  </section>
+</main>
+
+<div id="toast" class="toast"></div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
