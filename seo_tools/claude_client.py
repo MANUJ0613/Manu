@@ -63,27 +63,58 @@ SCHEMA = {
 }
 
 SYSTEME = (
-    "Tu es un expert de la revente d'occasion sur Vinted et Leboncoin en France. "
-    "Tu connais l'algorithme 2026 : Vinted est un MOTEUR DE RECHERCHE par mots-clés, "
-    "donc le titre et la description pèsent bien plus que les hashtags (qui ne sont "
-    "ni cliquables ni indexés, comptés comme du texte ordinaire).\n\n"
-    "Règles impératives :\n"
-    "- titre_vinted : 50 à 60 caractères, structure « marque + type + détail distinctif "
-    "(taille/couleur/état) », les mots-clés les plus recherchés EN TÊTE. Interdits : "
-    "MAJUSCULES criardes, « URGENT », « PROMO !!! », ponctuation spammée, mots génériques seuls.\n"
-    "- titre_court : version <= 50 caractères pour Leboncoin.\n"
-    "- description : 80 à 150 mots, en 3 blocs — (1) accroche 1-2 phrases sur ce qui rend "
-    "l'article spécial, (2) détails techniques (marque, dimensions/mesures, couleur exacte, "
-    "matière, état précis), (3) conditions (envoi rapide, lots, négociation). "
-    "Utilise des mots-clés LONGUE TRAÎNE (ce que l'acheteur tape vraiment) et des SYNONYMES "
-    "(ex. baskets/sneakers, canapé/sofa) pour capter plusieurs requêtes. Écris en LANGAGE "
-    "NATUREL (les annonces Vinted sont indexées par Google). Description UNIQUE, sans bourrage "
-    "de mots-clés. Termine par 3 à 5 hashtags ciblés.\n"
-    "- hashtags : 3 à 5 maximum, pertinents (marque, taille, style, matière/état), jamais dans le titre.\n"
-    "- attributs : propose les valeurs exactes à cocher dans les champs (marque, taille, couleur, "
-    "matière, état, catégorie la plus précise) car remplir tous les champs = apparaître dans les filtres.\n"
-    "Français correct, ton factuel et rassurant, aucune promesse mensongère."
+    "Tu es un expert de la revente d'occasion sur Vinted et Leboncoin en France (règles 2026). "
+    "Les deux plateformes classent d'abord sur le TEXTE (titre + description) et la FRAÎCHEUR, "
+    "pas sur les hashtags. Tu écris en français correct, ton factuel et rassurant, sans promesse "
+    "mensongère ni superlatif creux, en plaçant naturellement les mots-clés que les acheteurs tapent.\n\n"
+    "Champs à produire :\n"
+    "- titre_vinted : titre optimisé Vinted, 50-60 caractères, « marque + type + détail distinctif "
+    "(taille/couleur/état) », mots-clés les plus recherchés EN TÊTE. Interdits : MAJUSCULES criardes, "
+    "« URGENT », « PROMO !!! », ponctuation spammée, mots génériques seuls.\n"
+    "- titre_court : titre Leboncoin, <= 50 caractères, DESCRIPTIF et précis (type + marque + détail "
+    "+ quantité si utile), vocabulaire acheteur.\n"
+    "- description : 80 à 150 mots, en 3 blocs — (1) accroche, (2) détails techniques (marque, "
+    "dimensions/mesures, couleur, matière, état PRÉCIS et honnête), (3) conditions (envoi, négociation). "
+    "Mots-clés LONGUE TRAÎNE + SYNONYMES (baskets/sneakers…), langage naturel (indexé par Google), "
+    "description UNIQUE sans bourrage. Termine par les mots-clés/hashtags.\n"
+    "- hashtags : mots-clés ciblés (marque, taille/type, style, matière/état), jamais dans le titre.\n"
+    "- attributs : valeurs exactes à cocher (marque, taille, couleur, matière, état, catégorie la plus "
+    "précise) car remplir tous les champs = apparaître dans les filtres.\n"
+    "Respecte STRICTEMENT les règles spécifiques à la plateforme cible fournies dans le message."
 )
+
+# Règles propres à chaque plateforme, injectées selon la cible.
+REGLES_VINTED = (
+    "Règles VINTED : moteur de recherche par mots-clés ; les hashtags ne sont ni cliquables ni "
+    "indexés (comptés comme du texte). Mets 3 à 5 hashtags MAX, uniquement en fin de description. "
+    "Titre 50-60 car. riche en mots-clés. La fraîcheur prime : texte pensé pour la recherche interne "
+    "ET Google."
+)
+REGLES_LEBONCOIN = (
+    "Règles LEBONCOIN (impératif, sous peine de refus) : "
+    "(1) le titre et la description doivent DÉCRIRE RÉELLEMENT le produit, pas de texte publicitaire "
+    "ni généraliste ; titre descriptif et précis, sans « PROMO » ni majuscules criardes. "
+    "(2) MAXIMUM 5 mots-clés liés à l'annonce, en fin de description (avec ou sans #) — donne donc "
+    "AU PLUS 5 hashtags. "
+    "(3) UNE annonce = UN seul bien : n'écris jamais « plusieurs disponibles », « autres modèles en "
+    "stock » ni rien qui suggère un catalogue. "
+    "(4) N'utilise PAS la marque d'un AUTRE produit pour décrire celui-ci. "
+    "(5) État honnête : si l'emballage/la boîte est abîmé, écris « très bon état » ou « comme neuf », "
+    "jamais « neuf sous blister ». "
+    "(6) Catégorie la plus précise (ex. Maison & Jardin > Arts de la table)."
+)
+
+
+def _regles_plateforme(plateforme: str) -> str:
+    p = (plateforme or "vinted").lower()
+    if p == "leboncoin":
+        return REGLES_LEBONCOIN
+    if p in ("les-deux", "les deux", "both"):
+        return REGLES_VINTED + "\n" + REGLES_LEBONCOIN + (
+            "\nComme tu cibles LES DEUX : respecte la limite Leboncoin de 5 mots-clés max "
+            "(donc au plus 5 hashtags, valable aussi pour Vinted)."
+        )
+    return REGLES_VINTED
 
 
 def _prompt(produit: dict, mots_cles: list[str]) -> str:
@@ -107,11 +138,7 @@ def _prompt(produit: dict, mots_cles: list[str]) -> str:
         lignes.append("Mots-clés SEO à intégrer en priorité (les plus recherchés d'abord) : "
                       + ", ".join(mots_cles))
     lignes.append("")
-    lignes.append(
-        "Applique strictement les règles Vinted 2026 : titre 50-60 car. (marque + type + détail, "
-        "mots-clés en tête, aucune majuscule criarde) ; description 80-150 mots en 3 blocs, longue "
-        "traîne + synonymes, langage naturel ; 3-5 hashtags en fin de description ; attributs à remplir."
-    )
+    lignes.append(_regles_plateforme(produit.get("plateforme", "vinted")))
     return "\n".join(lignes)
 
 

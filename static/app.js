@@ -22,6 +22,7 @@ async function copier(texte) {
 }
 
 let dernierProduit = null;
+let dernierAnnonce = null;
 let dernierChiffrage = null;
 let dernierPromptGemini = "";
 
@@ -88,19 +89,51 @@ function afficherAnnonce(d) {
   } else { err.classList.add("cachee"); }
 
   const a = d.annonce || {};
-  $("lc-titre").textContent = a.titre_court || "—";
-  const len = (a.titre_court || "").length;
-  $("lc-titre-len").textContent = len + "/50" + (len > 50 ? " ⚠️" : "");
+  dernierAnnonce = a;
 
+  // Description commune
+  $("desc").textContent = a.description || "—";
+  const mots = (a.description || "").trim().split(/\s+/).filter(Boolean).length;
+  $("desc-len").textContent = a.description ? mots + " mots" + (mots >= 80 && mots <= 150 ? " ✓" : " (visez 80-150)") : "";
+
+  // Côté Vinted
   $("v-titre").textContent = a.titre_vinted || "—";
   const vlen = (a.titre_vinted || "").length;
-  // Cible Vinted : 50-60 caractères.
-  const vok = vlen >= 45 && vlen <= 60;
-  $("v-titre-len").textContent = vlen + " car." + (vok ? " ✓" : " (visez 50-60)");
-
-  $("desc").textContent = a.description || "—";
+  $("v-titre-len").textContent = vlen + " car." + (vlen >= 45 && vlen <= 60 ? " ✓" : " (50-60)");
   $("hashtags").textContent = (a.hashtags || []).slice(0, 5).map((h) => "#" + h.replace(/^#/, "")).join(" ") || "—";
+
+  // Côté Leboncoin
+  $("lc-titre").textContent = a.titre_court || "—";
+  const len = (a.titre_court || "").length;
+  $("lc-titre-len").textContent = len + "/50" + (len > 50 ? " ⚠️" : " ✓");
+  $("lc-cat").textContent = (a.attributs && a.attributs.categorie_precise) || "Maison & Jardin > Arts de la table";
+  // Leboncoin : 5 mots-clés max, sans le # (autorisés avec ou sans).
+  $("lc-tags").textContent = (a.hashtags || []).slice(0, 5).map((h) => h.replace(/^#/, "")).join(" · ") || "—";
+
+  // Affiche le(s) côté(s) selon la plateforme cible
+  const plat = (d.produit && d.produit.plateforme) || "les-deux";
+  $("cote-vinted").classList.toggle("cachee", plat === "leboncoin");
+  $("cote-lbc").classList.toggle("cachee", plat === "vinted");
+
   afficherAttributs(a.attributs);
+}
+
+// Copier l'annonce complète (titre + description + mots-clés) pour une plateforme
+function copierAnnonceComplete(plateforme) {
+  const a = dernierAnnonce;
+  if (!a) return;
+  let titre, tags;
+  if (plateforme === "leboncoin") {
+    titre = a.titre_court || "";
+    tags = (a.hashtags || []).slice(0, 5).map((h) => h.replace(/^#/, "")).join(" ");
+  } else {
+    titre = a.titre_vinted || "";
+    tags = (a.hashtags || []).slice(0, 5).map((h) => "#" + h.replace(/^#/, "")).join(" ");
+  }
+  // Si la description contient déjà les hashtags à la fin, on n'ajoute pas de doublon.
+  let desc = a.description || "";
+  const bloc = tags && !desc.includes(tags.split(" ")[0]) ? desc + "\n\n" + tags : desc;
+  copier(titre + "\n\n" + bloc);
 }
 
 function afficherAttributs(attrs) {
@@ -208,9 +241,20 @@ $("btn-mediane").addEventListener("click", async () => {
     `conseillé <strong style="color:var(--vert)">${s.conseille} €</strong> (référence remplie).`;
 });
 
-// copier les blocs
+// copier les blocs (boutons avec data-cible)
 document.querySelectorAll(".copier").forEach((b) => {
   b.addEventListener("click", () => copier($(b.dataset.cible).textContent));
+});
+
+// boutons « copier l'annonce complète » (Vinted / Leboncoin)
+document.querySelectorAll("[data-full]").forEach((b) => {
+  b.addEventListener("click", () => copierAnnonceComplete(b.dataset.full));
+});
+
+// clic direct sur un champ copiable = copier son contenu
+document.getElementById("resultats").addEventListener("click", (e) => {
+  const el = e.target.closest(".copiable.petit");
+  if (el && el.textContent && el.textContent !== "—") copier(el.textContent);
 });
 
 // ------------------------------------------------------------------ suivre annonce

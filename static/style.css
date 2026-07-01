@@ -57,6 +57,19 @@ button{font-family:inherit}
 .conseils li{margin:3px 0}
 .conseils strong{color:var(--txt)}
 
+.cotes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:12px 0}
+.cote{background:var(--carte2);border:1px solid var(--bord);border-radius:12px;padding:14px}
+.cote.cachee{display:none}
+.cote-vinted{border-top:3px solid #09b1ba}
+.cote-lbc{border-top:3px solid #ff6e14}
+.cote h3{margin:0 0 10px;font-size:1rem}
+.champ{margin-bottom:10px}
+.champ .lab{display:block;font-size:.75rem;color:var(--muted);margin-bottom:4px}
+.copiable.petit{background:var(--carte);border:1px solid var(--bord);border-radius:8px;padding:8px 10px;font-size:.9rem}
+.copier.mini{margin:6px 0 0;margin-left:0}
+.principal.mini{width:100%;margin-top:6px;padding:10px;font-size:.92rem}
+.rappel-lbc{font-size:.78rem;color:var(--muted);background:rgba(255,110,20,.08);border:1px solid rgba(255,110,20,.3);border-radius:8px;padding:8px 10px;margin:8px 0}
+
 .info{color:var(--muted);font-size:.88rem;margin-bottom:8px}
 .alerte{background:#3a2323;border:1px solid var(--rouge);color:#ffb4b4;padding:10px 12px;border-radius:9px;margin-bottom:10px;font-size:.9rem}
 

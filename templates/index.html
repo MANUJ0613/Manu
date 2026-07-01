@@ -76,33 +76,46 @@
     <div id="erreur-claude" class="alerte cachee"></div>
 
     <div class="bloc-copie">
-      <div class="entete-copie"><strong>Titre court (Leboncoin ≤ 50)</strong>
-        <span id="lc-titre-len" class="compteur"></span>
-        <button class="copier" data-cible="lc-titre">Copier</button>
-      </div>
-      <div id="lc-titre" class="copiable"></div>
-    </div>
-
-    <div class="bloc-copie">
-      <div class="entete-copie"><strong>Titre Vinted</strong>
-        <span id="v-titre-len" class="compteur"></span>
-        <button class="copier" data-cible="v-titre">Copier</button>
-      </div>
-      <div id="v-titre" class="copiable"></div>
-    </div>
-
-    <div class="bloc-copie">
-      <div class="entete-copie"><strong>Description</strong>
+      <div class="entete-copie"><strong>Description (commune)</strong>
+        <span id="desc-len" class="compteur"></span>
         <button class="copier" data-cible="desc">Copier</button>
       </div>
       <div id="desc" class="copiable multi"></div>
     </div>
 
-    <div class="bloc-copie">
-      <div class="entete-copie"><strong>Hashtags (3-5, en fin de description)</strong>
-        <button class="copier" data-cible="hashtags">Copier</button>
+    <div class="cotes">
+      <!-- ---------- Côté Vinted ---------- -->
+      <div class="cote cote-vinted" id="cote-vinted">
+        <h3>🛍️ Côté Vinted</h3>
+        <div class="champ">
+          <span class="lab">Titre <span id="v-titre-len" class="compteur"></span></span>
+          <div id="v-titre" class="copiable petit"></div>
+        </div>
+        <div class="champ">
+          <span class="lab">Hashtags (3-5, en fin de description)</span>
+          <div id="hashtags" class="copiable petit"></div>
+        </div>
+        <button class="principal mini" data-full="vinted">📋 Copier l'annonce Vinted</button>
       </div>
-      <div id="hashtags" class="copiable"></div>
+
+      <!-- ---------- Côté Leboncoin ---------- -->
+      <div class="cote cote-lbc" id="cote-lbc">
+        <h3>🔵 Côté Leboncoin</h3>
+        <div class="champ">
+          <span class="lab">Titre <span id="lc-titre-len" class="compteur"></span></span>
+          <div id="lc-titre" class="copiable petit"></div>
+        </div>
+        <div class="champ">
+          <span class="lab">Catégorie conseillée</span>
+          <div id="lc-cat" class="copiable petit"></div>
+        </div>
+        <div class="champ">
+          <span class="lab">Mots-clés (5 max, en fin de description)</span>
+          <div id="lc-tags" class="copiable petit"></div>
+        </div>
+        <div class="rappel-lbc">⚖️ 1 annonce = 1 bien · décris vraiment le produit (pas « plusieurs dispo ») · état réel · pas la marque d'un autre produit · republier = supprimer puis recréer.</div>
+        <button class="principal mini" data-full="leboncoin">📋 Copier l'annonce Leboncoin</button>
+      </div>
     </div>
 
     <div id="bloc-attributs" class="bloc-copie cachee">
@@ -111,13 +124,13 @@
     </div>
 
     <details class="conseils">
-      <summary>💡 Rappels SEO Vinted 2026</summary>
+      <summary>💡 Rappels SEO 2026</summary>
       <ul>
-        <li>Le <strong>texte</strong> et la <strong>fraîcheur</strong> priment sur les hashtags (non indexés).</li>
-        <li><strong>5-8 photos</strong> nettes, fond neutre, 1ʳᵉ = vue d'ensemble (facteur n°1 du clic).</li>
-        <li>Remplis <strong>tous les attributs</strong> + catégorie la plus précise.</li>
-        <li>Prix vérifié sur les <strong>« Vendus »</strong>, aligné ou -10 % (astuce : X,99 €).</li>
-        <li>Republie aux <strong>heures de pointe</strong> (mer/jeu 18-20h, dim soir), 1×/jour max.</li>
+        <li><strong>Vinted</strong> : titre 50-60 car., 3-5 hashtags en fin de description, republie 1×/jour max tous les 7-10 j.</li>
+        <li><strong>Leboncoin</strong> : titre descriptif, <strong>5 mots-clés max</strong>, 1 annonce = 1 bien, republier = <strong>supprimer puis recréer</strong> (durée annonce 60 j).</li>
+        <li><strong>Photos</strong> (les deux) : 5-8 nettes, fond neutre, 1ʳᵉ = vue d'ensemble ; montre le vrai objet + le défaut.</li>
+        <li><strong>Prix</strong> : vérifié sur les « Vendus », aligné ou -10 % (astuce X,99 €).</li>
+        <li><strong>Créneaux FR</strong> : mer/jeu 18-20h30, dim 17h30-20h30.</li>
       </ul>
     </details>
 
