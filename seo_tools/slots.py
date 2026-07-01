@@ -46,14 +46,25 @@ RELIST_MIN_HEURES = float(os.environ.get("RELIST_MIN_HEURES", "24"))
 
 
 def statut_annonce(annonce: dict, maintenant: float | None = None) -> dict:
-    """Ajoute couleur + âge à une annonce (dict issu de db)."""
+    """Ajoute couleur + âge à une annonce (dict issu de db).
+
+    Si l'annonce a une cadence_jours (rythme de republication conseillé, ex.
+    7-10 j), les seuils 🟠/🔴 s'y alignent ; sinon on utilise les seuils globaux.
+    """
     maintenant = maintenant or time.time()
     ref = annonce.get("date_republication") or annonce.get("date_publication") or maintenant
     age_h = max(0.0, (maintenant - ref) / 3600.0)
 
-    if age_h >= CRIT_HEURES:
+    cadence = annonce.get("cadence_jours")
+    if cadence:
+        crit_h = float(cadence) * 24.0
+        warn_h = max(float(cadence) - 2.0, 1.0) * 24.0   # orange 2 j avant l'échéance
+    else:
+        crit_h, warn_h = CRIT_HEURES, WARN_HEURES
+
+    if age_h >= crit_h:
         couleur, emoji, label = "rouge", "🔴", "À republier maintenant"
-    elif age_h >= WARN_HEURES:
+    elif age_h >= warn_h:
         couleur, emoji, label = "orange", "🟠", "À republier bientôt"
     else:
         couleur, emoji, label = "vert", "🟢", "Fraîche"
@@ -64,6 +75,9 @@ def statut_annonce(annonce: dict, maintenant: float | None = None) -> dict:
     out["statut_label"] = label
     out["age_heures"] = round(age_h, 1)
     out["age_jours"] = round(age_h / 24.0, 1)
+    # Date conseillée de prochaine republication.
+    out["prochaine_republication"] = ref + crit_h * 3600.0
+    out["jours_avant_republication"] = round((crit_h - age_h) / 24.0, 1)
     return out
 
 

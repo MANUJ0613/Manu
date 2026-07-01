@@ -121,6 +121,25 @@ def generer():
     })
 
 
+@app.post("/api/mediane")
+def api_mediane():
+    """Médiane des prix « vendus » collés par l'utilisateur (référence marché).
+
+    Accepte {'prix': [12, 15, ...]} ou {'texte': '12\\n15,50\\n20 €'}.
+    """
+    data = request.get_json(force=True, silent=True) or {}
+    prix_list: list[float] = []
+    if isinstance(data.get("prix"), list):
+        prix_list = [p for p in (_to_float(x) for x in data["prix"]) if p is not None]
+    elif data.get("texte"):
+        import re
+        for token in re.findall(r"\d+[.,]?\d*", data["texte"]):
+            v = _to_float(token)
+            if v is not None:
+                prix_list.append(v)
+    return jsonify(pricing.stats_prix(prix_list))
+
+
 @app.post("/api/prix")
 def prix():
     """Recalcul de prix/marge à la volée (curseur de marge côté UI)."""
@@ -163,10 +182,61 @@ def api_creer_annonce():
         categorie=data.get("categorie"),
         prix=_to_float(data.get("prix")),
         prix_achat=_to_float(data.get("prix_achat")),
+        reference_marche=_to_float(data.get("reference_marche")),
+        cadence_jours=_to_float(data.get("cadence_jours")),
+        titre_b=data.get("titre_b"),
+        prix_b=_to_float(data.get("prix_b")),
         url=data.get("url"),
         note=data.get("note"),
     )
     return jsonify(slots.statut_annonce(db.get_annonce(aid))), 201
+
+
+@app.patch("/api/annonces/<int:aid>")
+def api_maj_annonce(aid: int):
+    """Met à jour cadence, variante B, prix, note… (champs autorisés seulement)."""
+    if not db.get_annonce(aid):
+        return jsonify({"erreur": "introuvable"}), 404
+    data = request.get_json(force=True, silent=True) or {}
+    autorises = {"cadence_jours", "reference_marche", "titre_b", "prix_b",
+                 "prix", "prix_achat", "note", "url", "categorie", "titre"}
+    maj = {}
+    for k in autorises & set(data.keys()):
+        if k in ("cadence_jours", "reference_marche", "prix", "prix_achat", "prix_b"):
+            maj[k] = _to_float(data[k])
+        else:
+            maj[k] = data[k]
+    if maj:
+        db.maj_annonce(aid, **maj)
+    return jsonify(slots.statut_annonce(db.get_annonce(aid)))
+
+
+@app.post("/api/annonces/<int:aid>/variante")
+def api_variante(aid: int):
+    """Bascule A/B (change le titre/prix affiché = relister l'annonce)."""
+    a = db.get_annonce(aid)
+    if not a:
+        return jsonify({"erreur": "introuvable"}), 404
+    if not a.get("titre_b"):
+        return jsonify({"erreur": "Aucune variante B définie."}), 400
+    data = request.get_json(force=True, silent=True) or {}
+    if not data.get("force") and a["nb_republications"] >= 1 and slots.republication_trop_recente(a):
+        return jsonify({
+            "avertissement": "Basculer relance l'annonce (< 24 h depuis le dernier repost). Confirmer ?",
+            "annonce": slots.statut_annonce(a),
+        }), 409
+    nouvelle = db.basculer_variante(aid)
+    out = slots.statut_annonce(db.get_annonce(aid))
+    out["variante_active"] = nouvelle
+    return jsonify(out)
+
+
+@app.get("/api/annonces/<int:aid>/ab")
+def api_bilan_ab(aid: int):
+    """Bilan A/B : ventes par variante."""
+    if not db.get_annonce(aid):
+        return jsonify({"erreur": "introuvable"}), 404
+    return jsonify(db.ventes_par_variante(aid))
 
 
 @app.post("/api/annonces/<int:aid>/republier")

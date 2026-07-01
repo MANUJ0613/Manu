@@ -104,6 +104,29 @@ def prix_pour_marge(prix_achat: float, marge_cible_pct: float, plateforme: str =
     return round(prix_vente + 0.004, 2)  # arrondi propre
 
 
+def stats_prix(prix: list[float]) -> dict:
+    """Statistiques d'une liste de prix « vendus » (référence marché).
+
+    Renvoie médiane, moyenne, min, max et un prix conseillé (médiane -10 %,
+    astuce psychologique en X,99). Renvoie None partout si liste vide.
+    """
+    valeurs = sorted(float(p) for p in prix if p is not None and float(p) > 0)
+    n = len(valeurs)
+    if not n:
+        return {"n": 0, "mediane": None, "moyenne": None, "min": None, "max": None, "conseille": None}
+    milieu = n // 2
+    mediane = valeurs[milieu] if n % 2 else (valeurs[milieu - 1] + valeurs[milieu]) / 2
+    conseille = round(mediane * 0.9) - 0.01 if mediane else None  # -10 % puis X,99
+    return {
+        "n": n,
+        "mediane": round(mediane, 2),
+        "moyenne": round(sum(valeurs) / n, 2),
+        "min": round(valeurs[0], 2),
+        "max": round(valeurs[-1], 2),
+        "conseille": round(conseille, 2) if conseille and conseille > 0 else round(mediane, 2),
+    }
+
+
 def suggestions_prix(prix_achat: float, plateforme: str = "vinted",
                      reference_marche: float | None = None) -> dict:
     """Trois paliers de prix (rapide / équilibré / marge max) + un ancrage marché.

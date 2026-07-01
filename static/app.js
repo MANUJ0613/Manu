@@ -195,6 +195,19 @@ $("btn-copier-prompt").addEventListener("click", () => {
   if (dernierPromptGemini) copier(dernierPromptGemini);
 });
 
+// médiane des vendus -> remplit la référence marché
+$("btn-mediane").addEventListener("click", async () => {
+  const texte = $("vendus-texte").value.trim();
+  if (!texte) { toast("Colle des prix d'abord", true); return; }
+  const s = await api("/api/mediane", { method: "POST", body: { texte } });
+  if (!s.n) { $("mediane-res").textContent = "Aucun prix détecté."; return; }
+  $("reference_marche").value = s.mediane;
+  if (!$("bloc-prix").classList.contains("cachee")) majPrixLive();
+  $("mediane-res").innerHTML =
+    `${s.n} prix · médiane <strong>${s.mediane} €</strong> · min ${s.min} / max ${s.max} · ` +
+    `conseillé <strong style="color:var(--vert)">${s.conseille} €</strong> (référence remplie).`;
+});
+
 // copier les blocs
 document.querySelectorAll(".copier").forEach((b) => {
   b.addEventListener("click", () => copier($(b.dataset.cible).textContent));
@@ -231,22 +244,41 @@ async function chargerAnnonces() {
   d.annonces.forEach((a) => {
     const el = document.createElement("div");
     el.className = "annonce " + a.statut_couleur;
+    const bActive = a.variante_active === "B" && a.titre_b;
+    const titreActif = bActive ? a.titre_b : a.titre;
+    const badge = a.titre_b ? `<span class="badge">Var. ${a.variante_active}</span>` : "";
+    const repub = a.jours_avant_republication;
+    const repubTxt = repub <= 0 ? "à republier" : `repub. dans ${repub} j`;
+    const cadence = Math.round(a.cadence_jours || 8);
+    const opts = [7, 8, 10, 14, 21].map((v) =>
+      `<option value="${v}" ${v === cadence ? "selected" : ""}>${v} j</option>`).join("");
+
     el.innerHTML =
       `<div class="statut">${a.statut_emoji}</div>` +
-      `<div class="infos"><div class="titre">${a.titre}</div>` +
-      `<div class="meta">${a.plateforme} · ${a.age_jours} j · ${a.statut_label}` +
-      (a.nb_republications ? ` · ${a.nb_republications}× republié` : "") + `</div></div>` +
+      `<div class="infos"><div class="titre">${titreActif} ${badge}</div>` +
+      `<div class="meta">${a.plateforme} · ${a.age_jours} j · ${a.statut_label} · ${repubTxt}` +
+      (a.nb_republications ? ` · ${a.nb_republications}× repub.` : "") + `</div>` +
+      `<details class="ab-panel"><summary>⚙️ Cadence &amp; test A/B</summary>` +
+      `<div class="ab-row">Republier tous les <select data-cadence="${a.id}">${opts}</select></div>` +
+      `<div class="variante ${!bActive ? "on" : ""}">A · ${a.titre} ${a.prix ? "· " + a.prix + " €" : ""}</div>` +
+      `<div class="variante ${bActive ? "on" : ""}">B · ` +
+      `<input class="ab-in" data-btitre="${a.id}" value="${(a.titre_b || "").replace(/"/g, "&quot;")}" placeholder="titre variante B">` +
+      `<input class="ab-in prix" data-bprix="${a.id}" type="number" step="0.5" value="${a.prix_b || ""}" placeholder="€">` +
+      `<button data-bsave="${a.id}">💾</button></div>` +
+      (a.titre_b ? `<button class="secondaire mini" data-bascule="${a.id}">🔀 Basculer A/B (relister)</button>` : "") +
+      `<div class="ab-bilan" data-bilan="${a.id}"></div>` +
+      `</details></div>` +
       `<div class="actions">` +
       `<button class="rep" data-rep="${a.id}">Republié</button>` +
       `<button data-vendu="${a.id}">Vendu</button>` +
       `<button data-del="${a.id}">✕</button></div>`;
     box.appendChild(el);
   });
+
   box.querySelectorAll("[data-rep]").forEach((b) => b.addEventListener("click", async () => {
     const id = b.dataset.rep;
     let r = await api(`/api/annonces/${id}/republier`, { method: "POST", body: {} });
     if (r.avertissement) {
-      // Anti-spam Vinted : on confirme avant de forcer.
       if (!confirm(r.avertissement)) return;
       r = await api(`/api/annonces/${id}/republier`, { method: "POST", body: { force: true } });
     }
@@ -259,6 +291,34 @@ async function chargerAnnonces() {
   box.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", async () => {
     await api(`/api/annonces/${b.dataset.del}`, { method: "DELETE" });
     chargerAnnonces();
+  }));
+  box.querySelectorAll("[data-cadence]").forEach((s) => s.addEventListener("change", async () => {
+    await api(`/api/annonces/${s.dataset.cadence}`, { method: "PATCH", body: { cadence_jours: s.value } });
+    toast("Cadence mise à jour"); chargerAnnonces();
+  }));
+  box.querySelectorAll("[data-bsave]").forEach((b) => b.addEventListener("click", async () => {
+    const id = b.dataset.bsave;
+    const titre_b = box.querySelector(`[data-btitre="${id}"]`).value.trim();
+    const prix_b = box.querySelector(`[data-bprix="${id}"]`).value;
+    await api(`/api/annonces/${id}`, { method: "PATCH", body: { titre_b, prix_b } });
+    toast("Variante B enregistrée"); chargerAnnonces();
+  }));
+  box.querySelectorAll("[data-bascule]").forEach((b) => b.addEventListener("click", async () => {
+    const id = b.dataset.bascule;
+    let r = await api(`/api/annonces/${id}/variante`, { method: "POST", body: {} });
+    if (r.avertissement) { if (!confirm(r.avertissement)) return;
+      r = await api(`/api/annonces/${id}/variante`, { method: "POST", body: { force: true } }); }
+    toast("Variante " + (r.variante_active || "") + " en ligne 🔀"); chargerAnnonces();
+  }));
+  // bilan A/B (chargé à l'ouverture du panneau)
+  box.querySelectorAll("details.ab-panel").forEach((det) => det.addEventListener("toggle", async () => {
+    if (!det.open) return;
+    const cible = det.querySelector("[data-bilan]");
+    const id = cible.dataset.bilan;
+    const bilan = await api(`/api/annonces/${id}/ab`);
+    cible.textContent = (bilan.A || bilan.B)
+      ? `Bilan ventes — A : ${bilan.A} · B : ${bilan.B}`
+      : "Bilan A/B : aucune vente encore.";
   }));
 }
 

@@ -59,6 +59,15 @@
     <label class="pleine">Mots-clés à privilégier (optionnel, séparés par des virgules)
       <input id="mots_cles" placeholder="Ex : vintage, streetwear, collector">
     </label>
+
+    <details class="conseils">
+      <summary>📈 Coller les prix « Vendus » → référence marché auto</summary>
+      <p class="aide">Colle quelques prix relevés sur les articles VENDUS (Vinted filtre « Vendus », eBay vendus…). On calcule la médiane et on remplit la référence marché.</p>
+      <textarea id="vendus-texte" rows="2" placeholder="Ex : 39,99  45  35  51  38"></textarea>
+      <button id="btn-mediane" class="secondaire">Calculer la médiane</button>
+      <div id="mediane-res" class="info"></div>
+    </details>
+
     <button id="btn-generer" class="principal">✨ Générer l'annonce</button>
   </section>
 

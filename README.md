@@ -29,10 +29,16 @@ Tu décris ton produit dans l'interface web, et l'outil :
   intégrés) avec 3 paliers (vente rapide / équilibré / marge max) et un curseur ;
 - propose des boutons **Google Lens / eBay (prix vendus) / Gemini** pour caler
   le prix ;
-- **suit tes annonces** avec un statut de fraîcheur **🟢🟠🔴** et t'envoie une
-  **alerte push ntfy** aux meilleurs créneaux pour les republier ;
+- **suit tes annonces** avec un statut de fraîcheur **🟢🟠🔴** (aligné sur une
+  **cadence de republication par annonce**, 7-10 j conseillés) et t'envoie une
+  **alerte push ntfy** aux meilleurs créneaux pour les republier — avec
+  **garde-fou anti-spam** (blocage des reposts < 24 h) ;
+- **importe tes prix « Vendus »** (colle une liste → médiane calculée et injectée
+  comme référence marché, prix conseillé médiane -10 % en X,99) ;
+- permet un **test A/B** par annonce (2 variantes titre/prix, bascule = relist,
+  bilan des ventes par variante) ;
 - **détecte TES meilleurs créneaux** à partir de tes propres ventes (repli sur
-  des créneaux grand trafic tant que tu n'as pas assez de données).
+  les créneaux grand trafic France : mer/jeu 18-20h, dim soir, sam 9-11h).
 
 ### Démarrage rapide (local)
 

@@ -43,6 +43,10 @@ def get_conn():
             conn.close()
 
 
+# Cadence de republication par défaut (jours). Le guide Vinted conseille de
+# republier les articles à forte demande tous les 7-10 jours.
+CADENCE_DEFAUT = float(os.environ.get("REPUB_CADENCE_JOURS", "8"))
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS annonces (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,6 +60,12 @@ CREATE TABLE IF NOT EXISTS annonces (
     date_publication  REAL NOT NULL,                     -- timestamp epoch (s)
     date_republication REAL NOT NULL,                    -- dernière (re)publication
     nb_republications INTEGER NOT NULL DEFAULT 0,
+    cadence_jours     REAL,                              -- rythme de republication conseillé
+    reference_marche  REAL,                              -- prix médian marché constaté
+    titre_b           TEXT,                              -- variante B (A/B test)
+    prix_b            REAL,
+    variante_active   TEXT NOT NULL DEFAULT 'A',         -- A | B
+    date_variante     REAL,                              -- dernier basculement A/B
     note              TEXT,
     cree_le           REAL NOT NULL
 );
@@ -65,6 +75,7 @@ CREATE TABLE IF NOT EXISTS ventes (
     annonce_id INTEGER,
     plateforme TEXT NOT NULL DEFAULT 'vinted',
     montant    REAL,
+    variante   TEXT,                                     -- variante A/B active lors de la vente
     date_vente REAL NOT NULL,                            -- timestamp epoch (s)
     FOREIGN KEY (annonce_id) REFERENCES annonces(id) ON DELETE SET NULL
 );
@@ -78,10 +89,35 @@ CREATE INDEX IF NOT EXISTS idx_annonces_statut ON annonces(statut);
 CREATE INDEX IF NOT EXISTS idx_ventes_date ON ventes(date_vente);
 """
 
+# Colonnes ajoutées après coup : migration douce des bases existantes.
+_MIGRATIONS = {
+    "annonces": {
+        "cadence_jours": "REAL",
+        "reference_marche": "REAL",
+        "titre_b": "TEXT",
+        "prix_b": "REAL",
+        "variante_active": "TEXT NOT NULL DEFAULT 'A'",
+        "date_variante": "REAL",
+    },
+    "ventes": {
+        "variante": "TEXT",
+    },
+}
+
+
+def _colonnes(conn: sqlite3.Connection, table: str) -> set[str]:
+    return {r["name"] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+
 
 def init_db() -> None:
     with get_conn() as conn:
         conn.executescript(SCHEMA)
+        # Migration : ajoute les colonnes manquantes sur une base déjà existante.
+        for table, cols in _MIGRATIONS.items():
+            existantes = _colonnes(conn, table)
+            for col, definition in cols.items():
+                if col not in existantes:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {definition}")
 
 
 # --------------------------------------------------------------------------- #
@@ -100,6 +136,11 @@ def creer_annonce(**kw: Any) -> int:
         "date_publication": kw.get("date_publication", now),
         "date_republication": kw.get("date_republication", now),
         "nb_republications": kw.get("nb_republications", 0),
+        "cadence_jours": kw.get("cadence_jours") or CADENCE_DEFAUT,
+        "reference_marche": kw.get("reference_marche"),
+        "titre_b": kw.get("titre_b"),
+        "prix_b": kw.get("prix_b"),
+        "variante_active": kw.get("variante_active", "A"),
         "note": kw.get("note"),
         "cree_le": now,
     }
@@ -147,18 +188,37 @@ def maj_annonce(annonce_id: int, **kw: Any) -> None:
 
 
 def marquer_vendu(annonce_id: int, montant: float | None = None) -> None:
-    """Passe l'annonce en 'vendu' et enregistre la vente (sert aux créneaux)."""
+    """Passe l'annonce en 'vendu' et enregistre la vente (sert aux créneaux + A/B)."""
     now = time.time()
     a = get_annonce(annonce_id)
     plateforme = a["plateforme"] if a else "vinted"
+    variante = a.get("variante_active", "A") if a else "A"
     if montant is None and a:
-        montant = a.get("prix")
+        # Prix de la variante active si dispo.
+        montant = a.get("prix_b") if variante == "B" and a.get("prix_b") else a.get("prix")
     with get_conn() as conn:
         conn.execute("UPDATE annonces SET statut = 'vendu' WHERE id = ?", (annonce_id,))
         conn.execute(
-            "INSERT INTO ventes (annonce_id, plateforme, montant, date_vente) VALUES (?, ?, ?, ?)",
-            (annonce_id, plateforme, montant, now),
+            "INSERT INTO ventes (annonce_id, plateforme, montant, variante, date_vente) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (annonce_id, plateforme, montant, variante, now),
         )
+
+
+def basculer_variante(annonce_id: int) -> str:
+    """Bascule entre variante A et B et republie (changer le titre = relister)."""
+    now = time.time()
+    a = get_annonce(annonce_id)
+    if not a:
+        return "A"
+    nouvelle = "B" if a.get("variante_active", "A") == "A" else "A"
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE annonces SET variante_active = ?, date_variante = ?, "
+            "date_republication = ?, nb_republications = nb_republications + 1 WHERE id = ?",
+            (nouvelle, now, now, annonce_id),
+        )
+    return nouvelle
 
 
 def supprimer_annonce(annonce_id: int) -> None:
@@ -177,6 +237,19 @@ def ajouter_vente(date_vente: float, montant: float | None = None,
             (annonce_id, plateforme, montant, date_vente),
         )
         return cur.lastrowid
+
+
+def ventes_par_variante(annonce_id: int) -> dict:
+    """Nombre de ventes par variante A/B pour une annonce (bilan A/B test)."""
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT variante, COUNT(*) n FROM ventes WHERE annonce_id = ? GROUP BY variante",
+            (annonce_id,),
+        ).fetchall()
+    out = {"A": 0, "B": 0}
+    for r in rows:
+        out[r["variante"] or "A"] = r["n"]
+    return out
 
 
 def lister_ventes(depuis: float | None = None) -> list[dict]:

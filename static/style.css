@@ -95,6 +95,18 @@ button{font-family:inherit}
 .annonce .actions button{background:var(--carte);border:1px solid var(--bord);color:var(--txt);border-radius:8px;padding:6px 9px;cursor:pointer;font-size:.8rem}
 .annonce .actions .rep{border-color:var(--accent);color:var(--accent)}
 .aide{color:var(--muted);font-size:.82rem;margin-top:10px}
+.badge{background:var(--accent);color:#fff;border-radius:6px;padding:1px 7px;font-size:.68rem;vertical-align:middle}
+.ab-panel{margin-top:6px}
+.ab-panel summary{cursor:pointer;color:var(--muted);font-size:.78rem;padding:4px 0}
+.ab-row{font-size:.82rem;color:var(--muted);margin:6px 0}
+.ab-row select{width:auto;display:inline-block;padding:3px 6px;font-size:.82rem}
+.variante{font-size:.82rem;padding:6px 8px;border-radius:8px;border:1px solid var(--bord);margin:5px 0;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.variante.on{border-color:var(--vert);background:rgba(47,191,113,.08)}
+.ab-in{flex:1;min-width:90px;padding:5px 8px;font-size:.82rem}
+.ab-in.prix{flex:0 0 70px}
+.variante button{background:var(--carte);border:1px solid var(--bord);color:var(--txt);border-radius:7px;padding:4px 8px;cursor:pointer}
+.secondaire.mini{margin-top:6px;padding:6px 10px;font-size:.82rem}
+.ab-bilan{font-size:.8rem;color:var(--muted);margin-top:6px}
 
 .creneau{display:flex;align-items:center;gap:12px;background:var(--carte2);border:1px solid var(--bord);border-radius:10px;padding:11px 14px;margin:8px 0}
 .creneau .rang{font-size:1.3rem;font-weight:700;color:var(--accent);width:28px}
