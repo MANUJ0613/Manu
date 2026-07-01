@@ -43,9 +43,23 @@ def get_conn():
             conn.close()
 
 
-# Cadence de republication par défaut (jours). Le guide Vinted conseille de
-# republier les articles à forte demande tous les 7-10 jours.
-CADENCE_DEFAUT = float(os.environ.get("REPUB_CADENCE_JOURS", "8"))
+# Cadence de republication par défaut (jours), par plateforme.
+# Vinted : la fraîcheur prime, republier tous les 7-10 j (guide).
+# Leboncoin : l'annonce vit 60 j ; on rafraîchit plutôt tous les 10-14 j.
+CADENCE_DEFAUT = float(os.environ.get("REPUB_CADENCE_JOURS", "8"))          # repli global
+CADENCE_VINTED = float(os.environ.get("REPUB_CADENCE_VINTED", "8"))
+CADENCE_LEBONCOIN = float(os.environ.get("REPUB_CADENCE_LEBONCOIN", "12"))
+
+
+def cadence_defaut(plateforme: str | None) -> float:
+    """Cadence conseillée selon la plateforme."""
+    p = (plateforme or "vinted").lower()
+    if p == "leboncoin":
+        return CADENCE_LEBONCOIN
+    if p in ("les-deux", "les deux", "both"):
+        # Cible mixte : on prend la cadence la plus courte (Vinted) pour rester frais.
+        return min(CADENCE_VINTED, CADENCE_LEBONCOIN)
+    return CADENCE_VINTED
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS annonces (
@@ -136,7 +150,7 @@ def creer_annonce(**kw: Any) -> int:
         "date_publication": kw.get("date_publication", now),
         "date_republication": kw.get("date_republication", now),
         "nb_republications": kw.get("nb_republications", 0),
-        "cadence_jours": kw.get("cadence_jours") or CADENCE_DEFAUT,
+        "cadence_jours": kw.get("cadence_jours") or cadence_defaut(kw.get("plateforme")),
         "reference_marche": kw.get("reference_marche"),
         "titre_b": kw.get("titre_b"),
         "prix_b": kw.get("prix_b"),

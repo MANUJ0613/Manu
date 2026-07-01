@@ -294,7 +294,7 @@ async function chargerAnnonces() {
     const repub = a.jours_avant_republication;
     const repubTxt = repub <= 0 ? "à republier" : `repub. dans ${repub} j`;
     const cadence = Math.round(a.cadence_jours || 8);
-    const opts = [7, 8, 10, 14, 21].map((v) =>
+    const opts = [7, 8, 10, 12, 14, 21].map((v) =>
       `<option value="${v}" ${v === cadence ? "selected" : ""}>${v} j</option>`).join("");
 
     el.innerHTML =
