@@ -89,8 +89,12 @@ async function analyserFichierPhoto(input) {
     const map = { nom: "nom", marque: "marque", categorie: "categorie", taille: "taille", couleur: "couleur", details: "details" };
     Object.entries(map).forEach(([k, id]) => { if (p[k]) $(id).value = p[k]; });
     if (p.etat) {
+      // Boucle indexée : HTMLOptionsCollection n'est pas itérable sur tous les
+      // navigateurs mobiles (Samsung Internet, vieux Chromium).
       const sel = $("etat");
-      [...sel.options].forEach((o) => { if (o.value === p.etat) sel.value = p.etat; });
+      for (let i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === p.etat) { sel.value = p.etat; break; }
+      }
     }
     if (p.mots_cles && p.mots_cles.length) $("mots_cles").value = p.mots_cles.join(", ");
     status.textContent = "✅ Champs remplis (confiance " + (p.confiance || "?") +
