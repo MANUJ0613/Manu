@@ -132,6 +132,11 @@ button{font-family:inherit}
 .creneau .quand{flex:1;font-weight:600;text-transform:capitalize}
 .creneau .part{color:var(--muted);font-size:.85rem}
 
+.erreur-js{position:fixed;bottom:0;left:0;right:0;background:#7a1f23;color:#ffd7d7;padding:12px 14px;
+  font-size:.85rem;font-family:monospace;z-index:30;word-break:break-word;cursor:pointer}
+.erreur-js.cachee{display:none}
+.pied{text-align:center;color:var(--muted);font-size:.72rem;padding:14px 0 20px}
+
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
   background:var(--vert);color:#04240f;padding:12px 20px;border-radius:10px;font-weight:600;
   transition:transform .25s;z-index:20}

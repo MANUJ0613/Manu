@@ -48,6 +48,24 @@ let dernierAnnonce = null;
 let dernierChiffrage = null;
 let dernierPromptGemini = "";
 
+// Capteur d'erreurs global : affiche l'erreur complète (message + fichier:ligne)
+// dans un bandeau, pour diagnostiquer sans capture d'écran ni console.
+function montrerErreurJS(msg) {
+  const b = document.getElementById("erreur-js");
+  if (!b) return;
+  b.textContent = "🐞 " + msg + "  (appuie pour fermer)";
+  b.classList.remove("cachee");
+  b.onclick = () => b.classList.add("cachee");
+}
+window.addEventListener("error", (e) => {
+  const ou = e.filename ? e.filename.split("/").pop() + ":" + e.lineno : "?";
+  montrerErreurJS((e.message || "erreur inconnue") + " @ " + ou);
+});
+window.addEventListener("unhandledrejection", (e) => {
+  const r = e.reason || {};
+  montrerErreurJS((r.message || String(r)) + (r.stack ? " @ " + String(r.stack).split("\n")[1] : ""));
+});
+
 // ------------------------------------------------------------------ onglets
 document.querySelectorAll(".onglet").forEach((b) => {
   b.addEventListener("click", () => {
@@ -279,7 +297,10 @@ function afficherSeo(seo, paquets) {
 // ------------------------------------------------------------------ prix / marge
 function afficherPrix(chiffrage, plateforme) {
   const bloc = $("bloc-prix");
-  if (!chiffrage) { bloc.classList.add("cachee"); return; }
+  if (!chiffrage || !chiffrage.paliers || !chiffrage.paliers.equilibre) {
+    bloc.classList.add("cachee");
+    return;
+  }
   bloc.classList.remove("cachee");
   dernierChiffrage = chiffrage;
   const p = chiffrage.paliers;
@@ -304,17 +325,22 @@ $("marge-slider").addEventListener("input", () => {
 async function majPrixLive() {
   const prixAchat = $("prix_achat").value;
   if (!prixAchat) { $("prix-live").textContent = "Renseigne un prix d'achat pour le calcul."; return; }
-  const c = await api("/api/prix", {
-    method: "POST",
-    body: {
-      prix_achat: prixAchat,
-      plateforme: $("plateforme").value,
-      marge_cible_pct: $("marge-slider").value,
-    },
-  });
-  $("prix-live").innerHTML =
-    `Prix conseillé : <strong>${c.prix_vente.toFixed(2)} €</strong> · ` +
-    `marge nette <strong style="color:var(--vert)">${c.marge_euro.toFixed(2)} €</strong>`;
+  try {
+    const c = await api("/api/prix", {
+      method: "POST",
+      body: {
+        prix_achat: prixAchat,
+        plateforme: $("plateforme").value,
+        marge_cible_pct: $("marge-slider").value,
+      },
+    });
+    if (c == null || typeof c.prix_vente !== "number") throw new Error(c && c.erreur ? c.erreur : "calcul indisponible");
+    $("prix-live").innerHTML =
+      `Prix conseillé : <strong>${c.prix_vente.toFixed(2)} €</strong> · ` +
+      `marge nette <strong style="color:var(--vert)">${c.marge_euro.toFixed(2)} €</strong>`;
+  } catch (e) {
+    $("prix-live").textContent = "Prix indisponible : " + e.message;
+  }
 }
 
 // ------------------------------------------------------------------ liens externes
@@ -334,8 +360,10 @@ $("btn-copier-prompt").addEventListener("click", () => {
 $("btn-mediane").addEventListener("click", async () => {
   const texte = $("vendus-texte").value.trim();
   if (!texte) { toast("Colle des prix d'abord", true); return; }
-  const s = await api("/api/mediane", { method: "POST", body: { texte } });
-  if (!s.n) { $("mediane-res").textContent = "Aucun prix détecté."; return; }
+  let s;
+  try { s = await api("/api/mediane", { method: "POST", body: { texte } }); }
+  catch (e) { toast(e.message, true); return; }
+  if (!s || !s.n) { $("mediane-res").textContent = "Aucun prix détecté."; return; }
   $("reference_marche").value = s.mediane;
   if (!$("bloc-prix").classList.contains("cachee")) majPrixLive();
   $("mediane-res").innerHTML =
@@ -463,11 +491,13 @@ async function chargerAnnonces() {
   box.querySelectorAll("details.ab-panel").forEach((det) => det.addEventListener("toggle", async () => {
     if (!det.open) return;
     const cible = det.querySelector("[data-bilan]");
-    const id = cible.dataset.bilan;
-    const bilan = await api(`/api/annonces/${id}/ab`);
-    cible.textContent = (bilan.A || bilan.B)
-      ? `Bilan ventes — A : ${bilan.A} · B : ${bilan.B}`
-      : "Bilan A/B : aucune vente encore.";
+    if (!cible) return;
+    try {
+      const bilan = await api(`/api/annonces/${cible.dataset.bilan}/ab`) || {};
+      cible.textContent = (bilan.A || bilan.B)
+        ? `Bilan ventes — A : ${bilan.A || 0} · B : ${bilan.B || 0}`
+        : "Bilan A/B : aucune vente encore.";
+    } catch (e) { cible.textContent = "Bilan indisponible."; }
   }));
 }
 

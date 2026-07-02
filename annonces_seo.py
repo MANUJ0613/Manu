@@ -60,6 +60,16 @@ def index():
     return render_template("index.html", version_statique=_version_statique())
 
 
+@app.after_request
+def _pas_de_cache_html(resp):
+    """Le HTML ne doit jamais être mis en cache : c'est lui qui pointe vers la
+    bonne version du JS/CSS (?v=...). Sans ça, un HTML périmé recharge un vieux
+    app.js et fait réapparaître des bugs déjà corrigés."""
+    if resp.mimetype == "text/html":
+        resp.headers["Cache-Control"] = "no-store, must-revalidate"
+    return resp
+
+
 @app.get("/api/etat")
 def etat():
     """État de configuration : ce qui est branché ou non."""
