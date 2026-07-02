@@ -1,16 +1,7 @@
 {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-  "last_scan": "2026-07-01T09:34:23.738037+00:00",
-=======
-  "last_scan": "2026-07-01T15:08:36.507494+00:00",
->>>>>>> Stashed changes
+  "last_scan": "2026-07-02T02:16:28.076011+00:00",
+  "pack_id_max": 670,
   "pack_roll": 601,
-=======
-  "last_scan": "2026-07-01T20:42:12.982850+00:00",
-  "pack_id_max": 579,
-  "pack_roll": 481,
->>>>>>> Stashed changes
   "seen": {
     "https://www.micromania.fr/p/a-plague-tale-requiem-119972.html#new": 1.0,
     "https://www.micromania.fr/p/agatha-christie-mort-sur-le-nil-156426.html#new": 9.99,
@@ -18,24 +9,12 @@
     "https://www.micromania.fr/p/atlas-fallen-125123.html#new": 4.99,
     "https://www.micromania.fr/p/atlas-fallen-125137.html#new": 4.99,
     "https://www.micromania.fr/p/borderlands-4-151492.html#new": 19.99,
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-    "https://www.micromania.fr/p/final-fantasy-xvi-128408.html#new": 19.99,
-=======
     "https://www.micromania.fr/p/borderlands-4-151494.html#new": 19.99,
     "https://www.micromania.fr/p/destroy-all-humans-2-reprobed-single-player-131882.html#new": 1.0,
     "https://www.micromania.fr/p/dragon-ball-the-breakers-edition-speciale-124386.html#new": 1.0,
     "https://www.micromania.fr/p/ea-sports-fc-25-138306.html#new": 9.99,
     "https://www.micromania.fr/p/evil-west-119978.html#new": 1.0,
     "https://www.micromania.fr/p/final-fantasy-xvi-128408.html#new": 19.99,
-=======
-    "https://www.micromania.fr/p/borderlands-4-151494.html#new": 19.99,
-    "https://www.micromania.fr/p/destroy-all-humans-2-reprobed-single-player-131882.html#new": 1.0,
-    "https://www.micromania.fr/p/dragon-ball-the-breakers-edition-speciale-124386.html#new": 1.0,
-    "https://www.micromania.fr/p/ea-sports-fc-25-138306.html#new": 9.99,
-    "https://www.micromania.fr/p/evil-west-119978.html#new": 1.0,
-    "https://www.micromania.fr/p/final-fantasy-xvi-128408.html#new": 19.99,
->>>>>>> Stashed changes
     "https://www.micromania.fr/p/greedfall-ii-the-dying-world-157479.html#new": 29.99,
     "https://www.micromania.fr/p/hogwarts-legacy-l-heritage-de-poudlard-120188.html#new": 9.99,
     "https://www.micromania.fr/p/kaku-ancient-seal-152555.html#new": 14.99,
@@ -47,10 +26,6 @@
     "https://www.micromania.fr/p/mortal-kombat-1-133101.html#new": 9.99,
     "https://www.micromania.fr/p/persona-3-reload-135892.html#new": 9.99,
     "https://www.micromania.fr/p/prince-of-persia-the-lost-crown-133877.html#new": 9.99,
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
     "https://www.micromania.fr/p/rennsport-153929.html#new": 24.99,
     "https://www.micromania.fr/p/rennsport-153931.html#new": 24.99,
     "https://www.micromania.fr/p/saints-row-criminal-customs-edition-exclusivite-micromania-114900.html#new": 1.0,
