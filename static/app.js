@@ -8,17 +8,39 @@ const api = async (url, opts = {}) => {
     ...opts,
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
-  return r.json();
+  try {
+    return await r.json();
+  } catch (e) {
+    // Réponse non-JSON (page d'erreur, timeout proxy…) : erreur lisible.
+    throw new Error("Réponse invalide du serveur (HTTP " + r.status + ")");
+  }
 };
 function toast(msg, err = false) {
   const t = $("toast");
   t.textContent = msg;
   t.className = "toast show" + (err ? " err" : "");
-  setTimeout(() => (t.className = "toast"), 2200);
+  setTimeout(() => (t.className = "toast"), 2600);
 }
 async function copier(texte) {
-  try { await navigator.clipboard.writeText(texte); toast("Copié ✓"); }
-  catch { toast("Copie impossible", true); }
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(texte);
+    } else {
+      // Fallback HTTP (mobile) : navigator.clipboard exige HTTPS.
+      const ta = document.createElement("textarea");
+      ta.value = texte;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+    toast("Copié ✓");
+  } catch (e) {
+    toast("Copie impossible", true);
+  }
 }
 
 let dernierProduit = null;
@@ -71,19 +93,25 @@ function redimensionnerPhoto(file, maxDim = 1600) {
 }
 
 async function analyserFichierPhoto(input) {
-  const file = input.files[0];
-  if (!file) return;
+  const files = Array.prototype.slice.call(input.files || [], 0, 4);
+  if (!files.length) return;
   const zone = document.querySelector(".photo-boutons");
   const status = $("photo-status");
   zone.classList.add("charge");
   status.classList.remove("cachee");
-  status.textContent = "⏳ Analyse de la photo par Claude…";
+  status.textContent = files.length > 1
+    ? "⏳ Analyse des " + files.length + " photos par Claude…"
+    : "⏳ Analyse de la photo par Claude…";
   try {
-    const blob = await redimensionnerPhoto(file);
     const fd = new FormData();
-    fd.append("photo", blob, "photo.jpg");
+    for (let i = 0; i < files.length; i++) {
+      const blob = await redimensionnerPhoto(files[i]);
+      fd.append("photo", blob, "photo" + (i + 1) + ".jpg");
+    }
     const r = await fetch("/api/analyser-photo", { method: "POST", body: fd });
-    const d = await r.json();
+    let d;
+    try { d = await r.json(); }
+    catch (e) { throw new Error("Réponse invalide du serveur (HTTP " + r.status + ")"); }
     if (d.erreur) throw new Error(d.erreur);
     const p = d.produit || {};
     const map = { nom: "nom", marque: "marque", categorie: "categorie", taille: "taille", couleur: "couleur", details: "details" };
@@ -131,10 +159,11 @@ $("btn-generer").addEventListener("click", async () => {
   btn.disabled = true; btn.textContent = "⏳ Génération en cours…";
   try {
     const d = await api("/api/generer", { method: "POST", body: lireProduit() });
-    dernierProduit = d.produit;
+    if (d.erreur) { toast(d.erreur, true); return; }
+    dernierProduit = d.produit || {};
     afficherAnnonce(d);
     afficherSeo(d.seo);
-    afficherPrix(d.chiffrage, d.produit.plateforme);
+    afficherPrix(d.chiffrage, dernierProduit.plateforme);
     afficherLiens(d.liens);
   } catch (e) {
     toast("Erreur : " + e, true);
@@ -217,6 +246,8 @@ function afficherAttributs(attrs) {
 }
 
 function afficherSeo(seo) {
+  seo = seo || { disponible: false, mots_cles: [], erreur: "réponse incomplète" };
+  seo.mots_cles = seo.mots_cles || [];
   const bloc = $("bloc-seo");
   bloc.classList.remove("cachee");
   const tbody = $("seo-table").querySelector("tbody");
@@ -341,15 +372,18 @@ $("btn-suivre").addEventListener("click", async () => {
 
 // ------------------------------------------------------------------ vue suivi
 async function chargerAnnonces() {
-  const d = await api("/api/annonces");
+  let d;
+  try { d = await api("/api/annonces"); } catch (e) { toast(e.message, true); return; }
+  const resume = d.resume || { vert: 0, orange: 0, rouge: 0 };
+  const annonces = d.annonces || [];
   $("resume-statuts").innerHTML =
-    `<span class="b">🟢 ${d.resume.vert}</span>` +
-    `<span class="b">🟠 ${d.resume.orange}</span>` +
-    `<span class="b">🔴 ${d.resume.rouge}</span>`;
+    `<span class="b">🟢 ${resume.vert}</span>` +
+    `<span class="b">🟠 ${resume.orange}</span>` +
+    `<span class="b">🔴 ${resume.rouge}</span>`;
   const box = $("liste-annonces");
-  if (!d.annonces.length) { box.innerHTML = '<p class="aide">Aucune annonce suivie pour le moment.</p>'; return; }
+  if (!annonces.length) { box.innerHTML = '<p class="aide">Aucune annonce suivie pour le moment.</p>'; return; }
   box.innerHTML = "";
-  d.annonces.forEach((a) => {
+  annonces.forEach((a) => {
     const el = document.createElement("div");
     el.className = "annonce " + a.statut_couleur;
     const bActive = a.variante_active === "B" && a.titre_b;
@@ -432,13 +466,14 @@ async function chargerAnnonces() {
 
 // ------------------------------------------------------------------ vue créneaux
 async function chargerCreneaux() {
-  const d = await api("/api/creneaux");
+  let d;
+  try { d = await api("/api/creneaux"); } catch (e) { toast(e.message, true); return; }
   $("creneaux-info").textContent = d.source === "stats"
     ? `Basé sur tes ${d.total_ventes} ventes.`
-    : `Créneaux par défaut (grand trafic). Enregistre au moins 8 ventes pour personnaliser (${d.total_ventes} pour l'instant).`;
+    : `Créneaux par défaut (grand trafic). Enregistre au moins 8 ventes pour personnaliser (${d.total_ventes || 0} pour l'instant).`;
   const box = $("liste-creneaux");
   box.innerHTML = "";
-  d.creneaux.forEach((c, i) => {
+  (d.creneaux || []).forEach((c, i) => {
     const el = document.createElement("div");
     el.className = "creneau";
     el.innerHTML =

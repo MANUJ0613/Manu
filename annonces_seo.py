@@ -44,9 +44,20 @@ ALERTE_INCLURE_ORANGE = os.environ.get("ALERTE_INCLURE_ORANGE", "true").lower() 
 # --------------------------------------------------------------------------- #
 # Pages
 # --------------------------------------------------------------------------- #
+# Version des fichiers statiques = date du dernier commit du code : le
+# navigateur recharge automatiquement CSS/JS après chaque mise à jour
+# (fini les bugs de cache après un git pull).
+def _version_statique() -> str:
+    try:
+        js = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "app.js")
+        return str(int(os.path.getmtime(js)))
+    except OSError:
+        return "1"
+
+
 @app.get("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", version_statique=_version_statique())
 
 
 @app.get("/api/etat")
@@ -68,26 +79,27 @@ def etat():
 # --------------------------------------------------------------------------- #
 @app.post("/api/analyser-photo")
 def api_analyser_photo():
-    """Reçoit une photo (multipart 'photo') et renvoie les champs identifiés."""
+    """Reçoit 1 à 4 photos (multipart 'photo', répétable) et renvoie les champs identifiés."""
     if claude_client is None:
         return jsonify({"erreur": "Module Claude indisponible."}), 503
-    f = request.files.get("photo")
-    if not f:
+    fichiers = request.files.getlist("photo")
+    if not fichiers:
         return jsonify({"erreur": "Aucune photo reçue."}), 400
-    media_type = (f.mimetype or "image/jpeg").lower()
-    if media_type not in ("image/jpeg", "image/png", "image/webp", "image/gif"):
-        return jsonify({"erreur": f"Format non supporté ({media_type}). Utilise JPEG/PNG/WebP."}), 415
     import base64
-    data = f.read()
-    if len(data) > 5 * 1024 * 1024:
-        return jsonify({"erreur": "Photo trop lourde (> 5 Mo après compression). Réessaie."}), 413
+    images: list[tuple[str, str]] = []
+    for f in fichiers[:4]:
+        media_type = (f.mimetype or "image/jpeg").lower()
+        if media_type not in ("image/jpeg", "image/png", "image/webp", "image/gif"):
+            return jsonify({"erreur": f"Format non supporté ({media_type}). Utilise JPEG/PNG/WebP."}), 415
+        data = f.read()
+        if len(data) > 5 * 1024 * 1024:
+            return jsonify({"erreur": "Une photo dépasse 5 Mo après compression. Réessaie."}), 413
+        images.append((base64.standard_b64encode(data).decode("ascii"), media_type))
     try:
-        produit = claude_client.analyser_photo(
-            base64.standard_b64encode(data).decode("ascii"), media_type
-        )
+        produit = claude_client.analyser_photo(images)
     except Exception as e:
         return jsonify({"erreur": str(e)}), 502
-    return jsonify({"produit": produit})
+    return jsonify({"produit": produit, "nb_photos": len(images)})
 
 
 # --------------------------------------------------------------------------- #

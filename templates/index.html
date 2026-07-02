@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Revente SEO · Leboncoin &amp; Vinted</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ version_statique }}">
 </head>
 <body>
 <header>
@@ -30,11 +30,11 @@
         <input type="file" id="photo-input" accept="image/*" capture="environment" hidden>
       </label>
       <label class="btn-photo galerie" for="galerie-input">
-        🖼️ Choisir dans la galerie
-        <input type="file" id="galerie-input" accept="image/*" hidden>
+        🖼️ Choisir dans la galerie (jusqu'à 4)
+        <input type="file" id="galerie-input" accept="image/*" multiple hidden>
       </label>
     </div>
-    <p class="aide" style="margin-top:0">→ remplissage automatique du formulaire par analyse de la photo</p>
+    <p class="aide" style="margin-top:0">→ remplissage automatique du formulaire. Plusieurs photos (produit + boîte + défaut) = identification plus fiable.</p>
     <div id="photo-status" class="info cachee"></div>
 
     <div class="grille">
@@ -218,6 +218,6 @@
 </main>
 
 <div id="toast" class="toast"></div>
-<script src="{{ url_for('static', filename='app.js') }}"></script>
+<script src="{{ url_for('static', filename='app.js') }}?v={{ version_statique }}"></script>
 </body>
 </html>

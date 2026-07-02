@@ -170,10 +170,30 @@ SYSTEME_PHOTO = (
 )
 
 
-def analyser_photo(image_b64: str, media_type: str = "image/jpeg") -> dict:
-    """Identifie le produit sur la photo et renvoie les champs du formulaire."""
+def analyser_photo(images: list[tuple[str, str]] | str, media_type: str = "image/jpeg") -> dict:
+    """Identifie le produit à partir d'une ou plusieurs photos.
+
+    images : liste de (base64, media_type) — ou, rétro-compatible, une seule
+    chaîne base64 accompagnée de media_type. Plusieurs photos (produit, boîte,
+    étiquette, défaut) = identification plus fiable.
+    """
     if anthropic is None:
         raise RuntimeError("Le paquet 'anthropic' n'est pas installé (pip install anthropic).")
+
+    if isinstance(images, str):
+        images = [(images, media_type)]
+    images = images[:4]  # 4 photos max par analyse (coût + suffisant)
+
+    contenu: list[dict] = [
+        {"type": "image", "source": {"type": "base64", "media_type": mt, "data": b64}}
+        for b64, mt in images
+    ]
+    pluriel = "ces photos (mêmes produit sous plusieurs angles)" if len(images) > 1 else "cette photo"
+    contenu.append({
+        "type": "text",
+        "text": f"Identifie le produit sur {pluriel} et remplis les champs pour l'annonce de revente. "
+                "Croise les informations de toutes les images (boîte, étiquette, défauts).",
+    })
 
     client = anthropic.Anthropic()
     resp = client.messages.create(
@@ -182,13 +202,7 @@ def analyser_photo(image_b64: str, media_type: str = "image/jpeg") -> dict:
         thinking={"type": "adaptive"},
         system=SYSTEME_PHOTO,
         output_config={"format": {"type": "json_schema", "schema": PRODUIT_SCHEMA}},
-        messages=[{
-            "role": "user",
-            "content": [
-                {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_b64}},
-                {"type": "text", "text": "Identifie ce produit et remplis les champs pour l'annonce de revente."},
-            ],
-        }],
+        messages=[{"role": "user", "content": contenu}],
     )
     texte = next((b.text for b in resp.content if b.type == "text"), None)
     if not texte:
