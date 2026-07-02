@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Revente SEO · Leboncoin &amp; Vinted</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ version_statique }}">
+</head>
+<body>
+<header>
+  <h1>🛍️ Revente SEO</h1>
+  <p class="sous-titre">Génère l'annonce, cale le prix, republie au bon moment — Leboncoin &amp; Vinted</p>
+  <div id="etat-config" class="etat"></div>
+</header>
+
+<nav class="onglets">
+  <button class="onglet actif" data-vue="generer">✍️ Générer une annonce</button>
+  <button class="onglet" data-vue="suivi">📋 Mes annonces</button>
+  <button class="onglet" data-vue="creneaux">⏰ Créneaux &amp; alertes</button>
+</nav>
+
+<!-- =================== VUE : GÉNÉRER =================== -->
+<main id="vue-generer" class="vue active">
+  <section class="carte">
+    <h2>Décris ton produit</h2>
+
+    <div class="photo-boutons">
+      <label class="btn-photo" for="photo-input">
+        📸 Prendre une photo
+        <input type="file" id="photo-input" accept="image/*" capture="environment" hidden>
+      </label>
+      <label class="btn-photo galerie" for="galerie-input">
+        🖼️ Choisir dans la galerie (jusqu'à 4)
+        <input type="file" id="galerie-input" accept="image/*" multiple hidden>
+      </label>
+    </div>
+    <p class="aide" style="margin-top:0">→ remplissage automatique du formulaire. Plusieurs photos (produit + boîte + défaut) = identification plus fiable.</p>
+    <div id="photo-status" class="info cachee"></div>
+
+    <div class="grille">
+      <label>Nom / modèle *<input id="nom" placeholder="Ex : Sac à main cuir, iPhone 12, Jean Levi's 501"></label>
+      <label>Marque<input id="marque" placeholder="Ex : Nike, Zara, Sony"></label>
+      <label>Catégorie
+        <input id="categorie" list="cats" placeholder="Ex : vêtement, jeux vidéo…">
+        <datalist id="cats">
+          <option>Vêtement</option><option>Chaussures</option><option>Sac / maroquinerie</option>
+          <option>High-tech</option><option>Jeux vidéo</option><option>Console</option>
+          <option>Puériculture</option><option>Maison / déco</option><option>Livre</option>
+        </datalist>
+      </label>
+      <label>État
+        <select id="etat">
+          <option value="">—</option>
+          <option>Neuf avec étiquette</option><option>Neuf sans étiquette</option>
+          <option>Très bon état</option><option>Bon état</option><option>Satisfaisant</option>
+        </select>
+      </label>
+      <label>Taille<input id="taille" placeholder="Ex : M, 42, 40 EU"></label>
+      <label>Couleur<input id="couleur" placeholder="Ex : noir, bleu marine"></label>
+      <label>Plateforme cible
+        <select id="plateforme">
+          <option value="vinted">Vinted</option>
+          <option value="leboncoin">Leboncoin</option>
+          <option value="les-deux">Les deux</option>
+        </select>
+      </label>
+      <label>Prix d'achat (€)<input id="prix_achat" type="number" step="0.5" placeholder="Ex : 8"></label>
+      <label>Réf. prix marché (€)<input id="reference_marche" type="number" step="0.5" placeholder="ex. médiane eBay vendus"></label>
+    </div>
+    <label class="pleine">Détails / défauts / accessoires
+      <textarea id="details" rows="2" placeholder="Ex : petite tache au dos, boîte d'origine incluse, jamais porté"></textarea>
+    </label>
+    <label class="pleine">Mots-clés à privilégier (optionnel, séparés par des virgules)
+      <input id="mots_cles" placeholder="Ex : vintage, streetwear, collector">
+    </label>
+
+    <details class="conseils">
+      <summary>📈 Coller les prix « Vendus » → référence marché auto</summary>
+      <p class="aide">Colle quelques prix relevés sur les articles VENDUS (Vinted filtre « Vendus », eBay vendus…). On calcule la médiane et on remplit la référence marché.</p>
+      <textarea id="vendus-texte" rows="2" placeholder="Ex : 39,99  45  35  51  38"></textarea>
+      <button id="btn-mediane" class="secondaire">Calculer la médiane</button>
+      <div id="mediane-res" class="info"></div>
+    </details>
+
+    <button id="btn-generer" class="principal">✨ Générer l'annonce</button>
+  </section>
+
+  <section id="resultats" class="carte cachee">
+    <h2>Annonce générée</h2>
+    <div id="erreur-claude" class="alerte cachee"></div>
+
+    <div class="bloc-copie">
+      <div class="entete-copie"><strong>Description (commune)</strong>
+        <span id="desc-len" class="compteur"></span>
+        <button class="copier" data-cible="desc">Copier</button>
+      </div>
+      <div id="desc" class="copiable multi"></div>
+    </div>
+
+    <div class="cotes">
+      <!-- ---------- Côté Vinted ---------- -->
+      <div class="cote cote-vinted" id="cote-vinted">
+        <h3>🛍️ Côté Vinted</h3>
+        <div class="champ">
+          <span class="lab">Titre <span id="v-titre-len" class="compteur"></span></span>
+          <div id="v-titre" class="copiable petit"></div>
+        </div>
+        <div class="champ">
+          <span class="lab">Hashtags (3-5, en fin de description)</span>
+          <div id="hashtags" class="copiable petit"></div>
+        </div>
+        <button class="principal mini" data-full="vinted">📋 Copier l'annonce Vinted</button>
+      </div>
+
+      <!-- ---------- Côté Leboncoin ---------- -->
+      <div class="cote cote-lbc" id="cote-lbc">
+        <h3>🔵 Côté Leboncoin</h3>
+        <div class="champ">
+          <span class="lab">Titre <span id="lc-titre-len" class="compteur"></span></span>
+          <div id="lc-titre" class="copiable petit"></div>
+        </div>
+        <div class="champ">
+          <span class="lab">Catégorie conseillée</span>
+          <div id="lc-cat" class="copiable petit"></div>
+        </div>
+        <div class="champ">
+          <span class="lab">Mots-clés (5 max, en fin de description)</span>
+          <div id="lc-tags" class="copiable petit"></div>
+        </div>
+        <div class="rappel-lbc">⚖️ 1 annonce = 1 bien · décris vraiment le produit (pas « plusieurs dispo ») · état réel · pas la marque d'un autre produit · republier = supprimer puis recréer.</div>
+        <button class="principal mini" data-full="leboncoin">📋 Copier l'annonce Leboncoin</button>
+      </div>
+    </div>
+
+    <div id="bloc-attributs" class="bloc-copie cachee">
+      <div class="entete-copie"><strong>Attributs à remplir (filtres Vinted/Leboncoin)</strong></div>
+      <div id="attributs" class="copiable"></div>
+    </div>
+
+    <details class="conseils">
+      <summary>💡 Rappels SEO 2026</summary>
+      <ul>
+        <li><strong>Vinted</strong> : titre 50-60 car., 3-5 hashtags en fin de description, republie 1×/jour max tous les 7-10 j.</li>
+        <li><strong>Leboncoin</strong> : titre descriptif, <strong>5 mots-clés max</strong>, 1 annonce = 1 bien, republier = <strong>supprimer puis recréer</strong> (durée annonce 60 j).</li>
+        <li><strong>Photos</strong> (les deux) : 5-8 nettes, fond neutre, 1ʳᵉ = vue d'ensemble ; montre le vrai objet + le défaut.</li>
+        <li><strong>Prix</strong> : vérifié sur les « Vendus », aligné ou -10 % (astuce X,99 €).</li>
+        <li><strong>Créneaux FR</strong> : mer/jeu 18-20h30, dim 17h30-20h30.</li>
+      </ul>
+    </details>
+
+    <button id="btn-suivre" class="secondaire">📌 Suivre cette annonce (republication)</button>
+  </section>
+
+  <section id="bloc-seo" class="carte cachee">
+    <h2>📊 Volumes de mots-clés (Google · DataForSEO)</h2>
+    <div id="seo-info" class="info"></div>
+    <table id="seo-table" class="tableau"><thead>
+      <tr><th>Mot-clé</th><th>Volume / mois</th><th>Placement</th><th>Concurrence</th></tr>
+    </thead><tbody></tbody></table>
+  </section>
+
+  <section id="bloc-prix" class="carte cachee">
+    <h2>💰 Prix &amp; marge</h2>
+    <div class="curseur-marge">
+      <label>Marge cible : <span id="marge-val">60</span> %
+        <input id="marge-slider" type="range" min="0" max="200" value="60">
+      </label>
+      <div id="prix-live" class="prix-live"></div>
+    </div>
+    <div id="paliers" class="paliers"></div>
+  </section>
+
+  <section id="bloc-liens" class="carte cachee">
+    <h2>🔎 Caler le prix</h2>
+    <div class="boutons-liens">
+      <a id="lien-ebay" class="bouton-lien ebay" target="_blank" rel="noopener">🏷️ eBay — prix vendus</a>
+      <a id="lien-lens" class="bouton-lien lens" target="_blank" rel="noopener">📷 Google Lens</a>
+      <a id="lien-gemini" class="bouton-lien gemini" target="_blank" rel="noopener">✦ Gemini (estimer)</a>
+      <button id="btn-copier-prompt" class="bouton-lien">📋 Copier le prompt Gemini</button>
+    </div>
+  </section>
+</main>
+
+<!-- =================== VUE : SUIVI =================== -->
+<main id="vue-suivi" class="vue">
+  <section class="carte">
+    <h2>Mes annonces suivies</h2>
+    <div id="resume-statuts" class="resume"></div>
+    <div id="liste-annonces"></div>
+    <p class="aide">🟢 fraîche · 🟠 à republier bientôt · 🔴 republie maintenant. Clique « Republié » à chaque remontée/repost.</p>
+  </section>
+</main>
+
+<!-- =================== VUE : CRÉNEAUX =================== -->
+<main id="vue-creneaux" class="vue">
+  <section class="carte">
+    <h2>⏰ Tes meilleurs créneaux</h2>
+    <div id="creneaux-info" class="info"></div>
+    <div id="liste-creneaux"></div>
+  </section>
+  <section class="carte">
+    <h2>Enregistrer une vente</h2>
+    <p class="aide">Chaque vente enregistrée affine la détection de tes meilleurs créneaux.</p>
+    <div class="grille">
+      <label>Date &amp; heure<input id="v-date" type="datetime-local"></label>
+      <label>Montant (€)<input id="v-montant" type="number" step="0.5"></label>
+      <label>Plateforme
+        <select id="v-plateforme"><option value="vinted">Vinted</option><option value="leboncoin">Leboncoin</option></select>
+      </label>
+    </div>
+    <button id="btn-vente" class="secondaire">➕ Enregistrer la vente</button>
+  </section>
+  <section class="carte">
+    <h2>🔔 Alertes ntfy</h2>
+    <div id="ntfy-info" class="info"></div>
+    <button id="btn-test-ntfy" class="secondaire">Envoyer une notif de test</button>
+  </section>
+</main>
+
+<div id="toast" class="toast"></div>
+<div id="erreur-js" class="erreur-js cachee"></div>
+<footer class="pied">version {{ version_statique }}</footer>
+<script src="{{ url_for('static', filename='app.js') }}?v={{ version_statique }}"></script>
+</body>
+</html>

@@ -1,0 +1,476 @@
+#!/usr/bin/env python3
+"""Serveur Flask 24/7 : générateur d'annonces SEO + suivi de republication.
+
+Pensé pour tourner en continu sur un VPS (systemd) et t'aider à revendre plus
+vite sur Leboncoin et Vinted :
+
+  • Génère titre + description optimisés (API Claude)
+  • Récupère les vrais volumes de mots-clés Google (DataForSEO)
+  • Calcule prix conseillé + marge nette (frais Vinted/Leboncoin)
+  • Boutons Google Lens / eBay vendus / Gemini pour caler le prix
+  • Suit tes annonces avec un statut 🟢🟠🔴 de fraîcheur
+  • Envoie des alertes ntfy aux meilleurs créneaux pour republier
+  • Détecte TES meilleurs créneaux à partir de tes ventes
+
+Lancement local :   python annonces_seo.py
+Prod (systemd)  :   gunicorn -w 2 -b 0.0.0.0:8000 annonces_seo:app
+"""
+from __future__ import annotations
+
+import os
+import threading
+import time
+from datetime import datetime
+
+from flask import Flask, jsonify, render_template, request
+
+from seo_tools import db, dataforseo, generique, links, notify, pricing, slots
+
+try:
+    from seo_tools import claude_client
+except Exception:  # anthropic éventuellement absent : l'app démarre quand même
+    claude_client = None  # type: ignore
+
+app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # photos : 12 Mo max
+
+PUBLIC_URL = os.environ.get("ANNONCES_PUBLIC_URL", "")
+# Intervalle du planificateur d'alertes (secondes)
+SCHED_INTERVAL = int(os.environ.get("ANNONCES_SCHED_INTERVAL", "300"))
+# Envoyer aussi les 🟠 (True) ou seulement les 🔴 (False)
+ALERTE_INCLURE_ORANGE = os.environ.get("ALERTE_INCLURE_ORANGE", "true").lower() == "true"
+
+
+# --------------------------------------------------------------------------- #
+# Pages
+# --------------------------------------------------------------------------- #
+# Version des fichiers statiques = date du dernier commit du code : le
+# navigateur recharge automatiquement CSS/JS après chaque mise à jour
+# (fini les bugs de cache après un git pull).
+def _version_statique() -> str:
+    try:
+        js = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "app.js")
+        return str(int(os.path.getmtime(js)))
+    except OSError:
+        return "1"
+
+
+@app.get("/")
+def index():
+    return render_template("index.html", version_statique=_version_statique())
+
+
+@app.after_request
+def _pas_de_cache_html(resp):
+    """Le HTML ne doit jamais être mis en cache : c'est lui qui pointe vers la
+    bonne version du JS/CSS (?v=...). Sans ça, un HTML périmé recharge un vieux
+    app.js et fait réapparaître des bugs déjà corrigés."""
+    if resp.mimetype == "text/html":
+        resp.headers["Cache-Control"] = "no-store, must-revalidate"
+    return resp
+
+
+@app.get("/api/etat")
+def etat():
+    """État de configuration : ce qui est branché ou non."""
+    return jsonify({
+        "claude": claude_client is not None and bool(
+            os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")
+        ),
+        "dataforseo": dataforseo.disponible(),
+        "ntfy": notify.disponible(),
+        "ntfy_topic": notify.TOPIC if notify.disponible() else None,
+        "modele": getattr(claude_client, "MODEL", None) if claude_client else None,
+    })
+
+
+# --------------------------------------------------------------------------- #
+# Analyse de photo -> pré-remplissage du formulaire
+# --------------------------------------------------------------------------- #
+@app.post("/api/analyser-photo")
+def api_analyser_photo():
+    """Reçoit 1 à 4 photos (multipart 'photo', répétable) et renvoie les champs identifiés."""
+    if claude_client is None:
+        return jsonify({"erreur": "Module Claude indisponible."}), 503
+    fichiers = request.files.getlist("photo")
+    if not fichiers:
+        return jsonify({"erreur": "Aucune photo reçue."}), 400
+    import base64
+    images: list[tuple[str, str]] = []
+    for f in fichiers[:4]:
+        media_type = (f.mimetype or "image/jpeg").lower()
+        if media_type not in ("image/jpeg", "image/png", "image/webp", "image/gif"):
+            return jsonify({"erreur": f"Format non supporté ({media_type}). Utilise JPEG/PNG/WebP."}), 415
+        data = f.read()
+        if len(data) > 5 * 1024 * 1024:
+            return jsonify({"erreur": "Une photo dépasse 5 Mo après compression. Réessaie."}), 413
+        images.append((base64.standard_b64encode(data).decode("ascii"), media_type))
+    try:
+        produit = claude_client.analyser_photo(images)
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 502
+    return jsonify({"produit": produit, "nb_photos": len(images)})
+
+
+# --------------------------------------------------------------------------- #
+# Génération d'annonce
+# --------------------------------------------------------------------------- #
+@app.post("/api/generer")
+def generer():
+    data = request.get_json(force=True, silent=True) or {}
+    produit = {
+        "nom": (data.get("nom") or "").strip(),
+        "marque": (data.get("marque") or "").strip(),
+        "categorie": (data.get("categorie") or "").strip(),
+        "etat": (data.get("etat") or "").strip(),
+        "taille": (data.get("taille") or "").strip(),
+        "couleur": (data.get("couleur") or "").strip(),
+        "details": (data.get("details") or "").strip(),
+        "plateforme": (data.get("plateforme") or "vinted").strip(),
+    }
+    if not produit["nom"]:
+        return jsonify({"erreur": "Le nom du produit est requis."}), 400
+
+    # 1) Mots-clés candidats (+ génériques du type de produit) -> volumes réels
+    candidats = _mots_cles_candidats(produit, data.get("mots_cles"))
+    candidats = generique.enrichir_candidats(candidats, produit["nom"], produit.get("categorie") or "")
+    seo = dataforseo.volumes_mots_cles(candidats)
+
+    strategie = None
+    if seo["disponible"]:
+        paquets = dataforseo.trier_par_volume(seo["mots_cles"])
+        # Stratégie de titre : modèle recherché ou produit de niche ?
+        strategie = generique.strategie_titre(
+            seo["mots_cles"], produit["nom"], produit.get("marque") or "",
+            produit.get("categorie") or "",
+        )
+        # Écarte les pièges (ex. marque seule ambiguë) des paquets titre/description.
+        pieges = set(strategie["pieges"])
+        paquets["fort"] = [k for k in paquets["fort"] if k not in pieges]
+        paquets["moyen"] = [k for k in paquets["moyen"] if k not in pieges]
+    else:
+        # Sans volumes : le nom + les premiers candidats servent de paquet fort.
+        paquets = {"fort": candidats[:5], "moyen": candidats[5:15], "faible": []}
+    tops = (paquets["fort"] + paquets["moyen"])[:8]
+
+    # 2) Génération de l'annonce (mots FORT -> titre, MOYEN -> description)
+    annonce = None
+    erreur_claude = None
+    if claude_client is not None:
+        try:
+            annonce = claude_client.generer_annonce(produit, tops, paquets=paquets,
+                                                    strategie=strategie)
+        except Exception as e:  # clé absente, réseau, quota...
+            erreur_claude = str(e)
+    else:
+        erreur_claude = "Module Claude indisponible (installe 'anthropic')."
+
+    # 3) Prix + marge
+    chiffrage = None
+    prix_achat = _to_float(data.get("prix_achat"))
+    ref_marche = _to_float(data.get("reference_marche"))
+    if prix_achat is not None:
+        chiffrage = pricing.suggestions_prix(prix_achat, produit["plateforme"], ref_marche)
+
+    # 4) Liens externes (Lens / eBay / Gemini)
+    liens = links.liens_produit(produit, image_url=data.get("image_url"))
+
+    return jsonify({
+        "produit": produit,
+        "annonce": annonce,
+        "erreur_claude": erreur_claude,
+        "seo": seo,
+        "paquets": paquets,
+        "strategie": strategie,
+        "mots_cles_utilises": tops,
+        "chiffrage": chiffrage,
+        "liens": liens,
+    })
+
+
+@app.post("/api/mediane")
+def api_mediane():
+    """Médiane des prix « vendus » collés par l'utilisateur (référence marché).
+
+    Accepte {'prix': [12, 15, ...]} ou {'texte': '12\\n15,50\\n20 €'}.
+    """
+    data = request.get_json(force=True, silent=True) or {}
+    prix_list: list[float] = []
+    if isinstance(data.get("prix"), list):
+        prix_list = [p for p in (_to_float(x) for x in data["prix"]) if p is not None]
+    elif data.get("texte"):
+        import re
+        for token in re.findall(r"\d+[.,]?\d*", data["texte"]):
+            v = _to_float(token)
+            if v is not None:
+                prix_list.append(v)
+    return jsonify(pricing.stats_prix(prix_list))
+
+
+@app.post("/api/prix")
+def prix():
+    """Recalcul de prix/marge à la volée (curseur de marge côté UI)."""
+    data = request.get_json(force=True, silent=True) or {}
+    prix_achat = _to_float(data.get("prix_achat")) or 0
+    plateforme = data.get("plateforme", "vinted")
+    if data.get("prix_vente") is not None:
+        c = pricing.chiffrer(prix_achat, _to_float(data.get("prix_vente")) or 0, plateforme)
+        return jsonify(c.to_dict())
+    marge = _to_float(data.get("marge_cible_pct"))
+    if marge is not None:
+        pv = pricing.prix_pour_marge(prix_achat, marge, plateforme)
+        return jsonify(pricing.chiffrer(prix_achat, pv, plateforme).to_dict())
+    return jsonify(pricing.suggestions_prix(prix_achat, plateforme))
+
+
+# --------------------------------------------------------------------------- #
+# Suivi des annonces
+# --------------------------------------------------------------------------- #
+@app.get("/api/annonces")
+def api_annonces():
+    statut = request.args.get("statut", "active") or None
+    items = slots.annoter(db.lister_annonces(statut))
+    resume = {
+        "vert": sum(1 for a in items if a["statut_couleur"] == "vert"),
+        "orange": sum(1 for a in items if a["statut_couleur"] == "orange"),
+        "rouge": sum(1 for a in items if a["statut_couleur"] == "rouge"),
+    }
+    return jsonify({"annonces": items, "resume": resume})
+
+
+@app.post("/api/annonces")
+def api_creer_annonce():
+    data = request.get_json(force=True, silent=True) or {}
+    if not (data.get("titre") or "").strip():
+        return jsonify({"erreur": "Titre requis."}), 400
+    aid = db.creer_annonce(
+        titre=data["titre"].strip(),
+        plateforme=data.get("plateforme", "vinted"),
+        categorie=data.get("categorie"),
+        prix=_to_float(data.get("prix")),
+        prix_achat=_to_float(data.get("prix_achat")),
+        reference_marche=_to_float(data.get("reference_marche")),
+        cadence_jours=_to_float(data.get("cadence_jours")),
+        titre_b=data.get("titre_b"),
+        prix_b=_to_float(data.get("prix_b")),
+        url=data.get("url"),
+        note=data.get("note"),
+    )
+    return jsonify(slots.statut_annonce(db.get_annonce(aid))), 201
+
+
+@app.patch("/api/annonces/<int:aid>")
+def api_maj_annonce(aid: int):
+    """Met à jour cadence, variante B, prix, note… (champs autorisés seulement)."""
+    if not db.get_annonce(aid):
+        return jsonify({"erreur": "introuvable"}), 404
+    data = request.get_json(force=True, silent=True) or {}
+    autorises = {"cadence_jours", "reference_marche", "titre_b", "prix_b",
+                 "prix", "prix_achat", "note", "url", "categorie", "titre"}
+    maj = {}
+    for k in autorises & set(data.keys()):
+        if k in ("cadence_jours", "reference_marche", "prix", "prix_achat", "prix_b"):
+            maj[k] = _to_float(data[k])
+        else:
+            maj[k] = data[k]
+    if maj:
+        db.maj_annonce(aid, **maj)
+    return jsonify(slots.statut_annonce(db.get_annonce(aid)))
+
+
+@app.post("/api/annonces/<int:aid>/variante")
+def api_variante(aid: int):
+    """Bascule A/B (change le titre/prix affiché = relister l'annonce)."""
+    a = db.get_annonce(aid)
+    if not a:
+        return jsonify({"erreur": "introuvable"}), 404
+    if not a.get("titre_b"):
+        return jsonify({"erreur": "Aucune variante B définie."}), 400
+    data = request.get_json(force=True, silent=True) or {}
+    if not data.get("force") and a["nb_republications"] >= 1 and slots.republication_trop_recente(a):
+        return jsonify({
+            "avertissement": "Basculer relance l'annonce (< 24 h depuis le dernier repost). Confirmer ?",
+            "annonce": slots.statut_annonce(a),
+        }), 409
+    nouvelle = db.basculer_variante(aid)
+    out = slots.statut_annonce(db.get_annonce(aid))
+    out["variante_active"] = nouvelle
+    return jsonify(out)
+
+
+@app.get("/api/annonces/<int:aid>/ab")
+def api_bilan_ab(aid: int):
+    """Bilan A/B : ventes par variante."""
+    if not db.get_annonce(aid):
+        return jsonify({"erreur": "introuvable"}), 404
+    return jsonify(db.ventes_par_variante(aid))
+
+
+@app.post("/api/annonces/<int:aid>/republier")
+def api_republier(aid: int):
+    a = db.get_annonce(aid)
+    if not a:
+        return jsonify({"erreur": "introuvable"}), 404
+    data = request.get_json(force=True, silent=True) or {}
+    # Garde-fou anti-spam : Vinted pénalise les reposts trop rapprochés.
+    # Ne s'applique qu'après une vraie republication (pas au 1er bump après création).
+    if not data.get("force") and a["nb_republications"] >= 1 and slots.republication_trop_recente(a):
+        return jsonify({
+            "avertissement": (
+                "Déjà republiée il y a moins de 24 h. Republier trop souvent la même "
+                "fiche fait chuter la visibilité (détection de doublons Vinted). "
+                "Confirme si tu veux quand même republier."
+            ),
+            "annonce": slots.statut_annonce(a),
+        }), 409
+    db.republier(aid)
+    return jsonify(slots.statut_annonce(db.get_annonce(aid)))
+
+
+@app.post("/api/annonces/<int:aid>/vendu")
+def api_vendu(aid: int):
+    if not db.get_annonce(aid):
+        return jsonify({"erreur": "introuvable"}), 404
+    data = request.get_json(force=True, silent=True) or {}
+    db.marquer_vendu(aid, _to_float(data.get("montant")))
+    return jsonify({"ok": True})
+
+
+@app.delete("/api/annonces/<int:aid>")
+def api_supprimer(aid: int):
+    db.supprimer_annonce(aid)
+    return jsonify({"ok": True})
+
+
+# --------------------------------------------------------------------------- #
+# Créneaux + ventes
+# --------------------------------------------------------------------------- #
+@app.get("/api/creneaux")
+def api_creneaux():
+    return jsonify(slots.meilleurs_creneaux(db.lister_ventes()))
+
+
+@app.post("/api/ventes")
+def api_ajouter_vente():
+    """Ajout manuel d'une vente (pour alimenter la détection de créneaux)."""
+    data = request.get_json(force=True, silent=True) or {}
+    ts = data.get("date_vente")
+    if ts is None:
+        ts = time.time()
+    else:
+        ts = float(ts)
+    db.ajouter_vente(
+        date_vente=ts,
+        montant=_to_float(data.get("montant")),
+        plateforme=data.get("plateforme", "vinted"),
+        annonce_id=data.get("annonce_id"),
+    )
+    return jsonify({"ok": True}), 201
+
+
+@app.post("/api/tester-ntfy")
+def api_tester_ntfy():
+    ok = notify.envoyer("Test depuis ton outil de revente ✅", titre="Test ntfy", tags=["white_check_mark"])
+    return jsonify({"envoye": ok, "configure": notify.disponible()})
+
+
+# --------------------------------------------------------------------------- #
+# Helpers
+# --------------------------------------------------------------------------- #
+def _to_float(v) -> float | None:
+    try:
+        if v is None or v == "":
+            return None
+        return float(str(v).replace(",", "."))
+    except (TypeError, ValueError):
+        return None
+
+
+def _mots_cles_candidats(produit: dict, saisis: str | None) -> list[str]:
+    """Construit les requêtes candidates que les acheteurs pourraient taper.
+
+    Déclinaisons du nom : nom complet, sous-groupes de 2-3 mots (souvent plus
+    recherchés que le nom entier), combinaisons avec la marque, et variantes
+    d'intention d'achat (« pas cher », « neuf », « occasion », « cadeau »).
+    Les volumes réels DataForSEO trancheront ensuite (tri fort/moyen/faible).
+    """
+    base: list[str] = []
+    if saisis:
+        base += [m.strip() for m in saisis.replace("\n", ",").split(",") if m.strip()]
+
+    marque = (produit.get("marque") or "").strip()
+    nom = (produit.get("nom") or "").strip()
+    nom_bas = nom.lower()
+
+    if nom:
+        base.append(nom_bas)
+        # sous-groupes de 2-3 mots consécutifs du nom
+        mots = nom_bas.split()
+        for taille in (2, 3):
+            for i in range(len(mots) - taille + 1):
+                base.append(" ".join(mots[i:i + taille]))
+        # variantes d'intention d'achat
+        for suffixe in ("pas cher", "neuf", "occasion", "cadeau"):
+            base.append(f"{nom_bas} {suffixe}")
+    if marque and nom:
+        base.append(f"{marque.lower()} {nom_bas}")
+    if marque:
+        base.append(marque.lower())
+    for extra in ("categorie", "taille", "couleur"):
+        val = produit.get(extra)
+        if val and nom:
+            base.append(f"{nom_bas} {str(val).lower()}")
+
+    # dédoublonne en gardant l'ordre, longueurs raisonnables, plafond API
+    uniques = list(dict.fromkeys(m for m in base if m and 2 <= len(m) <= 80))
+    return uniques[:80]
+
+
+# --------------------------------------------------------------------------- #
+# Planificateur d'alertes (thread de fond)
+# --------------------------------------------------------------------------- #
+def _boucle_alertes():
+    """Vérifie régulièrement s'il faut alerter (bon créneau + annonces à republier)."""
+    while True:
+        try:
+            _tick_alerte()
+        except Exception as e:  # ne jamais tuer le thread
+            app.logger.warning("alerte: %s", e)
+        time.sleep(SCHED_INTERVAL)
+
+
+def _tick_alerte():
+    if not notify.disponible():
+        return
+    maintenant = datetime.now()
+    creneaux = slots.meilleurs_creneaux(db.lister_ventes())["creneaux"]
+    if not slots.est_bon_creneau(creneaux, maintenant):
+        return
+
+    # Anti-spam : une seule alerte par tranche horaire de bon créneau.
+    cle_creneau = maintenant.strftime("%Y-%m-%d-%H")
+    if db.get_reglage("derniere_alerte_creneau") == cle_creneau:
+        return
+
+    cibles = slots.a_republier(db.lister_annonces("active"), ALERTE_INCLURE_ORANGE)
+    if not cibles:
+        return
+
+    if notify.alerte_republication(cibles, PUBLIC_URL):
+        db.set_reglage("derniere_alerte_creneau", cle_creneau)
+
+
+def _demarrer_scheduler():
+    t = threading.Thread(target=_boucle_alertes, daemon=True, name="alertes-republication")
+    t.start()
+
+
+# Init base + scheduler dès l'import (fonctionne aussi sous gunicorn).
+db.init_db()
+if os.environ.get("ANNONCES_SCHEDULER", "true").lower() == "true":
+    _demarrer_scheduler()
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", "8000"))
+    app.run(host="0.0.0.0", port=port, debug=os.environ.get("FLASK_DEBUG") == "1")
