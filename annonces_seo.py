@@ -121,20 +121,22 @@ def generer():
     if not produit["nom"]:
         return jsonify({"erreur": "Le nom du produit est requis."}), 400
 
-    # 1) Mots-clés candidats -> volumes réels DataForSEO
+    # 1) Mots-clés candidats -> volumes réels DataForSEO -> tri fort/moyen/faible
     candidats = _mots_cles_candidats(produit, data.get("mots_cles"))
     seo = dataforseo.volumes_mots_cles(candidats)
-    tops = (
-        [m["keyword"] for m in seo["mots_cles"][:8]]
-        if seo["disponible"] else candidats[:8]
-    )
+    if seo["disponible"]:
+        paquets = dataforseo.trier_par_volume(seo["mots_cles"])
+    else:
+        # Sans volumes : le nom + les premiers candidats servent de paquet fort.
+        paquets = {"fort": candidats[:5], "moyen": candidats[5:15], "faible": []}
+    tops = (paquets["fort"] + paquets["moyen"])[:8]
 
-    # 2) Génération de l'annonce
+    # 2) Génération de l'annonce (mots FORT -> titre, MOYEN -> description)
     annonce = None
     erreur_claude = None
     if claude_client is not None:
         try:
-            annonce = claude_client.generer_annonce(produit, tops)
+            annonce = claude_client.generer_annonce(produit, tops, paquets=paquets)
         except Exception as e:  # clé absente, réseau, quota...
             erreur_claude = str(e)
     else:
@@ -155,6 +157,7 @@ def generer():
         "annonce": annonce,
         "erreur_claude": erreur_claude,
         "seo": seo,
+        "paquets": paquets,
         "mots_cles_utilises": tops,
         "chiffrage": chiffrage,
         "liens": liens,
@@ -360,24 +363,43 @@ def _to_float(v) -> float | None:
 
 
 def _mots_cles_candidats(produit: dict, saisis: str | None) -> list[str]:
-    """Construit une liste de mots-clés candidats à partir du produit + saisie libre."""
+    """Construit les requêtes candidates que les acheteurs pourraient taper.
+
+    Déclinaisons du nom : nom complet, sous-groupes de 2-3 mots (souvent plus
+    recherchés que le nom entier), combinaisons avec la marque, et variantes
+    d'intention d'achat (« pas cher », « neuf », « occasion », « cadeau »).
+    Les volumes réels DataForSEO trancheront ensuite (tri fort/moyen/faible).
+    """
     base: list[str] = []
     if saisis:
         base += [m.strip() for m in saisis.replace("\n", ",").split(",") if m.strip()]
-    marque = produit.get("marque", "")
-    nom = produit.get("nom", "")
+
+    marque = (produit.get("marque") or "").strip()
+    nom = (produit.get("nom") or "").strip()
+    nom_bas = nom.lower()
+
     if nom:
-        base.append(nom)
+        base.append(nom_bas)
+        # sous-groupes de 2-3 mots consécutifs du nom
+        mots = nom_bas.split()
+        for taille in (2, 3):
+            for i in range(len(mots) - taille + 1):
+                base.append(" ".join(mots[i:i + taille]))
+        # variantes d'intention d'achat
+        for suffixe in ("pas cher", "neuf", "occasion", "cadeau"):
+            base.append(f"{nom_bas} {suffixe}")
     if marque and nom:
-        base.append(f"{marque} {nom}")
+        base.append(f"{marque.lower()} {nom_bas}")
     if marque:
-        base.append(marque)
+        base.append(marque.lower())
     for extra in ("categorie", "taille", "couleur"):
         val = produit.get(extra)
         if val and nom:
-            base.append(f"{nom} {val}")
-    # dédoublonne en gardant l'ordre
-    return list(dict.fromkeys([m for m in base if m]))
+            base.append(f"{nom_bas} {str(val).lower()}")
+
+    # dédoublonne en gardant l'ordre, longueurs raisonnables, plafond API
+    uniques = list(dict.fromkeys(m for m in base if m and 2 <= len(m) <= 80))
+    return uniques[:80]
 
 
 # --------------------------------------------------------------------------- #

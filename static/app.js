@@ -162,7 +162,7 @@ $("btn-generer").addEventListener("click", async () => {
     if (d.erreur) { toast(d.erreur, true); return; }
     dernierProduit = d.produit || {};
     afficherAnnonce(d);
-    afficherSeo(d.seo);
+    afficherSeo(d.seo, d.paquets);
     afficherPrix(d.chiffrage, dernierProduit.plateforme);
     afficherLiens(d.liens);
   } catch (e) {
@@ -245,9 +245,12 @@ function afficherAttributs(attrs) {
   bloc.classList.remove("cachee");
 }
 
-function afficherSeo(seo) {
+function afficherSeo(seo, paquets) {
   seo = seo || { disponible: false, mots_cles: [], erreur: "réponse incomplète" };
   seo.mots_cles = seo.mots_cles || [];
+  paquets = paquets || {};
+  const fort = paquets.fort || [];
+  const moyen = paquets.moyen || [];
   const bloc = $("bloc-seo");
   bloc.classList.remove("cachee");
   const tbody = $("seo-table").querySelector("tbody");
@@ -259,12 +262,16 @@ function afficherSeo(seo) {
     return;
   }
   $("seo-table").style.display = "";
-  $("seo-info").textContent = "Volumes mensuels Google (France).";
+  $("seo-info").textContent =
+    "Volumes mensuels Google (France) — 🔥 fort volume (mis dans le titre) · 📈 moyen (dans la description).";
   seo.mots_cles.forEach((m) => {
+    let usage = "—";
+    if (fort.indexOf(m.keyword) !== -1) usage = "🔥 Titre";
+    else if (moyen.indexOf(m.keyword) !== -1) usage = "📈 Description";
     const tr = document.createElement("tr");
     tr.innerHTML =
       `<td>${m.keyword}</td><td class="vol">${(m.volume || 0).toLocaleString("fr-FR")}</td>` +
-      `<td>${m.competition || "—"}</td><td>${m.cpc != null ? m.cpc.toFixed(2) + " €" : "—"}</td>`;
+      `<td>${usage}</td><td>${m.competition || "—"}</td>`;
     tbody.appendChild(tr);
   });
 }

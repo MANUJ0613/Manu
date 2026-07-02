@@ -97,3 +97,33 @@ def meilleurs_mots_cles(mots_cles: list[str], top: int = 8) -> list[str]:
     if not r["disponible"]:
         return mots_cles[:top]
     return [m["keyword"] for m in r["mots_cles"][:top]]
+
+
+# --------------------------------------------------------------------------- #
+# Tri en 3 paquets selon le volume mensuel France
+# --------------------------------------------------------------------------- #
+# >= SEUIL_FORT  -> réservés au TITRE (empiler un max dans 50-60 caractères)
+# >= SEUIL_MOYEN -> à intégrer naturellement dans la DESCRIPTION
+# en dessous     -> faibles (complément, souvent ignorés)
+SEUIL_FORT = float(os.environ.get("SEO_SEUIL_FORT", "1000"))
+SEUIL_MOYEN = float(os.environ.get("SEO_SEUIL_MOYEN", "100"))
+
+
+def trier_par_volume(resultats: list[dict]) -> dict:
+    """Trie les résultats de volumes_mots_cles() en paquets fort/moyen/faible.
+
+    Si aucun mot n'atteint le seuil fort (produit de niche), on promeut les
+    3 meilleurs 'moyen' en 'fort' pour ne jamais laisser le titre sans mots-clés.
+    """
+    fort, moyen, faible = [], [], []
+    for m in resultats:  # déjà triés par volume décroissant
+        v = m.get("volume") or 0
+        if v >= SEUIL_FORT:
+            fort.append(m["keyword"])
+        elif v >= SEUIL_MOYEN:
+            moyen.append(m["keyword"])
+        else:
+            faible.append(m["keyword"])
+    if not fort and moyen:
+        fort, moyen = moyen[:3], moyen[3:]
+    return {"fort": fort, "moyen": moyen, "faible": faible}

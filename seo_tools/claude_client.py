@@ -117,7 +117,7 @@ def _regles_plateforme(plateforme: str) -> str:
     return REGLES_VINTED
 
 
-def _prompt(produit: dict, mots_cles: list[str]) -> str:
+def _prompt(produit: dict, mots_cles: list[str], paquets: dict | None = None) -> str:
     lignes = ["Crée une annonce de revente optimisée à partir de ces informations :", ""]
     libelles = {
         "nom": "Produit",
@@ -133,10 +133,26 @@ def _prompt(produit: dict, mots_cles: list[str]) -> str:
         val = produit.get(cle)
         if val:
             lignes.append(f"- {libelle} : {val}")
-    if mots_cles:
+
+    if paquets and (paquets.get("fort") or paquets.get("moyen")):
+        # Volumes Google réels -> consignes de placement précises.
+        lignes.append("")
+        if paquets.get("fort"):
+            lignes.append(
+                "MOTS-CLÉS FORT VOLUME (les plus recherchés sur Google France — à prioriser "
+                "dans le TITRE, empiles-en un maximum dans la limite de caractères, puis "
+                "réutilise-les dans la description) : " + ", ".join(paquets["fort"][:8])
+            )
+        if paquets.get("moyen"):
+            lignes.append(
+                "MOTS-CLÉS VOLUME MOYEN (à intégrer NATURELLEMENT dans la DESCRIPTION, "
+                "avec leurs synonymes) : " + ", ".join(paquets["moyen"][:15])
+            )
+    elif mots_cles:
         lignes.append("")
         lignes.append("Mots-clés SEO à intégrer en priorité (les plus recherchés d'abord) : "
                       + ", ".join(mots_cles))
+
     lignes.append("")
     lignes.append(_regles_plateforme(produit.get("plateforme", "vinted")))
     return "\n".join(lignes)
@@ -222,8 +238,13 @@ def analyser_photo(images: list[tuple[str, str]] | str, media_type: str = "image
     return json.loads(texte)
 
 
-def generer_annonce(produit: dict, mots_cles: list[str] | None = None) -> dict:
-    """Appelle Claude et renvoie le dict de l'annonce. Lève une exception en cas d'échec."""
+def generer_annonce(produit: dict, mots_cles: list[str] | None = None,
+                    paquets: dict | None = None) -> dict:
+    """Appelle Claude et renvoie le dict de l'annonce. Lève une exception en cas d'échec.
+
+    paquets : {'fort': [...], 'moyen': [...]} issus du tri par volume DataForSEO —
+    les mots FORT vont au titre, les MOYEN à la description.
+    """
     if anthropic is None:
         raise RuntimeError("Le paquet 'anthropic' n'est pas installé (pip install anthropic).")
 
@@ -236,7 +257,7 @@ def generer_annonce(produit: dict, mots_cles: list[str] | None = None) -> dict:
         thinking={"type": "adaptive"},
         system=SYSTEME,
         output_config={"format": {"type": "json_schema", "schema": SCHEMA}},
-        messages=[{"role": "user", "content": _prompt(produit, mots_cles)}],
+        messages=[{"role": "user", "content": _prompt(produit, mots_cles, paquets)}],
     )
 
     texte = next((b.text for b in resp.content if b.type == "text"), None)
