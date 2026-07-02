@@ -83,7 +83,7 @@ async function chargerEtat() {
   const e = await api("/api/etat");
   const p = (label, ok) =>
     `<span class="pastille ${ok ? "ok" : "ko"}">${ok ? "●" : "○"} ${label}</span>`;
-  $("etat").innerHTML =
+  $("etat-config").innerHTML =
     p("Claude" + (e.modele ? " (" + e.modele + ")" : ""), e.claude) +
     p("DataForSEO", e.dataforseo) +
     p("ntfy" + (e.ntfy_topic ? " (" + e.ntfy_topic + ")" : ""), e.ntfy);
