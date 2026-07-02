@@ -155,7 +155,14 @@ PRODUIT_SCHEMA = {
         "taille": {"type": "string", "description": "Taille/pointure/dimensions si visibles, sinon vide"},
         "couleur": {"type": "string", "description": "Couleur dominante"},
         "details": {"type": "string", "description": "Détails utiles pour l'annonce : contenu, accessoires visibles, défauts apparents (boîte abîmée…), édition"},
-        "mots_cles": {"type": "array", "items": {"type": "string"}, "description": "5-10 mots-clés de recherche que les acheteurs taperaient"},
+        "mots_cles": {
+            "type": "array", "items": {"type": "string"},
+            "description": "8-12 expressions de recherche LONGUE TRAÎNE que les acheteurs tapent "
+                           "réellement (2-4 mots chacune, en français). Mélange : usage + qualificatif "
+                           "(« tondeuse cheveux professionnelle »), marque + modèle (« tondeuse Jaguar "
+                           "J-Cut 60 »), synonymes métier (« clipper barber »). JAMAIS de mots génériques "
+                           "seuls (« tondeuse », « rouge », « qualité ») ni de traits (« sans fil » seul).",
+        },
         "confiance": {"type": "string", "enum": ["haute", "moyenne", "basse"], "description": "Confiance dans l'identification"},
     },
     "required": ["nom", "marque", "categorie", "etat", "taille", "couleur", "details", "mots_cles", "confiance"],
@@ -166,7 +173,12 @@ SYSTEME_PHOTO = (
     "Tu identifies des produits d'occasion à partir d'une photo, pour pré-remplir une annonce "
     "de revente Vinted/Leboncoin. Lis les textes visibles (boîte, étiquette, logo) pour trouver "
     "marque et modèle exacts. Note honnêtement les défauts visibles (boîte marquée, rayures…). "
-    "Si un champ n'est pas déterminable, renvoie une chaîne vide plutôt que d'inventer."
+    "Si un champ n'est pas déterminable, renvoie une chaîne vide plutôt que d'inventer.\n\n"
+    "Pour les mots-clés : pense comme un ACHETEUR français qui tape sa recherche sur Vinted, "
+    "Leboncoin ou Google. Donne des expressions complètes de 2 à 4 mots (« coffret matcha complet », "
+    "« tondeuse cheveux professionnelle », « veste en jean Levi's »), incluant marque+modèle, "
+    "usage+qualificatif et les synonymes du métier (baskets/sneakers, tondeuse/clipper). "
+    "Un mot seul ou un simple attribut (couleur, « sans fil ») n'est PAS un mot-clé valable."
 )
 
 
