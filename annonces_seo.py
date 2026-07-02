@@ -24,7 +24,7 @@ from datetime import datetime
 
 from flask import Flask, jsonify, render_template, request
 
-from seo_tools import db, dataforseo, links, notify, pricing, slots
+from seo_tools import db, dataforseo, generique, links, notify, pricing, slots
 
 try:
     from seo_tools import claude_client
@@ -131,11 +131,23 @@ def generer():
     if not produit["nom"]:
         return jsonify({"erreur": "Le nom du produit est requis."}), 400
 
-    # 1) Mots-clés candidats -> volumes réels DataForSEO -> tri fort/moyen/faible
+    # 1) Mots-clés candidats (+ génériques du type de produit) -> volumes réels
     candidats = _mots_cles_candidats(produit, data.get("mots_cles"))
+    candidats = generique.enrichir_candidats(candidats, produit["nom"], produit.get("categorie") or "")
     seo = dataforseo.volumes_mots_cles(candidats)
+
+    strategie = None
     if seo["disponible"]:
         paquets = dataforseo.trier_par_volume(seo["mots_cles"])
+        # Stratégie de titre : modèle recherché ou produit de niche ?
+        strategie = generique.strategie_titre(
+            seo["mots_cles"], produit["nom"], produit.get("marque") or "",
+            produit.get("categorie") or "",
+        )
+        # Écarte les pièges (ex. marque seule ambiguë) des paquets titre/description.
+        pieges = set(strategie["pieges"])
+        paquets["fort"] = [k for k in paquets["fort"] if k not in pieges]
+        paquets["moyen"] = [k for k in paquets["moyen"] if k not in pieges]
     else:
         # Sans volumes : le nom + les premiers candidats servent de paquet fort.
         paquets = {"fort": candidats[:5], "moyen": candidats[5:15], "faible": []}
@@ -146,7 +158,8 @@ def generer():
     erreur_claude = None
     if claude_client is not None:
         try:
-            annonce = claude_client.generer_annonce(produit, tops, paquets=paquets)
+            annonce = claude_client.generer_annonce(produit, tops, paquets=paquets,
+                                                    strategie=strategie)
         except Exception as e:  # clé absente, réseau, quota...
             erreur_claude = str(e)
     else:
@@ -168,6 +181,7 @@ def generer():
         "erreur_claude": erreur_claude,
         "seo": seo,
         "paquets": paquets,
+        "strategie": strategie,
         "mots_cles_utilises": tops,
         "chiffrage": chiffrage,
         "liens": liens,

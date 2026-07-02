@@ -180,7 +180,7 @@ $("btn-generer").addEventListener("click", async () => {
     if (d.erreur) { toast(d.erreur, true); return; }
     dernierProduit = d.produit || {};
     afficherAnnonce(d);
-    afficherSeo(d.seo, d.paquets);
+    afficherSeo(d.seo, d.paquets, d.strategie);
     afficherPrix(d.chiffrage, dernierProduit.plateforme);
     afficherLiens(d.liens);
   } catch (e) {
@@ -263,7 +263,7 @@ function afficherAttributs(attrs) {
   bloc.classList.remove("cachee");
 }
 
-function afficherSeo(seo, paquets) {
+function afficherSeo(seo, paquets, strategie) {
   seo = seo || { disponible: false, mots_cles: [], erreur: "réponse incomplète" };
   seo.mots_cles = seo.mots_cles || [];
   paquets = paquets || {};
@@ -280,8 +280,12 @@ function afficherSeo(seo, paquets) {
     return;
   }
   $("seo-table").style.display = "";
-  $("seo-info").textContent =
-    "Volumes mensuels Google (France) — 🔥 fort volume (mis dans le titre) · 📈 moyen (dans la description).";
+  let info = "Volumes mensuels Google (France) — 🔥 fort volume (titre) · 📈 moyen (description).";
+  if (strategie && strategie.mode === "generique") {
+    info = "⚠️ Modèle peu recherché (volume ≈ " + (strategie.volume_modele || 0) +
+      "/mois) → titre construit sur les génériques du type de produit, nom du modèle en fin. " + info;
+  }
+  $("seo-info").textContent = info;
   seo.mots_cles.forEach((m) => {
     let usage = "—";
     if (fort.indexOf(m.keyword) !== -1) usage = "🔥 Titre";

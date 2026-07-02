@@ -117,7 +117,8 @@ def _regles_plateforme(plateforme: str) -> str:
     return REGLES_VINTED
 
 
-def _prompt(produit: dict, mots_cles: list[str], paquets: dict | None = None) -> str:
+def _prompt(produit: dict, mots_cles: list[str], paquets: dict | None = None,
+            strategie: dict | None = None) -> str:
     lignes = ["Crée une annonce de revente optimisée à partir de ces informations :", ""]
     libelles = {
         "nom": "Produit",
@@ -133,6 +134,24 @@ def _prompt(produit: dict, mots_cles: list[str], paquets: dict | None = None) ->
         val = produit.get(cle)
         if val:
             lignes.append(f"- {libelle} : {val}")
+
+    if strategie and strategie.get("mode") == "generique":
+        # Produit de niche : personne ne cherche le modèle par son nom.
+        lignes.append("")
+        lignes.append(
+            "⚠️ STRATÉGIE TITRE « GÉNÉRIQUE » : le nom exact du modèle n'est quasiment "
+            f"jamais recherché (volume ≈ {int(strategie.get('volume_modele') or 0)}/mois). "
+            "Construis le TITRE D'ABORD sur ces expressions génériques réellement tapées "
+            "par les acheteurs : " + ", ".join(strategie.get("generiques_forts", [])[:4]) +
+            ". Place le nom exact du modèle EN FIN de titre (pour la recherche exacte), "
+            "pas en tête."
+        )
+        if strategie.get("pieges"):
+            lignes.append(
+                "N'utilise JAMAIS ces mots seuls (ambigus/hors sujet) : "
+                + ", ".join(strategie["pieges"][:5]) +
+                " — uniquement accolés au type de produit."
+            )
 
     if paquets and (paquets.get("fort") or paquets.get("moyen")):
         # Volumes Google réels -> consignes de placement précises.
@@ -239,11 +258,13 @@ def analyser_photo(images: list[tuple[str, str]] | str, media_type: str = "image
 
 
 def generer_annonce(produit: dict, mots_cles: list[str] | None = None,
-                    paquets: dict | None = None) -> dict:
+                    paquets: dict | None = None, strategie: dict | None = None) -> dict:
     """Appelle Claude et renvoie le dict de l'annonce. Lève une exception en cas d'échec.
 
-    paquets : {'fort': [...], 'moyen': [...]} issus du tri par volume DataForSEO —
-    les mots FORT vont au titre, les MOYEN à la description.
+    paquets  : {'fort': [...], 'moyen': [...]} issus du tri par volume DataForSEO —
+               les mots FORT vont au titre, les MOYEN à la description.
+    strategie: sortie de generique.strategie_titre() — en mode 'generique', le
+               titre se construit sur les génériques, modèle en fin de titre.
     """
     if anthropic is None:
         raise RuntimeError("Le paquet 'anthropic' n'est pas installé (pip install anthropic).")
@@ -257,7 +278,7 @@ def generer_annonce(produit: dict, mots_cles: list[str] | None = None,
         thinking={"type": "adaptive"},
         system=SYSTEME,
         output_config={"format": {"type": "json_schema", "schema": SCHEMA}},
-        messages=[{"role": "user", "content": _prompt(produit, mots_cles, paquets)}],
+        messages=[{"role": "user", "content": _prompt(produit, mots_cles, paquets, strategie)}],
     )
 
     texte = next((b.text for b in resp.content if b.type == "text"), None)
