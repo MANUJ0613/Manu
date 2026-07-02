@@ -32,6 +32,7 @@ except Exception:  # anthropic éventuellement absent : l'app démarre quand mê
     claude_client = None  # type: ignore
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # photos : 12 Mo max
 
 PUBLIC_URL = os.environ.get("ANNONCES_PUBLIC_URL", "")
 # Intervalle du planificateur d'alertes (secondes)
@@ -60,6 +61,33 @@ def etat():
         "ntfy_topic": notify.TOPIC if notify.disponible() else None,
         "modele": getattr(claude_client, "MODEL", None) if claude_client else None,
     })
+
+
+# --------------------------------------------------------------------------- #
+# Analyse de photo -> pré-remplissage du formulaire
+# --------------------------------------------------------------------------- #
+@app.post("/api/analyser-photo")
+def api_analyser_photo():
+    """Reçoit une photo (multipart 'photo') et renvoie les champs identifiés."""
+    if claude_client is None:
+        return jsonify({"erreur": "Module Claude indisponible."}), 503
+    f = request.files.get("photo")
+    if not f:
+        return jsonify({"erreur": "Aucune photo reçue."}), 400
+    media_type = (f.mimetype or "image/jpeg").lower()
+    if media_type not in ("image/jpeg", "image/png", "image/webp", "image/gif"):
+        return jsonify({"erreur": f"Format non supporté ({media_type}). Utilise JPEG/PNG/WebP."}), 415
+    import base64
+    data = f.read()
+    if len(data) > 5 * 1024 * 1024:
+        return jsonify({"erreur": "Photo trop lourde (> 5 Mo après compression). Réessaie."}), 413
+    try:
+        produit = claude_client.analyser_photo(
+            base64.standard_b64encode(data).decode("ascii"), media_type
+        )
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 502
+    return jsonify({"produit": produit})
 
 
 # --------------------------------------------------------------------------- #

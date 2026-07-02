@@ -142,6 +142,60 @@ def _prompt(produit: dict, mots_cles: list[str]) -> str:
     return "\n".join(lignes)
 
 
+# --------------------------------------------------------------------------- #
+# Analyse de photo : identifier le produit pour pré-remplir le formulaire
+# --------------------------------------------------------------------------- #
+PRODUIT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "nom": {"type": "string", "description": "Nom/modèle précis du produit (ex. « Coffret matcha 10 pièces », « iPhone 12 64 Go »)"},
+        "marque": {"type": "string", "description": "Marque si visible/identifiable, sinon chaîne vide"},
+        "categorie": {"type": "string", "description": "Catégorie de revente (Vêtement, High-tech, Jeux vidéo, Maison / déco…)"},
+        "etat": {"type": "string", "description": "État apparent parmi : Neuf avec étiquette, Neuf sans étiquette, Très bon état, Bon état, Satisfaisant — ou vide si indéterminable"},
+        "taille": {"type": "string", "description": "Taille/pointure/dimensions si visibles, sinon vide"},
+        "couleur": {"type": "string", "description": "Couleur dominante"},
+        "details": {"type": "string", "description": "Détails utiles pour l'annonce : contenu, accessoires visibles, défauts apparents (boîte abîmée…), édition"},
+        "mots_cles": {"type": "array", "items": {"type": "string"}, "description": "5-10 mots-clés de recherche que les acheteurs taperaient"},
+        "confiance": {"type": "string", "enum": ["haute", "moyenne", "basse"], "description": "Confiance dans l'identification"},
+    },
+    "required": ["nom", "marque", "categorie", "etat", "taille", "couleur", "details", "mots_cles", "confiance"],
+    "additionalProperties": False,
+}
+
+SYSTEME_PHOTO = (
+    "Tu identifies des produits d'occasion à partir d'une photo, pour pré-remplir une annonce "
+    "de revente Vinted/Leboncoin. Lis les textes visibles (boîte, étiquette, logo) pour trouver "
+    "marque et modèle exacts. Note honnêtement les défauts visibles (boîte marquée, rayures…). "
+    "Si un champ n'est pas déterminable, renvoie une chaîne vide plutôt que d'inventer."
+)
+
+
+def analyser_photo(image_b64: str, media_type: str = "image/jpeg") -> dict:
+    """Identifie le produit sur la photo et renvoie les champs du formulaire."""
+    if anthropic is None:
+        raise RuntimeError("Le paquet 'anthropic' n'est pas installé (pip install anthropic).")
+
+    client = anthropic.Anthropic()
+    resp = client.messages.create(
+        model=MODEL,
+        max_tokens=1200,
+        thinking={"type": "adaptive"},
+        system=SYSTEME_PHOTO,
+        output_config={"format": {"type": "json_schema", "schema": PRODUIT_SCHEMA}},
+        messages=[{
+            "role": "user",
+            "content": [
+                {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_b64}},
+                {"type": "text", "text": "Identifie ce produit et remplis les champs pour l'annonce de revente."},
+            ],
+        }],
+    )
+    texte = next((b.text for b in resp.content if b.type == "text"), None)
+    if not texte:
+        raise RuntimeError("Réponse Claude vide.")
+    return json.loads(texte)
+
+
 def generer_annonce(produit: dict, mots_cles: list[str] | None = None) -> dict:
     """Appelle Claude et renvoie le dict de l'annonce. Lève une exception en cas d'échec."""
     if anthropic is None:

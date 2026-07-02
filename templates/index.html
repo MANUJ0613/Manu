@@ -23,6 +23,13 @@
 <main id="vue-generer" class="vue active">
   <section class="carte">
     <h2>Décris ton produit</h2>
+
+    <label class="btn-photo" for="photo-input">
+      📸 Prendre une photo → remplissage automatique
+      <input type="file" id="photo-input" accept="image/*" capture="environment" hidden>
+    </label>
+    <div id="photo-status" class="info cachee"></div>
+
     <div class="grille">
       <label>Nom / modèle *<input id="nom" placeholder="Ex : Sac à main cuir, iPhone 12, Jean Levi's 501"></label>
       <label>Marque<input id="marque" placeholder="Ex : Nike, Zara, Sony"></label>

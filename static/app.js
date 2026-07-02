@@ -49,6 +49,64 @@ async function chargerEtat() {
     p("ntfy" + (e.ntfy_topic ? " (" + e.ntfy_topic + ")" : ""), e.ntfy);
 }
 
+// ------------------------------------------------------------------ photo -> remplissage auto
+// Redimensionne la photo côté navigateur (max 1600 px, JPEG) : upload rapide
+// et taille compatible avec l'API vision.
+function redimensionnerPhoto(file, maxDim = 1600) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const ratio = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * ratio);
+      canvas.height = Math.round(img.height * ratio);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("compression échouée"))),
+        "image/jpeg", 0.85);
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = () => reject(new Error("image illisible"));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+$("photo-input").addEventListener("change", async () => {
+  const file = $("photo-input").files[0];
+  if (!file) return;
+  const btn = document.querySelector(".btn-photo");
+  const status = $("photo-status");
+  btn.classList.add("charge");
+  status.classList.remove("cachee");
+  status.textContent = "⏳ Analyse de la photo par Claude…";
+  try {
+    const blob = await redimensionnerPhoto(file);
+    const fd = new FormData();
+    fd.append("photo", blob, "photo.jpg");
+    const r = await fetch("/api/analyser-photo", { method: "POST", body: fd });
+    const d = await r.json();
+    if (d.erreur) throw new Error(d.erreur);
+    const p = d.produit || {};
+    // Remplit les champs identifiés (sans écraser une saisie déjà faite… sauf si vide)
+    const map = { nom: "nom", marque: "marque", categorie: "categorie", taille: "taille", couleur: "couleur", details: "details" };
+    Object.entries(map).forEach(([k, id]) => { if (p[k]) $(id).value = p[k]; });
+    if (p.etat) {
+      const sel = $("etat");
+      [...sel.options].forEach((o) => { if (o.value === p.etat) sel.value = p.etat; });
+    }
+    if (p.mots_cles && p.mots_cles.length) $("mots_cles").value = p.mots_cles.join(", ");
+    status.textContent = "✅ Champs remplis (confiance " + (p.confiance || "?") +
+      "). Vérifie, ajoute ton prix d'achat, puis Générer.";
+    toast("Produit identifié 📸");
+    $("prix_achat").focus();
+  } catch (e) {
+    status.textContent = "❌ " + e.message;
+    toast("Analyse échouée", true);
+  } finally {
+    btn.classList.remove("charge");
+    $("photo-input").value = "";
+  }
+});
+
 // ------------------------------------------------------------------ génération
 function lireProduit() {
   return {
