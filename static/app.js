@@ -70,12 +70,12 @@ function redimensionnerPhoto(file, maxDim = 1600) {
   });
 }
 
-$("photo-input").addEventListener("change", async () => {
-  const file = $("photo-input").files[0];
+async function analyserFichierPhoto(input) {
+  const file = input.files[0];
   if (!file) return;
-  const btn = document.querySelector(".btn-photo");
+  const zone = document.querySelector(".photo-boutons");
   const status = $("photo-status");
-  btn.classList.add("charge");
+  zone.classList.add("charge");
   status.classList.remove("cachee");
   status.textContent = "⏳ Analyse de la photo par Claude…";
   try {
@@ -86,7 +86,6 @@ $("photo-input").addEventListener("change", async () => {
     const d = await r.json();
     if (d.erreur) throw new Error(d.erreur);
     const p = d.produit || {};
-    // Remplit les champs identifiés (sans écraser une saisie déjà faite… sauf si vide)
     const map = { nom: "nom", marque: "marque", categorie: "categorie", taille: "taille", couleur: "couleur", details: "details" };
     Object.entries(map).forEach(([k, id]) => { if (p[k]) $(id).value = p[k]; });
     if (p.etat) {
@@ -102,10 +101,13 @@ $("photo-input").addEventListener("change", async () => {
     status.textContent = "❌ " + e.message;
     toast("Analyse échouée", true);
   } finally {
-    btn.classList.remove("charge");
-    $("photo-input").value = "";
+    zone.classList.remove("charge");
+    input.value = "";
   }
-});
+}
+
+$("photo-input").addEventListener("change", () => analyserFichierPhoto($("photo-input")));
+$("galerie-input").addEventListener("change", () => analyserFichierPhoto($("galerie-input")));
 
 // ------------------------------------------------------------------ génération
 function lireProduit() {

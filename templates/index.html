@@ -24,10 +24,17 @@
   <section class="carte">
     <h2>Décris ton produit</h2>
 
-    <label class="btn-photo" for="photo-input">
-      📸 Prendre une photo → remplissage automatique
-      <input type="file" id="photo-input" accept="image/*" capture="environment" hidden>
-    </label>
+    <div class="photo-boutons">
+      <label class="btn-photo" for="photo-input">
+        📸 Prendre une photo
+        <input type="file" id="photo-input" accept="image/*" capture="environment" hidden>
+      </label>
+      <label class="btn-photo galerie" for="galerie-input">
+        🖼️ Choisir dans la galerie
+        <input type="file" id="galerie-input" accept="image/*" hidden>
+      </label>
+    </div>
+    <p class="aide" style="margin-top:0">→ remplissage automatique du formulaire par analyse de la photo</p>
     <div id="photo-status" class="info cachee"></div>
 
     <div class="grille">
