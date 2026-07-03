@@ -1,6 +1,11 @@
 {
+<<<<<<< Updated upstream
   "last_scan": "2026-07-02T18:59:30.944664+00:00",
   "pack_id_max": 671,
+=======
+  "last_scan": "2026-07-03T00:33:25.648326+00:00",
+  "pack_id_max": 670,
+>>>>>>> Stashed changes
   "pack_roll": 241,
   "seen": {
     "https://www.micromania.fr/p/a-plague-tale-requiem-119972.html#new": 1.0,
