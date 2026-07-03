@@ -24,7 +24,7 @@ from datetime import datetime
 
 from flask import Flask, jsonify, render_template, request
 
-from seo_tools import db, dataforseo, generique, links, notify, pricing, slots
+from seo_tools import ab, db, dataforseo, generique, links, notify, pricing, slots
 
 try:
     from seo_tools import claude_client
@@ -300,10 +300,41 @@ def api_variante(aid: int):
 
 @app.get("/api/annonces/<int:aid>/ab")
 def api_bilan_ab(aid: int):
-    """Bilan A/B : ventes par variante."""
-    if not db.get_annonce(aid):
+    """Bilan A/B complet : scores vues+favoris par jour, gagnant, conseils."""
+    a = db.get_annonce(aid)
+    if not a:
         return jsonify({"erreur": "introuvable"}), 404
-    return jsonify(db.ventes_par_variante(aid))
+    stats = db.dernieres_ab_stats(aid)
+    bilan = ab.comparer(a, stats, db.ventes_par_variante(aid))
+    bilan["stats_brutes"] = stats
+    return jsonify(bilan)
+
+
+@app.post("/api/annonces/<int:aid>/ab/stats")
+def api_ab_stats(aid: int):
+    """Enregistre un relevé de stats réelles (vues/favoris/heures) pour une variante."""
+    a = db.get_annonce(aid)
+    if not a:
+        return jsonify({"erreur": "introuvable"}), 404
+    data = request.get_json(force=True, silent=True) or {}
+    variante = (data.get("variante") or "A").upper()
+    if variante not in ("A", "B"):
+        return jsonify({"erreur": "variante A ou B"}), 400
+    vues = _to_float(data.get("vues"))
+    favoris = _to_float(data.get("favoris"))
+    heures = _to_float(data.get("heures"))
+    if vues is None and favoris is None:
+        return jsonify({"erreur": "Renseigne au moins les vues ou les favoris."}), 400
+    if not heures:
+        return jsonify({"erreur": "Indique depuis combien d'heures la variante est en ligne."}), 400
+    db.enregistrer_ab_stats(aid, variante,
+                            int(vues) if vues is not None else None,
+                            int(favoris) if favoris is not None else None,
+                            heures)
+    stats = db.dernieres_ab_stats(aid)
+    bilan = ab.comparer(a, stats, db.ventes_par_variante(aid))
+    bilan["stats_brutes"] = stats
+    return jsonify(bilan), 201
 
 
 @app.post("/api/annonces/<int:aid>/republier")

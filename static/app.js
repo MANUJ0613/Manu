@@ -517,10 +517,53 @@ async function chargerAnnonces() {
     if (!cible) return;
     try {
       const bilan = await api(`/api/annonces/${cible.dataset.bilan}/ab`) || {};
-      cible.textContent = (bilan.A || bilan.B)
-        ? `Bilan ventes — A : ${bilan.A || 0} · B : ${bilan.B || 0}`
-        : "Bilan A/B : aucune vente encore.";
+      renderBilanAB(cible, cible.dataset.bilan, bilan);
     } catch (e) { cible.textContent = "Bilan indisponible."; }
+  }));
+}
+
+// ------------------------------------------------------------------ bilan A/B (stats réelles)
+// Relevé manuel : ouvre ton annonce sur Vinted/LBC, lis vues + favoris, saisis-les
+// ici avec le nombre d'heures en ligne. Score = (vues + 10×favoris)/heures×24.
+function renderBilanAB(el, id, b) {
+  let h = "";
+  (b.variantes || []).forEach((v, i) => {
+    const badge = b.gagnant === v.label ? " 🏆" : "";
+    h += `<div class="ab-ligne${i === 0 && b.gagnant ? " gagnant" : ""}">` +
+      `<strong>${v.label}${badge}</strong> · score <strong>${v.score_jour}</strong>/jour · ` +
+      `${v.vues} vues · ${v.favoris} fav · ${Math.round(v.heures)}h` +
+      (v.ventes ? ` · ${v.ventes} vente(s)` : "") + `</div>`;
+  });
+  if (b.conseil) h += `<div class="ab-conseil">💡 ${b.conseil}</div>`;
+  (b.avertissements || []).forEach((a) => { h += `<div class="ab-avert">⚠️ ${a}</div>`; });
+
+  // Saisie d'un relevé par variante
+  const brutes = b.stats_brutes || {};
+  ["A", "B"].forEach((lab) => {
+    if (lab === "B" && !b.a_variante_b) return;
+    const s = brutes[lab] || {};
+    h += `<div class="ab-releve">` +
+      `<span class="lab-var">${lab}</span>` +
+      `<input type="number" min="0" placeholder="vues" value="${s.vues != null ? s.vues : ""}" data-sv="${lab}">` +
+      `<input type="number" min="0" placeholder="favoris" value="${s.favoris != null ? s.favoris : ""}" data-sf="${lab}">` +
+      `<input type="number" min="1" placeholder="heures" value="${s.heures != null ? s.heures : ""}" data-sh="${lab}">` +
+      `<button data-abstat="${lab}">💾</button></div>`;
+  });
+  h += `<p class="aide">Relève vues + favoris sur la plateforme après ≥ 48 h, saisis-les avec le temps en ligne.</p>`;
+  el.innerHTML = h;
+
+  el.querySelectorAll("[data-abstat]").forEach((btn) => btn.addEventListener("click", async () => {
+    const lab = btn.dataset.abstat;
+    const val = (sel) => { const i = el.querySelector(`[data-s${sel}="${lab}"]`); return i && i.value !== "" ? i.value : null; };
+    try {
+      const r = await api(`/api/annonces/${id}/ab/stats`, {
+        method: "POST",
+        body: { variante: lab, vues: val("v"), favoris: val("f"), heures: val("h") },
+      });
+      if (r.erreur) { toast(r.erreur, true); return; }
+      toast("Relevé " + lab + " enregistré 📊");
+      renderBilanAB(el, id, r);
+    } catch (e) { toast(e.message, true); }
   }));
 }
 

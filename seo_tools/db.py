@@ -94,6 +94,17 @@ CREATE TABLE IF NOT EXISTS ventes (
     FOREIGN KEY (annonce_id) REFERENCES annonces(id) ON DELETE SET NULL
 );
 
+CREATE TABLE IF NOT EXISTS ab_stats (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    annonce_id INTEGER NOT NULL,
+    variante   TEXT NOT NULL,                            -- A | B
+    vues       INTEGER,
+    favoris    INTEGER,
+    heures     REAL,                                     -- temps en ligne au moment du relevé
+    saisi_le   REAL NOT NULL,
+    FOREIGN KEY (annonce_id) REFERENCES annonces(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS reglages (
     cle    TEXT PRIMARY KEY,
     valeur TEXT
@@ -251,6 +262,33 @@ def ajouter_vente(date_vente: float, montant: float | None = None,
             (annonce_id, plateforme, montant, date_vente),
         )
         return cur.lastrowid
+
+
+def enregistrer_ab_stats(annonce_id: int, variante: str,
+                         vues: int | None, favoris: int | None,
+                         heures: float | None) -> None:
+    """Ajoute un relevé de stats (vues/favoris) pour une variante A/B."""
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO ab_stats (annonce_id, variante, vues, favoris, heures, saisi_le) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (annonce_id, variante, vues, favoris, heures, time.time()),
+        )
+
+
+def dernieres_ab_stats(annonce_id: int) -> dict:
+    """Dernier relevé par variante : {'A': {vues, favoris, heures}, 'B': {...}}."""
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT variante, vues, favoris, heures, MAX(saisi_le) AS saisi_le "
+            "FROM ab_stats WHERE annonce_id = ? GROUP BY variante",
+            (annonce_id,),
+        ).fetchall()
+    return {
+        r["variante"]: {"vues": r["vues"], "favoris": r["favoris"],
+                        "heures": r["heures"], "saisi_le": r["saisi_le"]}
+        for r in rows
+    }
 
 
 def ventes_par_variante(annonce_id: int) -> dict:
