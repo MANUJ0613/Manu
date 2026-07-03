@@ -211,6 +211,10 @@ function afficherAnnonce(d) {
   $("v-titre").textContent = a.titre_vinted || "—";
   const vlen = (a.titre_vinted || "").length;
   $("v-titre-len").textContent = vlen + " car." + (vlen >= 45 && vlen <= 60 ? " ✓" : " (50-60)");
+  $("v-titre-b").textContent = a.titre_vinted_b || "—";
+  const vblen = (a.titre_vinted_b || "").length;
+  $("v-titre-b-len").textContent = a.titre_vinted_b
+    ? vblen + " car." + (vblen >= 45 && vblen <= 60 ? " ✓" : " (50-60)") : "";
   $("hashtags").textContent = (a.hashtags || []).slice(0, 5).map((h) => "#" + h.replace(/^#/, "")).join(" ") || "—";
 
   // Côté Leboncoin
@@ -394,19 +398,27 @@ document.getElementById("resultats").addEventListener("click", (e) => {
 // ------------------------------------------------------------------ suivre annonce
 $("btn-suivre").addEventListener("click", async () => {
   if (!dernierProduit) return;
-  const a = document.querySelector("#v-titre").textContent;
-  const prixVente = dernierChiffrage ? dernierChiffrage.paliers.equilibre.prix_vente : null;
+  const a = dernierAnnonce || {};
+  const titreA = a.titre_vinted && a.titre_vinted !== "—" ? a.titre_vinted : dernierProduit.nom;
+  // Test A/B pré-rempli : titre B généré + prix A (équilibré) / prix B (vente rapide).
+  const paliers = (dernierChiffrage && dernierChiffrage.paliers) || {};
+  const prixA = paliers.equilibre ? paliers.equilibre.prix_vente : null;
+  const prixB = paliers.vente_rapide ? paliers.vente_rapide.prix_vente : null;
   await api("/api/annonces", {
     method: "POST",
     body: {
-      titre: a && a !== "—" ? a : dernierProduit.nom,
+      titre: titreA,
+      titre_b: a.titre_vinted_b || null,
       plateforme: dernierProduit.plateforme === "les-deux" ? "vinted" : dernierProduit.plateforme,
       categorie: dernierProduit.categorie,
-      prix: prixVente,
+      prix: prixA,
+      prix_b: prixB,
       prix_achat: $("prix_achat").value,
+      reference_marche: $("reference_marche").value || null,
     },
   });
-  toast("Annonce ajoutée au suivi 📌");
+  toast(a.titre_vinted_b ? "Annonce suivie — test A/B prêt (🔀 dans Mes annonces) 📌"
+                         : "Annonce ajoutée au suivi 📌");
 });
 
 // ------------------------------------------------------------------ vue suivi
