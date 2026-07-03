@@ -221,6 +221,10 @@ function afficherAnnonce(d) {
   $("lc-titre").textContent = a.titre_court || "—";
   const len = (a.titre_court || "").length;
   $("lc-titre-len").textContent = len + "/50" + (len > 50 ? " ⚠️" : " ✓");
+  $("lc-titre-b").textContent = a.titre_court_b || "—";
+  const lblen = (a.titre_court_b || "").length;
+  $("lc-titre-b-len").textContent = a.titre_court_b
+    ? lblen + "/50" + (lblen > 50 ? " ⚠️" : " ✓") : "";
   $("lc-cat").textContent = (a.attributs && a.attributs.categorie_precise) || "Maison & Jardin > Arts de la table";
   // Leboncoin : 5 mots-clés max, sans le # (autorisés avec ou sans).
   $("lc-tags").textContent = (a.hashtags || []).slice(0, 5).map((h) => h.replace(/^#/, "")).join(" · ") || "—";
@@ -399,7 +403,10 @@ document.getElementById("resultats").addEventListener("click", (e) => {
 $("btn-suivre").addEventListener("click", async () => {
   if (!dernierProduit) return;
   const a = dernierAnnonce || {};
-  const titreA = a.titre_vinted && a.titre_vinted !== "—" ? a.titre_vinted : dernierProduit.nom;
+  // Titres A/B adaptés à la plateforme suivie (Leboncoin = titres courts).
+  const surLbc = dernierProduit.plateforme === "leboncoin";
+  const titreA = (surLbc ? a.titre_court : a.titre_vinted) || dernierProduit.nom;
+  const titreB = (surLbc ? a.titre_court_b : a.titre_vinted_b) || null;
   // Test A/B pré-rempli : titre B généré + prix A (équilibré) / prix B (vente rapide).
   const paliers = (dernierChiffrage && dernierChiffrage.paliers) || {};
   const prixA = paliers.equilibre ? paliers.equilibre.prix_vente : null;
@@ -408,7 +415,7 @@ $("btn-suivre").addEventListener("click", async () => {
     method: "POST",
     body: {
       titre: titreA,
-      titre_b: a.titre_vinted_b || null,
+      titre_b: titreB,
       plateforme: dernierProduit.plateforme === "les-deux" ? "vinted" : dernierProduit.plateforme,
       categorie: dernierProduit.categorie,
       prix: prixA,
@@ -417,8 +424,8 @@ $("btn-suivre").addEventListener("click", async () => {
       reference_marche: $("reference_marche").value || null,
     },
   });
-  toast(a.titre_vinted_b ? "Annonce suivie — test A/B prêt (🔀 dans Mes annonces) 📌"
-                         : "Annonce ajoutée au suivi 📌");
+  toast(titreB ? "Annonce suivie — test A/B prêt (🔀 dans Mes annonces) 📌"
+               : "Annonce ajoutée au suivi 📌");
 });
 
 // ------------------------------------------------------------------ vue suivi

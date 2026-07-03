@@ -38,7 +38,8 @@ MODEL = os.environ.get("ANNONCES_MODEL", "claude-opus-4-8")
 SCHEMA = {
     "type": "object",
     "properties": {
-        "titre_court": {"type": "string", "description": "Titre <= 50 caractères pour Leboncoin"},
+        "titre_court": {"type": "string", "description": "Titre <= 50 caractères pour Leboncoin, descriptif et précis"},
+        "titre_court_b": {"type": "string", "description": "VARIANTE B du titre Leboncoin pour test A/B : angle DIFFÉRENT de la variante A (autre mot-clé en tête, autre formulation descriptive). <= 50 caractères, toujours descriptif (règles Leboncoin)."},
         "titre_vinted": {"type": "string", "description": "Titre Vinted 50-60 caractères MAXIMUM (jamais plus de 60) : mots-clés les plus forts en tête"},
         "titre_vinted_b": {"type": "string", "description": "VARIANTE B du titre Vinted pour test A/B : angle DIFFÉRENT de la variante A — autre mot-clé fort en tête, autre bénéfice mis en avant ou synonymes (ex. A commence par l'usage, B par la marque ou le public cible). 50-60 caractères MAXIMUM."},
         "description": {"type": "string", "description": "80-150 mots, 3 blocs, langage naturel, 3-5 hashtags à la toute fin"},
@@ -59,7 +60,7 @@ SCHEMA = {
             "additionalProperties": False,
         },
     },
-    "required": ["titre_court", "titre_vinted", "titre_vinted_b", "description", "hashtags", "mots_cles_places", "attributs"],
+    "required": ["titre_court", "titre_court_b", "titre_vinted", "titre_vinted_b", "description", "hashtags", "mots_cles_places", "attributs"],
     "additionalProperties": False,
 }
 
@@ -74,9 +75,10 @@ SYSTEME = (
     "« URGENT », « PROMO !!! », ponctuation spammée, mots génériques seuls.\n"
     "- titre_court : titre Leboncoin, <= 50 caractères, DESCRIPTIF et précis (type + marque + détail "
     "+ quantité si utile), vocabulaire acheteur.\n"
-    "- titre_vinted_b : VARIANTE B pour test A/B — même produit, angle DIFFÉRENT (autre mot-clé "
-    "fort en tête, autre bénéfice, ou synonymes). Les deux variantes doivent être assez "
-    "différentes pour qu'un test A/B ait du sens. 50-60 caractères MAXIMUM.\n"
+    "- titre_vinted_b et titre_court_b : VARIANTES B pour test A/B — même produit, angle "
+    "DIFFÉRENT (autre mot-clé fort en tête, autre bénéfice, ou synonymes). Les deux variantes "
+    "doivent être assez différentes pour qu'un test A/B ait du sens. titre_vinted_b : 50-60 "
+    "caractères MAXIMUM ; titre_court_b : <= 50 caractères, descriptif (règles Leboncoin).\n"
     "- description : 80 à 150 mots, en 3 blocs — (1) accroche, (2) détails techniques (marque, "
     "dimensions/mesures, couleur, matière, état PRÉCIS et honnête), (3) conditions (envoi, négociation). "
     "Mots-clés LONGUE TRAÎNE + SYNONYMES (baskets/sneakers…), langage naturel (indexé par Google), "
