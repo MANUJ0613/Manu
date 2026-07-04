@@ -612,6 +612,16 @@ $("btn-test-ntfy").addEventListener("click", async () => {
   const r = await api("/api/tester-ntfy", { method: "POST" });
   toast(r.envoye ? "Notif envoyée 🔔" : "Échec (ntfy configuré ?)", !r.envoye);
 });
+$("btn-test-alerte").addEventListener("click", async () => {
+  const r = await api("/api/tester-alerte", { method: "POST" });
+  if (r.envoye) {
+    toast(r.type === "republication"
+      ? `Alerte republication envoyée (${r.nb_a_republier} annonce·s) 🔔`
+      : "Alerte « bon créneau » envoyée 🔔");
+  } else {
+    toast("Échec : " + (r.erreur || "ntfy ?"), true);
+  }
+});
 
 // premier chargement de prix live quand on change le prix d'achat
 $("prix_achat").addEventListener("input", () => {

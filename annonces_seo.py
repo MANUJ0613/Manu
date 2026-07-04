@@ -411,6 +411,26 @@ def api_tester_ntfy():
     return jsonify({"envoye": ok, "configure": notify.disponible()})
 
 
+@app.post("/api/tester-alerte")
+def api_tester_alerte():
+    """Envoie MAINTENANT l'alerte que le planificateur enverrait au prochain créneau
+    (republication s'il y a du 🟠/🔴, sinon rappel de bon créneau). Sert à valider
+    la chaîne automatique de bout en bout sans attendre le créneau réel."""
+    if not notify.disponible():
+        return jsonify({"envoye": False, "erreur": "ntfy non configuré"}), 400
+    cibles = slots.a_republier(db.lister_annonces("active"), ALERTE_INCLURE_ORANGE)
+    if cibles:
+        ok = notify.alerte_republication(cibles, PUBLIC_URL)
+        type_alerte = "republication"
+    else:
+        creneaux = slots.meilleurs_creneaux(db.lister_ventes())["creneaux"]
+        c = slots.creneau_actuel(creneaux) or slots.prochain_creneau(creneaux) \
+            or {"jour_nom": "prochain créneau", "heure": ""}
+        ok = notify.alerte_bon_creneau(c, PUBLIC_URL)
+        type_alerte = "bon_creneau"
+    return jsonify({"envoye": ok, "type": type_alerte, "nb_a_republier": len(cibles)})
+
+
 # --------------------------------------------------------------------------- #
 # Helpers
 # --------------------------------------------------------------------------- #
