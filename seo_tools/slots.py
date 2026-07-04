@@ -22,6 +22,11 @@ import os
 import time
 from collections import Counter
 from datetime import datetime
+from zoneinfo import ZoneInfo
+
+# Fuseau des créneaux : les heures (mer 19h, dim 20h…) sont des heures FRANÇAISES.
+# Beaucoup de VPS sont en UTC -> sans ça, les alertes partent 1-2 h trop tard.
+TZ = ZoneInfo(os.environ.get("ANNONCES_TZ", "Europe/Paris"))
 
 WARN_HEURES = float(os.environ.get("REPUB_WARN_HEURES", "72"))    # 3 j -> orange
 CRIT_HEURES = float(os.environ.get("REPUB_CRIT_HEURES", "168"))   # 7 j -> rouge
@@ -111,7 +116,7 @@ def meilleurs_creneaux(ventes: list[dict], top: int = 5, min_ventes: int = 8) ->
 
     compteur: Counter = Counter()
     for ts in horodatages:
-        d = datetime.fromtimestamp(ts)
+        d = datetime.fromtimestamp(ts, TZ)
         compteur[(d.weekday(), d.hour)] += 1
 
     creneaux = []
@@ -126,14 +131,38 @@ def meilleurs_creneaux(ventes: list[dict], top: int = 5, min_ventes: int = 8) ->
     return {"source": "stats", "creneaux": creneaux, "total_ventes": total}
 
 
+def creneau_actuel(creneaux: list[dict], maintenant: datetime | None = None,
+                   tolerance_h: int = 1) -> dict | None:
+    """Renvoie le créneau (dict) dans lequel on se trouve, ou None.
+
+    L'heure de référence est en heure FRANÇAISE (TZ), pas l'heure du serveur.
+    """
+    maintenant = maintenant or datetime.now(TZ)
+    for c in creneaux:
+        if c["jour"] == maintenant.weekday() and abs(c["heure"] - maintenant.hour) <= tolerance_h:
+            return c
+    return None
+
+
 def est_bon_creneau(creneaux: list[dict], maintenant: datetime | None = None,
                     tolerance_h: int = 1) -> bool:
     """Vrai si l'instant présent tombe dans un des meilleurs créneaux (± tolérance)."""
-    maintenant = maintenant or datetime.now()
+    return creneau_actuel(creneaux, maintenant, tolerance_h) is not None
+
+
+def prochain_creneau(creneaux: list[dict], maintenant: datetime | None = None) -> dict | None:
+    """Le prochain créneau à venir (en heure française), avec le délai en heures."""
+    maintenant = maintenant or datetime.now(TZ)
+    meilleur = None
     for c in creneaux:
-        if c["jour"] == maintenant.weekday() and abs(c["heure"] - maintenant.hour) <= tolerance_h:
-            return True
-    return False
+        # heures d'écart jusqu'à la prochaine occurrence de (jour, heure)
+        delta_jours = (c["jour"] - maintenant.weekday()) % 7
+        delta_h = delta_jours * 24 + (c["heure"] - maintenant.hour) - maintenant.minute / 60.0
+        if delta_h < 0:
+            delta_h += 7 * 24
+        if meilleur is None or delta_h < meilleur["dans_heures"]:
+            meilleur = {**c, "dans_heures": round(delta_h, 1)}
+    return meilleur
 
 
 def republication_trop_recente(annonce: dict, maintenant: float | None = None) -> bool:

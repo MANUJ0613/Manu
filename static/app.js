@@ -571,9 +571,13 @@ function renderBilanAB(el, id, b) {
 async function chargerCreneaux() {
   let d;
   try { d = await api("/api/creneaux"); } catch (e) { toast(e.message, true); return; }
-  $("creneaux-info").textContent = d.source === "stats"
+  let info = d.source === "stats"
     ? `Basé sur tes ${d.total_ventes} ventes.`
     : `Créneaux par défaut (grand trafic). Enregistre au moins 8 ventes pour personnaliser (${d.total_ventes || 0} pour l'instant).`;
+  if (d.prochain) {
+    info += ` — 🔔 Prochaine alerte : ${d.prochain.jour_nom} ${d.prochain.heure}h (dans ~${Math.round(d.prochain.dans_heures)}h, heure de Paris).`;
+  }
+  $("creneaux-info").textContent = info;
   const box = $("liste-creneaux");
   box.innerHTML = "";
   (d.creneaux || []).forEach((c, i) => {

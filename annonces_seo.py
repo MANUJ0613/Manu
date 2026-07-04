@@ -39,6 +39,8 @@ PUBLIC_URL = os.environ.get("ANNONCES_PUBLIC_URL", "")
 SCHED_INTERVAL = int(os.environ.get("ANNONCES_SCHED_INTERVAL", "300"))
 # Envoyer aussi les 🟠 (True) ou seulement les 🔴 (False)
 ALERTE_INCLURE_ORANGE = os.environ.get("ALERTE_INCLURE_ORANGE", "true").lower() == "true"
+# Notifier CHAQUE bon créneau même sans annonce à republier (pour poster du neuf)
+ALERTE_CRENEAU_TOUJOURS = os.environ.get("ALERTE_CRENEAU_TOUJOURS", "true").lower() == "true"
 
 
 # --------------------------------------------------------------------------- #
@@ -378,7 +380,11 @@ def api_supprimer(aid: int):
 # --------------------------------------------------------------------------- #
 @app.get("/api/creneaux")
 def api_creneaux():
-    return jsonify(slots.meilleurs_creneaux(db.lister_ventes()))
+    info = slots.meilleurs_creneaux(db.lister_ventes())
+    info["prochain"] = slots.prochain_creneau(info["creneaux"])
+    info["heure_paris"] = datetime.now(slots.TZ).strftime("%A %H:%M")
+    info["alerte_sans_republication"] = ALERTE_CRENEAU_TOUJOURS
+    return jsonify(info)
 
 
 @app.post("/api/ventes")
@@ -473,9 +479,11 @@ def _boucle_alertes():
 def _tick_alerte():
     if not notify.disponible():
         return
-    maintenant = datetime.now()
+    # Heure FRANÇAISE (les créneaux sont exprimés en heure de Paris, pas UTC).
+    maintenant = datetime.now(slots.TZ)
     creneaux = slots.meilleurs_creneaux(db.lister_ventes())["creneaux"]
-    if not slots.est_bon_creneau(creneaux, maintenant):
+    creneau = slots.creneau_actuel(creneaux, maintenant)
+    if creneau is None:
         return
 
     # Anti-spam : une seule alerte par tranche horaire de bon créneau.
@@ -484,10 +492,15 @@ def _tick_alerte():
         return
 
     cibles = slots.a_republier(db.lister_annonces("active"), ALERTE_INCLURE_ORANGE)
-    if not cibles:
+    if cibles:
+        ok = notify.alerte_republication(cibles, PUBLIC_URL)
+    elif ALERTE_CRENEAU_TOUJOURS:
+        # Rien à republier, mais c'est un bon créneau : rappel pour poster du neuf.
+        ok = notify.alerte_bon_creneau(creneau, PUBLIC_URL)
+    else:
         return
 
-    if notify.alerte_republication(cibles, PUBLIC_URL):
+    if ok:
         db.set_reglage("derniere_alerte_creneau", cle_creneau)
 
 

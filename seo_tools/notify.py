@@ -55,6 +55,19 @@ def envoyer(message: str, titre: str = "Revente", priorite: str = "default",
         return False
 
 
+def alerte_bon_creneau(creneau: dict, base_url: str = "") -> bool:
+    """Rappel « c'est le bon moment pour publier » (même sans annonce à republier)."""
+    quand = f"{creneau.get('jour_nom', '')} {creneau.get('heure', '')}h"
+    return envoyer(
+        f"🕐 Bon créneau pour publier : {quand}.\n"
+        "C'est le moment de poster tes nouvelles annonces (fort trafic acheteurs).",
+        titre="Créneau de publication",
+        priorite="high",
+        tags=["alarm_clock"],
+        cliquer_url=base_url or None,
+    )
+
+
 def alerte_republication(annonces: list[dict], base_url: str = "") -> bool:
     """Notification résumée des annonces à republier maintenant."""
     if not annonces:
