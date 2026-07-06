@@ -1,0 +1,11 @@
+# Dépendances du service Autobuy (sniper collector Micromania/Fnac/Funko).
+#
+#   pip install -r requirements-autobuy.txt
+#
+# Impersonation TLS (contourne DataDome/Cloudflare) — fortement recommandé :
+curl_cffi>=0.7
+#
+# Auto-checkout piloté (facultatif). Après l'install, lance UNE fois :
+#   python3 -m playwright install chromium
+# (Sur ce type d'environnement, Chromium est parfois déjà présent — voir README.)
+playwright>=1.40

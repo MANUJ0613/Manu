@@ -2,3 +2,10 @@ __pycache__/
 *.pyc
 state/deals.log
 state/state.json
+
+# Autobuy — ne jamais committer : sessions connectées, cibles perso, état/achats.
+state/autobuy_state.json
+autobuy_watchlist.json
+*.storage.json
+autobuy_storage_*.json
+secrets/

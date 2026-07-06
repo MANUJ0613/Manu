@@ -342,3 +342,77 @@ Pour le `chat_id`, envoie un message au bot puis ouvre
 
 Pour rendre la détection plus stricte (uniquement les erreurs de prix
 évidentes), monte le seuil : `DISCOUNT_THRESHOLD=0.70`.
+
+---
+
+## 🛒 Autobuy — sniper d'éditions collector / limitées (Micromania · Fnac · Funko)
+
+Service qui **détecte un restock en quelques secondes, ajoute au panier, pousse le
+checkout jusqu'au paiement, et t'alerte instantanément** (ntfy + Discord) avec le
+lien de paiement prêt. Surveille à la fois une **watchlist** de produits précis et
+les **rayons collector/limité** des trois sites.
+
+### ⚠️ À lire avant de l'utiliser
+- **Le 3-D Secure ne s'automatise pas.** En Europe (DSP2), l'étape finale de
+  paiement se valide dans ton appli banque. « Auto-checkout » = le bot pousse
+  **jusqu'à l'écran 3DS**, puis tu confirmes du doigt. C'est le maximum légalement/
+  techniquement possible.
+- **Aucune carte n'est stockée.** L'achat s'appuie sur tes **comptes marchands avec
+  carte + adresse déjà enregistrées**. Le mode piloté réutilise une **session déjà
+  connectée** (storageState Playwright que tu génères une fois) — jamais de mot de
+  passe ni de numéro de carte dans le repo.
+- **Anti-bot & ToS.** Micromania (DataDome), Fnac (lourd), Funko (Shopify). Un rythme
+  trop agressif = **ban compte/IP**. La cadence est bridée par défaut ; un **proxy
+  résidentiel** (`AUTOBUY_PROXY`) est conseillé si tu pousses fort. L'achat
+  automatisé viole les CGU des sites : c'est ton risque assumé.
+- **`DRY_RUN` est activé par défaut** : aucune commande réelle tant que tu ne mets
+  pas `AUTOBUY_DRY_RUN=false`.
+
+### Comment ça marche
+1. `autobuy_watchlist.json` liste tes cibles (`mode:"auto"` = tente l'achat,
+   `mode:"alert"` = prévient seulement). Copie `autobuy_watchlist.example.json`.
+2. Le service `autobuy_run.py` vérifie la watchlist toutes les ~10 s et scanne les
+   rayons collector toutes les ~5 min.
+3. Produit dispo → alerte **ntfy + Discord** (bouton « PAYER ») ; si `mode:"auto"` et
+   sous le plafond, il ajoute au panier et (option) pilote le checkout jusqu'au 3DS.
+
+### Garde-fous
+`AUTOBUY_DRY_RUN` (défaut `true`) · `AUTOBUY_DAILY_SPEND_CAP` (€/jour) · `max_price`
+par article · quantité 1 · achat unique par produit · flags `AUTOBUY_SITE_*` pour
+couper un site · `AUTOBUY_ENABLED=false` = kill-switch.
+
+### Installation (VPS, systemd)
+```bash
+pip install -r requirements-autobuy.txt
+# (option, pour l'auto-checkout piloté)  python3 -m playwright install chromium
+cp autobuy_watchlist.example.json autobuy_watchlist.json   # puis édite tes cibles
+cp deploy/autobuy.env.example /etc/autobuy.env && chmod 600 /etc/autobuy.env
+# édite /etc/autobuy.env (topic ntfy, webhook Discord, DRY_RUN…)
+sudo cp deploy/autobuy.service /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now autobuy
+journalctl -u autobuy -f
+```
+
+### Alertes sur le téléphone (ntfy)
+Installe l'appli **ntfy** (Android/iOS), abonne-toi à ton **topic secret**, mets ce
+même topic dans `NTFY_TOPIC`. Tu reçois une notif push avec un bouton **PAYER** qui
+ouvre directement le panier/paiement.
+
+### Auto-checkout piloté (facultatif, `AUTOBUY_PLAYWRIGHT=true`)
+Connecte-toi **une fois** au site dans un navigateur Playwright et exporte l'état de
+session (`storageState`) vers un fichier JSON (ex. `secrets/funko.storage.json`),
+puis renseigne `FUNKO_STORAGE=...`. Le bot rouvre cette session connectée, va au
+paiement avec ta carte enregistrée, et s'arrête au 3DS pour que tu valides. Ces
+fichiers `*.storage.json` sont **ignorés par git** (ils contiennent ta session).
+
+### Fiabilité par site (état actuel)
+- **Funko (Shopify)** : le plus solide — stock/panier/checkout via les endpoints
+  Shopify. ✅
+- **Micromania** : détection de stock + alerte solides ; auto-panier via le flux
+  connecté (à confirmer en live sur ton compte). 🟡
+- **Fnac** : le plus hostile — détection + alerte fiables ; achat auto best-effort,
+  repli alerte-seule. 🟠
+
+> Les sélecteurs de checkout (noms de boutons, endpoints panier Micromania/Fnac)
+> peuvent devoir être ajustés en live : commence en `DRY_RUN`, vérifie les liens de
+> panier, puis désactive `DRY_RUN` pour un achat test à faible montant.

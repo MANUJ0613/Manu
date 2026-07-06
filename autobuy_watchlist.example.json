@@ -1,0 +1,31 @@
+[
+  {
+    "site": "funko",
+    "label": "Pop! exemple — édition limitée",
+    "url": "https://funko.com/fr/products/REMPLACE-PAR-LE-HANDLE",
+    "variant": null,
+    "max_price": 25,
+    "mode": "auto"
+  },
+  {
+    "site": "funko",
+    "label": "Exemple en alerte seule (pas d'achat auto)",
+    "handle": "un-autre-produit",
+    "max_price": 40,
+    "mode": "alert"
+  },
+  {
+    "site": "micromania",
+    "label": "Steelbook collector exemple",
+    "url": "https://www.micromania.fr/exemple-produit-123456.html",
+    "max_price": 80,
+    "mode": "auto"
+  },
+  {
+    "site": "fnac",
+    "label": "Édition collector Fnac exemple",
+    "url": "https://www.fnac.com/exemple/a12345678",
+    "max_price": 90,
+    "mode": "alert"
+  }
+]

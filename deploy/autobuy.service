@@ -1,0 +1,19 @@
+[Unit]
+Description=Autobuy - sniper collector/limitees (Micromania, Fnac, Funko)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# notify => le service envoie un heartbeat (sd_notify) ; si systemd ne le reçoit
+# plus pendant WatchdogSec, il considère le process "figé" et le redémarre.
+Type=notify
+WatchdogSec=120
+WorkingDirectory=/opt/autobuy
+EnvironmentFile=/etc/autobuy.env
+ExecStart=/opt/autobuy/venv/bin/python /opt/autobuy/autobuy_run.py
+Restart=always
+RestartSec=10
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target
