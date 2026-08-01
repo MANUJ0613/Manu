@@ -1,12 +1,80 @@
 # Outils de veille e-commerce
 
-Ce dépôt contient deux outils indépendants :
+Ce dépôt contient trois outils indépendants :
 
 1. **[Analyseur de demande Vinted](#analyseur-de-demande-vinted-)** 🛍️ — savoir
    ce qui est le plus recherché sur Vinted (favoris/vues) et à quel prix ça se
    revend.
 2. **[Micromania deals watcher](#micromania-deals-watcher-)** 🔥 — alerte sur les
    grosses réductions / erreurs de prix sur micromania.fr.
+3. **[Revente SEO (Leboncoin & Vinted)](#revente-seo-leboncoin--vinted-)** ✍️ —
+   serveur web qui génère tes annonces (titre + description via Claude), cale le
+   prix/marge, et t'alerte quand republier au meilleur créneau.
+
+---
+
+# Revente SEO (Leboncoin & Vinted) ✍️
+
+Un **serveur Flask 24/7** (pensé pour un VPS) qui t'aide à revendre plus vite.
+Tu décris ton produit dans l'interface web, et l'outil :
+
+- **génère titre + description optimisés** via l'**API Claude**, en appliquant
+  les **règles SEO Vinted 2026** (le texte prime sur les hashtags) : titre
+  Vinted 50-60 car. (marque + type + détail), titre court Leboncoin ≤ 50,
+  description 80-150 mots en 3 blocs avec mots-clés longue traîne + synonymes,
+  3-5 hashtags en fin de description, et suggestion des **attributs à remplir** ;
+- récupère les **vrais volumes de recherche Google** de tes mots-clés via
+  **DataForSEO** (pour prioriser ceux que les acheteurs tapent vraiment) ;
+- calcule le **prix conseillé et la marge nette** (frais Vinted/Leboncoin
+  intégrés) avec 3 paliers (vente rapide / équilibré / marge max) et un curseur ;
+- propose des boutons **Google Lens / eBay (prix vendus) / Gemini** pour caler
+  le prix ;
+- **suit tes annonces** avec un statut de fraîcheur **🟢🟠🔴** (aligné sur une
+  **cadence de republication par annonce**, 7-10 j conseillés) et t'envoie une
+  **alerte push ntfy** aux meilleurs créneaux pour les republier — avec
+  **garde-fou anti-spam** (blocage des reposts < 24 h) ;
+- **importe tes prix « Vendus »** (colle une liste → médiane calculée et injectée
+  comme référence marché, prix conseillé médiane -10 % en X,99) ;
+- permet un **test A/B** par annonce (2 variantes titre/prix, bascule = relist,
+  bilan des ventes par variante) ;
+- **détecte TES meilleurs créneaux** à partir de tes propres ventes (repli sur
+  les créneaux grand trafic France : mer/jeu 18-20h, dim soir, sam 9-11h).
+
+### Démarrage rapide (local)
+
+```bash
+pip install -r requirements-web.txt
+export ANTHROPIC_API_KEY=sk-ant-...      # génération d'annonce
+export NTFY_TOPIC=revente-secret         # alertes push (abonne-toi via l'appli ntfy)
+export DATAFORSEO_LOGIN=... DATAFORSEO_PASSWORD=...   # optionnel : volumes réels
+python annonces_seo.py                    # http://localhost:8000
+```
+
+L'appli **démarre même sans clés** : la génération Claude se désactive
+proprement, le reste (mots-clés saisis, prix/marge, liens, suivi) continue.
+
+### Déploiement VPS (systemd)
+
+```bash
+sudo bash deploy/install-annonces.sh      # clone, venv, service systemd
+sudo nano /etc/annonces-seo.env           # remplis Claude / ntfy / DataForSEO
+sudo systemctl start annonces-seo
+```
+
+Toute la config est dans **`deploy/annonces-seo.env.example`** (frais des
+plateformes, seuils 🟠/🔴, modèle Claude, etc.). Mets un reverse-proxy nginx +
+HTTPS devant en production.
+
+### Comment ça marche
+
+| Élément | Détail |
+|---|---|
+| Serveur | `annonces_seo.py` (Flask) + planificateur d'alertes en thread de fond |
+| Logique | `seo_tools/` : `claude_client`, `dataforseo`, `pricing`, `slots`, `notify`, `links`, `db` |
+| Stockage | SQLite `state/annonces.db` (annonces, ventes, réglages) — non versionné |
+| Statuts | 🟢 fraîche · 🟠 à republier bientôt (72 h) · 🔴 republie maintenant (168 h) |
+| Créneaux | histogramme (jour × heure) de tes ventes → alerte ntfy au bon moment |
+| Modèle | `claude-opus-4-8` par défaut (surcharge via `ANNONCES_MODEL`) |
 
 ---
 
