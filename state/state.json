@@ -1,7 +1,13 @@
 {
+<<<<<<< Updated upstream
   "last_scan": "2026-08-06T13:43:44.729559+00:00",
   "pack_id_max": 667,
   "pack_roll": 361,
+=======
+  "last_scan": "2026-08-06T16:15:21.717510+00:00",
+  "pack_id_max": 500,
+  "pack_roll": 1,
+>>>>>>> Stashed changes
   "seen": {
     "https://www.micromania.fr/p/borderlands-4-151494.html#new": 19.99,
     "https://www.micromania.fr/p/civilization-vii-143918.html#new": 19.99,
