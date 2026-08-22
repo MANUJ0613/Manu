@@ -2,3 +2,7 @@ __pycache__/
 *.pyc
 state/deals.log
 state/state.json
+# Base SQLite de l'outil de revente SEO (données perso : annonces, ventes)
+state/annonces.db
+state/annonces.db-wal
+state/annonces.db-shm
