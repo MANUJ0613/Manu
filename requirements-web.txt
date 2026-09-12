@@ -1,0 +1,5 @@
+# Dépendances de l'outil de revente SEO (annonces_seo.py).
+# Installe-les en plus de requirements.txt :  pip install -r requirements-web.txt
+Flask>=3.0
+anthropic>=0.40
+gunicorn>=21.2
