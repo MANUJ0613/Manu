@@ -1,0 +1,80 @@
+name: Appli recettes (APK Android)
+
+# Construit l'appli « Au gramme près » (dossier recettes-app/) en APK signé
+# et le publie sur la branche `recettes-apk` (avec le journal de build).
+
+on:
+  push:
+    branches: ["claude/recettes-app"]
+    paths:
+      - "recettes-app/**"
+      - ".github/workflows/recettes-apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write # publier l'APK sur la branche recettes-apk
+
+concurrency:
+  group: recettes-apk
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: recettes-app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: recettes-app/package-lock.json
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+          cache-dependency-path: |
+            recettes-app/android/*.gradle*
+            recettes-app/android/app/*.gradle*
+            recettes-app/android/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Construire l'APK
+        run: |
+          set -o pipefail
+          {
+            npm ci --no-audit --no-fund &&
+            node build.mjs &&
+            npx cap sync android &&
+            cd android && chmod +x gradlew &&
+            ./gradlew assembleRelease --no-daemon --stacktrace --warning-mode=none
+          } 2>&1 | tee build.log
+
+      - name: Publier sur la branche recettes-apk
+        if: always()
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN: ${{ github.run_number }}
+          SHA: ${{ github.sha }}
+        run: |
+          OUT=$(mktemp -d)
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          if [ -f "$APK" ]; then cp "$APK" "$OUT/au-gramme-pres.apk"; STATUS=success; else STATUS=failure; fi
+          if [ -f build.log ]; then tail -c 300000 build.log > "$OUT/build.log"; fi
+          printf '{"run": %s, "status": "%s", "sha": "%s"}\n' "$RUN" "$STATUS" "$SHA" > "$OUT/status.json"
+          cd "$OUT"
+          git init -q -b recettes-apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "APK build $RUN ($STATUS)"
+          git push -qf "https://x-access-token:${TOKEN}@github.com/${REPO}.git" recettes-apk

@@ -1,0 +1,21 @@
+{
+  "appId": "app.augrammepres.recettes",
+  "appName": "Au gramme près",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover",
+      "style": "DEFAULT"
+    },
+    "CapacitorHttp": {
+      "enabled": false
+    }
+  },
+  "backgroundColor": "#F7F4EE"
+}
