@@ -4,6 +4,8 @@ import { $, $$, esc, num, str, arr, clone, f0, f1, round1, gOrNull, resizeImage 
 import { pushPage, icon, actionSheet, confirmSheet, toast } from '../ui.js';
 import { isSec, perFromLine, lookupPer, foodByName, foodPer, applyPer, perPortion, bestFit, STW, hasMacros } from '../macros.js';
 import { openRecipe } from './detail.js';
+import { suggestSteps } from '../importers.js';
+import { hasKey } from '../ai.js';
 
 export function openEditor(rec, opts = {}) {
   const base = opts.draft ? clone(opts.draft) : rec ? clone(rec) : {
@@ -138,7 +140,7 @@ export function openEditor(rec, opts = {}) {
         <div class="ed-tot" id="ed-tot">${totalsHTML()}</div>
         <h2 class="ed-h">Étapes</h2>
         <div class="sts">${d.steps.map((s, i) => `<div class="st" data-si="${i}"><span class="sn">${i + 1}</span><textarea rows="2" placeholder="Étape ${i + 1}">${esc(s)}</textarea><button type="button" class="icon-btn small" data-sact="del" aria-label="Supprimer l'étape">${icon('close')}</button></div>`).join('')}</div>
-        <div class="row-btns left"><button type="button" class="btn small ghost" data-act="add-step">${icon('plus')}Étape</button></div>
+        <div class="row-btns left"><button type="button" class="btn small ghost" data-act="add-step">${icon('plus')}Étape</button>${d.steps.every(s => !str(s)) ? `<button type="button" class="btn small primary" data-act="ai-steps">${icon('sparkle')}Écrire les étapes avec Gemini</button>` : ''}</div>
         <div class="field"><label for="ed-notes">Notes</label><textarea id="ed-notes" rows="4" placeholder="Astuces, conservation, variantes…">${esc(d.notes)}</textarea></div>
         <button type="button" class="btn primary block" data-act="save">Enregistrer la recette</button>
       </div>
@@ -262,6 +264,24 @@ export function openEditor(rec, opts = {}) {
     else if (a === 'save') save();
     else if (a === 'add-line') { collect(); d.lines.push({ name: '', qty: '', g: '', per: null, est: false, open: false }); paint(); const all = $$('.ln-name', page.el); if (all.length) all[all.length - 1].focus(); }
     else if (a === 'add-sec') { collect(); d.lines.push({ sec: '' }); paint(); const all = $$('.sec-name', page.el); if (all.length) all[all.length - 1].focus(); }
+    else if (a === 'ai-steps') {
+      collect();
+      if (!hasKey()) { toast('Ajoute d’abord ta clé Gemini dans Profil.'); return; }
+      b.disabled = true;
+      b.textContent = 'Gemini écrit les étapes…';
+      try {
+        const steps = await suggestSteps({ title: d.title, servings: d.servings, ingredients: d.lines.filter(l => l.sec == null && str(l.name)).map(toIngredient) });
+        if (!steps.length) throw new Error('aucune étape');
+        d.steps = steps;
+        if (!/déduites/i.test(d.notes)) d.notes = [str(d.notes), 'Étapes proposées par Gemini d’après les ingrédients : vérifie les temps de cuisson.'].filter(Boolean).join('\n');
+        dirty = true;
+        paint();
+        toast('Étapes ajoutées. Vérifie-les avant d’enregistrer.');
+      } catch (err) {
+        toast('Impossible d’écrire les étapes : ' + (err && err.message ? err.message : 'erreur'));
+        b.disabled = false;
+      }
+    }
     else if (a === 'add-step') { collect(); d.steps.push(''); paint(); const all = $$('.st textarea', page.el); if (all.length) all[all.length - 1].focus(); }
     else if (a === 'photo-del') { collect(); dropPhoto = true; if (photoPreview) { URL.revokeObjectURL(photoPreview); photoPreview = null; } photoBlob = null; dirty = true; paint(); }
   });

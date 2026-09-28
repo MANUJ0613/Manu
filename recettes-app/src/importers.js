@@ -435,7 +435,7 @@ export function libText() {
   return S.foods.map(f => `${f.name} : ${f1(f.kcal)}/${f1(f.p)}/${f1(f.c)}/${f1(f.f)}`).join('\n');
 }
 const IMPORT_RULES = `Réponds avec UNIQUEMENT un objet JSON de cette forme :
-{"is_recipe": true, "title": "Nom court", "servings": 1, "ingredients": [{"section": "Crème"}, {"name": "Flocons d'avoine", "qty": "30 g", "g": 30, "kcal": 112.5, "p": 3.8, "c": 20.3, "f": 2.3}], "steps": ["Préchauffe le four à 180 °C."], "notes": "", "author": ""}
+{"is_recipe": true, "title": "Nom court", "servings": 1, "ingredients": [{"section": "Crème"}, {"name": "Flocons d'avoine", "qty": "30 g", "g": 30, "kcal": 112.5, "p": 3.8, "c": 20.3, "f": 2.3}], "steps": ["Préchauffe le four à 180 °C."], "steps_source": "source", "notes": "", "author": ""}
 
 Règles :
 - is_recipe = false s'il n'y a aucune recette (pas d'ingrédients) ; le reste peut alors rester vide.
@@ -444,7 +444,8 @@ Règles :
 - Garde l'ordre des ingrédients. Si la recette a des parties (base, crème, topping…), mets un objet {"section": "Nom"} avant chaque partie.
 - qty = la quantité telle qu'écrite (« 1 banane », « 2 c. à soupe »). g = son poids en grammes : 1 c.à.s ≈ 15 g, 1 c.à.c ≈ 5 g, 1 œuf ≈ 55 g, 1 banane ≈ 118 g, 1 dose de whey ≈ 30 g ; pour « 150 à 200 g », prends le milieu ; convertis cups, oz et ml. g = null seulement pour le sel, le poivre, les épices, l'eau, le café, la levure et l'édulcorant (macros à 0).
 - kcal, p (protéines), c (glucides), f (lipides) = valeurs pour ces g, arrondies à 0,1. Si l'aliment est dans MA BASE ci-dessous, reprends son nom EXACT et ses valeurs pour 100 g ; sinon, des valeurs d'étiquette françaises courantes.
-- steps : une étape par élément, sans numéro, reformulées avec tes mots en phrases courtes à la 2e personne du singulier.
+- steps : une étape par élément, sans numéro, reformulées avec tes mots en phrases courtes à la 2e personne du singulier. Si la source ne donne pas la préparation, écris quand même des étapes simples et logiques pour réaliser la recette avec ces ingrédients (ordre, cuisson, température, temps, repos), et dis dans notes qu'elles sont déduites.
+- steps_source = "source" si les étapes viennent du contenu, "deduites" si tu les as écrites toi-même.
 - notes : astuces, conservation, variantes de la source (reformulées). Si des quantités manquaient et que tu les as estimées, dis-le. author : le compte (@…) ou le site s'il est visible, sinon "".
 - N'invente aucun ingrédient absent de la source.`;
 
@@ -539,6 +540,27 @@ export async function importFromLink(url, { note = '', sharedText = '', onStep =
       else got.trace.push('rien dans la vidéo non plus');
     } else got.trace.push(`vidéo : ${(v && v.error) || 'illisible'}`);
   }
+  const deduced = x => x && (x.steps_source === 'deduites' || !arr(x.steps).some(s => str(s)));
+  if (!noRecipe(j) && deduced(j) && got.video && got.platform !== 'youtube') {
+    got.trace = got.trace || [];
+    onStep('Gemini regarde la vidéo pour la préparation…');
+    if (cache.video === undefined) cache.video = await downloadVideo(got.video);
+    const v = cache.video;
+    if (isCancelled()) throw new AIError('cancelled', 'Annulé.');
+    if (v && v.b64) {
+      try {
+        const jv = await generateJSON([videoPart(v.b64, v.type), textPart(promptFor('video', { text: got.text + extraText, note }))], { isCancelled, onStatus: onStep });
+        if (jv && !deduced(jv)) {
+          j.steps = jv.steps;
+          j.notes = [str(j.notes).replace(/[^.]*déduites?[^.]*\.?/gi, '').trim(), 'Étapes tirées de la vidéo.'].filter(Boolean).join(' ');
+          got.trace.push('étapes lues dans la vidéo');
+        }
+      } catch (e) {
+        if (e.code === 'cancelled') throw e;
+        got.trace.push('vidéo illisible pour les étapes');
+      }
+    }
+  }
   if (!j) {
     throw new AIError('empty', got.platform === 'instagram'
       ? 'Instagram n’a pas donné la légende de ce post. Fais une capture de la recette et partage-la à l’appli.'
@@ -570,6 +592,20 @@ export async function importFromImages(blobs, { note = '', text = '', onStep = (
   const j = await generateJSON(parts, { isCancelled, onStatus: onStep });
   const label = url ? PLATFORM_LABEL[detectPlatform(url)] : '';
   return { recipe: normalizeRecipe(j, { url, label }), photo: null };
+}
+
+/** Écrit les étapes d'une recette à partir de ses ingrédients (quand la source ne les donne pas). */
+export async function suggestSteps(r) {
+  const lines = arr(r.ingredients).map(it => (it && it.section && !it.name ? `[${it.section}]` : it && it.name ? `- ${[it.qty, it.name].filter(Boolean).join(' ')}${num(it.g) > 0 && !/\bg\b/.test(it.qty || '') ? ` (${Math.round(num(it.g))} g)` : ''}` : '')).filter(Boolean).join('\n');
+  const prompt = `Écris la préparation de cette recette, simple et logique, pour quelqu'un qui cuisine chez lui : ordre des gestes, cuisson (température, temps), repos, découpe si besoin.
+Réponds avec UNIQUEMENT un objet JSON : {"steps": ["Préchauffe le four à 180 °C."]}
+Étapes courtes à la 2e personne du singulier, sans numéro, en français. N'ajoute aucun ingrédient.
+
+Recette : ${str(r.title)} (${Math.max(1, Math.round(num(r.servings)) || 1)} portions)
+Ingrédients :
+${lines}`;
+  const j = await generateJSON([textPart(prompt)]);
+  return arr(j && j.steps).map(cleanStep).filter(Boolean).slice(0, 30);
 }
 
 /** Étiquette nutritionnelle → aliment (pour 100 g). */

@@ -1,6 +1,6 @@
 // Fiche recette : photo, macros, balance face au plan, ingrédients, étapes, actions.
 import { S, recipeById, saveRecipe, deleteRecipe } from '../store.js';
-import { $, esc, f0, f1, f2, sgn, num, arr, clone, norm } from '../util.js';
+import { $, esc, f0, f1, f2, sgn, num, arr, str, clone, norm } from '../util.js';
 import { pushPage, icon, actionSheet, confirmSheet, openSheet, toast, thumbHTML } from '../ui.js';
 import {
   perPortion, totals, servingsOf, stepFor, bestS, fitAt, fit, bestFit, verdictSub, compareMeals, mealById, hasMacros,
@@ -12,6 +12,8 @@ import { openCook } from './cook.js';
 import { openBookPicker } from './book.js';
 import { openPlanPicker } from './planner.js';
 import { addRecipeToGroceries } from './groceries.js';
+import { suggestSteps } from '../importers.js';
+import { hasKey } from '../ai.js';
 
 const kcalStatus = (e, t) => { const r = Math.abs(e) / Math.max(1, t); return r <= 0.03 ? 'ok' : r <= 0.07 ? 'near' : 'far'; };
 
@@ -82,7 +84,11 @@ function render(page) {
       ${arr(r.steps).length ? `<section class="d-sec">
         <div class="sec-h"><h2>Étapes</h2><button type="button" class="btn small ghost" data-act="cook">${icon('play')}Mode cuisine</button></div>
         <ol class="steps">${r.steps.map((s, i) => `<li><span class="sn">${i + 1}</span><p>${esc(s)}</p></li>`).join('')}</ol>
-      </section>` : ''}
+      </section>` : `<section class="d-sec">
+        <div class="sec-h"><h2>Étapes</h2></div>
+        <p class="muted">La source ne donne pas la préparation.</p>
+        <button type="button" class="btn primary block" data-act="ai-steps">${icon('sparkle')}Écrire les étapes avec Gemini</button>
+      </section>`}
       ${r.notes ? `<section class="d-sec"><h2>Notes</h2><p class="notes">${esc(r.notes)}</p></section>` : ''}
       <div class="d-foot">
         <button type="button" class="btn ghost" data-act="edit">${icon('pen')}Modifier</button>
@@ -206,6 +212,25 @@ function onClick(e, page) {
   else if (a === 'edit') openEditor(r);
   else if (a === 'share') shareRecipe(r);
   else if (a === 'calibrate') openCalibrate(page, r, mealById(st.meal));
+  else if (a === 'ai-steps') writeSteps(b, r);
+}
+
+async function writeSteps(btn, r) {
+  if (!hasKey()) { toast('Ajoute d’abord ta clé Gemini dans Profil.'); return; }
+  btn.disabled = true;
+  btn.textContent = 'Gemini écrit les étapes…';
+  try {
+    const steps = await suggestSteps(r);
+    if (!steps.length) throw new Error('aucune étape');
+    const out = clone(r);
+    out.steps = steps;
+    if (!/déduites|proposées par Gemini/i.test(out.notes || '')) out.notes = [str(out.notes), 'Étapes proposées par Gemini d’après les ingrédients : vérifie les temps de cuisson.'].filter(Boolean).join('\n');
+    await saveRecipe(out);
+    toast('Étapes ajoutées.');
+  } catch (err) {
+    toast('Impossible d’écrire les étapes : ' + (err && err.message ? err.message : 'erreur'));
+    btn.disabled = false;
+  }
 }
 
 function groceriesSheet(r, st) {
