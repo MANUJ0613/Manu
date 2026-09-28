@@ -72,7 +72,7 @@ export function openEditor(rec, opts = {}) {
     }
     const m = lineMacros(l);
     const food = foodByName(l.name);
-    const tag = !str(l.name) ? '' : food ? `<span class="tag ok">${icon('check')}Ma base</span>` : l.per ? `<span class="tag est">≈ estimé</span>` : `<span class="tag warn">macros ?</span>`;
+    const tag = !str(l.name) || !(num(l.g) > 0) ? '' : food ? `<span class="tag ok">${icon('check')}Ma base</span>` : l.per ? `<span class="tag est">≈ estimé</span>` : `<span class="tag warn">macros ?</span>`;
     return `<div class="ln" data-li="${i}">
       <div class="ln-top">
         <input class="ln-name" list="foodnames" value="${esc(l.name)}" placeholder="Ingrédient" aria-label="Ingrédient" autocomplete="off">

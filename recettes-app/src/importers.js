@@ -264,7 +264,7 @@ function fbContent(html) {
   const doc = parseHTML(html);
   const imgs = [...doc.querySelectorAll('img')]
     .map(i => ({ src: i.getAttribute('src') || '', w: +(i.getAttribute('width') || 0) }))
-    .filter(x => /scontent|fbcdn/.test(x.src))
+    .filter(x => /scontent/.test(x.src) && !/static\.|rsrc\.php|emoji|\/rsrc\//.test(x.src) && (!x.w || x.w >= 150))
     .sort((a, b) => b.w - a.w);
   const video = doc.querySelector('video[poster]');
   const d = doc.cloneNode(true);
@@ -365,7 +365,7 @@ const IMPORT_RULES = `Réponds avec UNIQUEMENT un objet JSON de cette forme :
 Règles :
 - is_recipe = false s'il n'y a aucune recette (pas d'ingrédients) ; le reste peut alors rester vide.
 - Tout en français (traduis si besoin). Titre court, sans emoji ni hashtag.
-- servings = nombre de portions de la recette telle qu'écrite (1 si rien n'est indiqué).
+- servings = nombre de portions ou de pièces de la recette telle qu'écrite. Pour une recette à découper ou à partager (barres, cookies, muffins, gâteau, pancakes…) sans nombre indiqué, estime un nombre de pièces réaliste et dis-le dans notes ; sinon 1.
 - Garde l'ordre des ingrédients. Si la recette a des parties (base, crème, topping…), mets un objet {"section": "Nom"} avant chaque partie.
 - qty = la quantité telle qu'écrite (« 1 banane », « 2 c. à soupe »). g = son poids en grammes : 1 c.à.s ≈ 15 g, 1 c.à.c ≈ 5 g, 1 œuf ≈ 55 g, 1 banane ≈ 118 g, 1 dose de whey ≈ 30 g ; pour « 150 à 200 g », prends le milieu ; convertis cups, oz et ml. g = null seulement pour le sel, le poivre, les épices, l'eau, le café, la levure et l'édulcorant (macros à 0).
 - kcal, p (protéines), c (glucides), f (lipides) = valeurs pour ces g, arrondies à 0,1. Si l'aliment est dans MA BASE ci-dessous, reprends son nom EXACT et ses valeurs pour 100 g ; sinon, des valeurs d'étiquette françaises courantes.
