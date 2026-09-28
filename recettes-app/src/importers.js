@@ -183,17 +183,54 @@ async function fromYouTube(url, onStep) {
 }
 
 const DESKTOP_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
-const FB_BLOCKED = 'Facebook ne laisse pas lire cette publication sans être connecté. Fais une capture de la recette (description dépliée) et partage-la à l’appli, ou copie le texte du post.';
+const FB_BLOCKED = 'Facebook refuse d’ouvrir cette publication sans être connecté. Fais une capture de la recette (description dépliée) et partage-la à l’appli, ou copie le texte du post.';
 const isFbVideo = u => /\/(reels?|videos?|watch)\b|fb\.watch|\/share\/(r|v)\//i.test(u);
+const fbHeaders = (dest = 'document', ua = MOBILE_UA) => ({
+  'User-Agent': ua,
+  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+  'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+  'Upgrade-Insecure-Requests': '1',
+  'Sec-Fetch-Dest': dest,
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': dest === 'iframe' ? 'cross-site' : 'none',
+  ...(dest === 'document' ? { 'Sec-Fetch-User': '?1' } : {}),
+  'sec-ch-ua': '"Chromium";v="140", "Google Chrome";v="140", "Not?A_Brand";v="99"',
+  'sec-ch-ua-mobile': ua === MOBILE_UA ? '?1' : '?0',
+  'sec-ch-ua-platform': ua === MOBILE_UA ? '"Android"' : '"Windows"',
+});
+/** Lien propre d'une vidéo, d'un reel ou d'un post (sans les paramètres de suivi). */
+function fbClean(u) {
+  try {
+    const x = new URL(u);
+    x.hostname = 'www.facebook.com';
+    const v = x.searchParams.get('v') || x.searchParams.get('story_fbid');
+    const id = x.searchParams.get('id');
+    x.search = '';
+    if (v && /watch|video/.test(x.pathname)) return `https://www.facebook.com/watch/?v=${v}`;
+    if (v && id) return `https://www.facebook.com/permalink.php?story_fbid=${v}&id=${id}`;
+    return x.toString();
+  } catch (e) { return u; }
+}
 const hdr = (h, k) => { if (!h) return ''; for (const [a, b] of Object.entries(h)) if (a.toLowerCase() === k) return String(b); return ''; };
 
 /** Les liens /share/… et fb.watch redirigent : on suit à la main pour garder le lien complet. */
 async function resolveFb(url, trace) {
+  let out = await followFb(url, trace);
+  if (out.length === 1 && /\/share\//.test(url)) {
+    const alt = url.replace(/^https?:\/\/(www\.|web\.)?facebook\.com/, 'https://m.facebook.com');
+    if (alt !== url) { const o2 = await followFb(alt, trace); if (o2.length > 1) out = o2; }
+  }
+  const clean = [...new Set(out.map(fbClean))];
+  const reel = clean.map(u => (u.match(/\/reel\/(\d+)/) || [])[1]).find(Boolean);
+  if (reel) clean.splice(1, 0, `https://www.facebook.com/watch/?v=${reel}`);
+  return [...new Set(clean)].slice(0, 3);
+}
+async function followFb(url, trace) {
   const seen = [url];
   let cur = url;
   for (let i = 0; i < 5; i++) {
     let r;
-    try { r = await http({ url: cur, headers: HDRS, redirects: false, timeout: 15000 }); } catch (e) { trace.push(`lien → erreur ${String(e && e.message || e).slice(0, 60)}`); break; }
+    try { r = await http({ url: cur, headers: fbHeaders('document'), redirects: false, timeout: 15000 }); } catch (e) { trace.push(`lien → erreur ${String(e && e.message || e).slice(0, 60)}`); break; }
     const loc = hdr(r.headers, 'location');
     trace.push(`lien → ${r.status}${loc ? ' ' + shortUrl(loc) : ''}`);
     if (!(r.status >= 300 && r.status < 400) || !loc) break;
@@ -209,7 +246,7 @@ async function resolveFb(url, trace) {
     seen.push(next);
     cur = next;
   }
-  return seen.reverse().slice(0, 2);
+  return seen.reverse();
 }
 const shortUrl = u => String(u).replace(/^https?:\/\/(www\.|m\.)?facebook\.com/, '').slice(0, 60);
 /** Textes longs cachés dans les données JSON de la page (légende de la vidéo, message du post…). */
@@ -236,7 +273,7 @@ function fbContent(html) {
   for (const t of jsonTexts(html)) if (!text.includes(t.slice(0, 30))) text = `${t}\n\n${text}`;
   return { text: text.replace(/\n{3,}/g, '\n\n').trim().slice(0, 12000), image: (video && video.getAttribute('poster')) || (imgs[0] && imgs[0].src) || '' };
 }
-const fbBlocked = t => t.length < 60 || (t.length < 700 && /(connectez-vous|se connecter|log in|log into|créer (un )?(nouveau )?compte|create new account|n.est pas disponible|isn.t available|not available)/i.test(t));
+const fbBlocked = t => t.length < 60 || (t.length < 700 && /(connectez-vous|se connecter|log in|log into|créer (un )?(nouveau )?compte|create new account|n.est pas disponible|non disponible|n.existe plus|l.autorisation de|isn.t available|not available|unavailable|no longer available)/i.test(t));
 
 async function fromFacebook(url, onStep) {
   const trace = [];
@@ -249,19 +286,20 @@ async function fromFacebook(url, onStep) {
     for (const kind of kinds) {
       for (const ua of [MOBILE_UA, DESKTOP_UA]) {
         try {
-          const p = await http({ url: `https://www.facebook.com/plugins/${kind}.php?href=${encodeURIComponent(href)}&show_text=true&width=500`, headers: { ...HDRS, 'User-Agent': ua }, timeout: 20000 });
+          const p = await http({ url: `https://www.facebook.com/plugins/${kind}.php?href=${encodeURIComponent(href)}&show_text=true&width=500`, headers: fbHeaders('iframe', ua), timeout: 20000 });
           const html = typeof p.data === 'string' ? p.data : '';
           const got = p.status === 200 && html ? fbContent(html) : { text: '', image: '' };
           trace.push(`${kind}.php ${ua === MOBILE_UA ? 'mobile' : 'pc'} → ${p.status}, ${got.text.length} car.`);
           if (!fbBlocked(got.text) && (!best || got.text.length > best.text.length)) best = { ...got, href };
-          if (best && best.text.length > 300) break outer;
+          if (best) break outer;
         } catch (e) { trace.push(`${kind}.php → erreur`); }
       }
     }
   }
   // la page elle-même : description (og) et textes cachés, en complément
   try {
-    const p = await get(hrefs[0]);
+    const pr = await http({ url: hrefs[0], headers: fbHeaders('document'), timeout: 20000 });
+    const p = { status: pr.status, html: typeof pr.data === 'string' ? pr.data : '' };
     const doc = parseHTML(p.html);
     const og = [meta(doc, 'og:title'), meta(doc, 'og:description', 'description'), ...(p.status < 400 ? jsonTexts(p.html) : [])].filter(Boolean).join('\n');
     trace.push(`page → ${p.status}, ${og.length} car.`);
