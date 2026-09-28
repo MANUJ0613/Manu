@@ -145,3 +145,4 @@ export async function generateJSON(parts, { isCancelled = () => false, onStatus 
 export const textPart = text => ({ text });
 export const imagePart = (b64, mimeType = 'image/jpeg') => ({ inlineData: { mimeType, data: b64 } });
 export const youtubePart = url => ({ fileData: { fileUri: url } });
+export const videoPart = (b64, mimeType = 'video/mp4') => ({ inlineData: { mimeType, data: b64 } });

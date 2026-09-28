@@ -1,7 +1,7 @@
 // Import de recettes : liens (Instagram, TikTok, YouTube, Facebook, sites), texte, photos.
 import { http, MOBILE_UA } from './native.js';
 import { S } from './store.js';
-import { generateJSON, textPart, imagePart, youtubePart, AIError } from './ai.js';
+import { generateJSON, textPart, imagePart, youtubePart, videoPart, AIError } from './ai.js';
 import { lookupPer, applyPer } from './macros.js';
 import { arr, str, num, pos1, gOrNull, hostOf, firstUrl, b64ToBlob, blobToB64, resizeImage, f1 } from './util.js';
 
@@ -22,6 +22,23 @@ const HDRS = { 'User-Agent': MOBILE_UA, 'Accept-Language': 'fr-FR,fr;q=0.9,en;q=
 const unescapeJSON = s => { try { return JSON.parse('"' + s + '"'); } catch (e) { return s; } };
 const decodeEntities = s => { const t = document.createElement('textarea'); t.innerHTML = s; return t.value; };
 function parseHTML(html) { return new DOMParser().parseFromString(String(html || ''), 'text/html'); }
+/** Adresse du fichier vidéo cachée dans la page (Facebook, Instagram). */
+function findVideoUrl(html) {
+  const s = String(html || '');
+  const pats = [
+    /"(?:browser_native_sd_url|playable_url|sd_src_no_ratelimit|sd_src|video_url)"\s*:\s*"(https?:[^"]+?)"/,
+    /\\"(?:browser_native_sd_url|playable_url|sd_src|video_url)\\"\s*:\s*\\"(https?:[^"]+?)\\"/,
+    /"(?:browser_native_hd_url|playable_url_quality_hd|hd_src)"\s*:\s*"(https?:[^"]+?)"/,
+  ];
+  for (const re of pats) {
+    const m = s.match(re);
+    if (!m) continue;
+    let u = m[1].replace(/\\\\\//g, '/').replace(/\\\//g, '/').replace(/\\u0025/gi, '%').replace(/\\u0026/gi, '&').replace(/&amp;/g, '&');
+    if (/^https?:\/\//.test(u)) return u;
+  }
+  const v = parseHTML(s).querySelector('video[src], video source[src]');
+  return v ? v.getAttribute('src') || '' : '';
+}
 function meta(doc, ...names) {
   for (const n of names) {
     const el = doc.querySelector(`meta[property="${n}"], meta[name="${n}"]`);
@@ -124,7 +141,7 @@ async function fromInstagram(url, onStep) {
   const code = m[2];
   const canon = `https://www.instagram.com/p/${code}/`;
   onStep('Lecture de la légende Instagram…');
-  let text = '', author = '', image = '';
+  let text = '', author = '', image = '', video = '';
   try {
     const e = await get(`https://www.instagram.com/p/${code}/embed/captioned/`);
     const doc = parseHTML(e.html);
@@ -145,6 +162,7 @@ async function fromInstagram(url, onStep) {
     const img = doc.querySelector('.EmbeddedMediaImage, img.EmbeddedMediaImage');
     image = (img && img.getAttribute('src')) || '';
     if (!image) { const d = e.html.match(/"display_url":"((?:[^"\\]|\\.)*)"/); if (d) image = unescapeJSON(d[1]); }
+    video = findVideoUrl(e.html);
   } catch (err) { /* on tente la page du post */ }
   if (!text || !image) {
     try {
@@ -159,7 +177,7 @@ async function fromInstagram(url, onStep) {
       if (!image) image = meta(doc, 'og:image');
     } catch (err) { /* rien de plus */ }
   }
-  return { url: canon, text, title: '', author, image };
+  return { url: canon, text, title: '', author, image, video, trace: [video ? 'vidéo trouvée' : 'pas de vidéo dans la page'] };
 }
 
 function youtubeId(url) {
@@ -271,7 +289,7 @@ function fbContent(html) {
   d.querySelectorAll('script, style, noscript').forEach(e => e.remove());
   let text = textOf(d.body);
   for (const t of jsonTexts(html)) if (!text.includes(t.slice(0, 30))) text = `${t}\n\n${text}`;
-  return { text: text.replace(/\n{3,}/g, '\n\n').trim().slice(0, 12000), image: (video && video.getAttribute('poster')) || (imgs[0] && imgs[0].src) || '' };
+  return { text: text.replace(/\n{3,}/g, '\n\n').trim().slice(0, 12000), image: (video && video.getAttribute('poster')) || (imgs[0] && imgs[0].src) || '', video: findVideoUrl(html) };
 }
 const fbBlocked = t => t.length < 60 || (t.length < 700 && /(connectez-vous|se connecter|log in|log into|créer (un )?(nouveau )?compte|create new account|n.est pas disponible|non disponible|n.existe plus|l.autorisation de|isn.t available|not available|unavailable|no longer available)/i.test(t));
 
@@ -304,12 +322,14 @@ async function fromFacebook(url, onStep) {
     const og = [meta(doc, 'og:title'), meta(doc, 'og:description', 'description'), ...(p.status < 400 ? jsonTexts(p.html) : [])].filter(Boolean).join('\n');
     trace.push(`page → ${p.status}, ${og.length} car.`);
     if (p.status < 400 && !fbBlocked(og)) {
-      if (!best) best = { text: og, image: meta(doc, 'og:image'), href: hrefs[0] };
+      if (!best) best = { text: og, image: meta(doc, 'og:image'), href: hrefs[0], video: findVideoUrl(p.html) };
+      else if (!best.video) best.video = findVideoUrl(p.html);
       else if (!best.text.includes(og.slice(0, 40))) best.text = `${og}\n\n${best.text}`;
     }
   } catch (e) { trace.push('page → erreur'); }
   if (!best) throw new AIError('blocked-site', FB_BLOCKED, trace.join(' · '));
-  return { url: best.href, text: best.text, title: '', author: '', image: best.image, trace };
+  trace.push(best.video ? 'vidéo trouvée' : 'pas de vidéo dans la page');
+  return { url: best.href, text: best.text, title: '', author: '', image: best.image, video: best.video || '', trace };
 }
 
 async function fromPage(url, onStep, platform) {
@@ -338,6 +358,20 @@ export async function fetchLink(url, onStep = () => {}) {
   else if (platform === 'facebook') res = await fromFacebook(url, onStep);
   else res = await fromPage(url, onStep, platform);
   return { platform, ...res, text: str(res.text).slice(0, 20000) };
+}
+
+/** Télécharge la vidéo d'un post (max ~19 Mo) pour que Gemini la regarde. */
+export async function downloadVideo(url) {
+  if (!url) return null;
+  try {
+    const r = await http({ url, headers: { 'User-Agent': MOBILE_UA }, responseType: 'blob', timeout: 90000 });
+    if (r.status !== 200 || typeof r.data !== 'string' || r.data.length < 2000) return { error: `code ${r.status}` };
+    if (r.data.length > 26000000) return { error: 'trop lourde' };
+    const ct = Object.entries(r.headers || {}).find(([k]) => k.toLowerCase() === 'content-type');
+    return { b64: r.data, type: ct && /webm/i.test(ct[1]) ? 'video/webm' : 'video/mp4', mb: r.data.length * 0.75 / 1e6 };
+  } catch (e) {
+    return { error: 'téléchargement impossible' };
+  }
 }
 
 /** Télécharge une image distante et la réduit (pour la photo de la recette). */
@@ -379,7 +413,7 @@ function promptFor(kind, { text = '', note = '', url = '', platform = '' } = {})
     text: `Voici le texte de la recette :\n"""\n${text}\n"""`,
     images: `La recette est dans les images jointes (captures d'écran d'un post, d'une vidéo ou d'une page, ou photo d'un livre). Lis tout le texte visible, légende comprise.${text ? `\nTexte partagé avec les images :\n"""\n${text}\n"""` : ''}`,
     link: `Voici ce que j'ai récupéré du lien ${url} (${src}) : légende ou description du post, titre, texte de la page.\n"""\n${text}\n"""`,
-    video: `La recette est dans la vidéo YouTube jointe : regarde-la et écoute-la en entier (ingrédients dits à l'oral ou affichés à l'écran).${text ? `\nDescription de la vidéo :\n"""\n${text}\n"""` : ''}`,
+    video: `La recette est dans la vidéo jointe : regarde-la et écoute-la en entier (ingrédients dits à l'oral ou affichés à l'écran).${text ? `\nDescription de la vidéo :\n"""\n${text}\n"""` : ''}`,
   }[kind];
   return `Tu extrais une recette pour mon carnet de recettes perso. Je suis bodybuilder et je compte mes macros au gramme près.
 
@@ -443,15 +477,31 @@ export async function importFromLink(url, { note = '', sharedText = '', onStep =
       j = null;
     }
   }
-  if (!j || j.is_recipe === false) {
-    const text = [got.title, got.text].filter(Boolean).join('\n\n') + extraText;
-    if (text.trim().length < 15) {
-      throw new AIError('empty', got.platform === 'instagram'
-        ? 'Instagram n’a pas donné la légende de ce post. Fais une capture de la recette et partage-la à l’appli.'
-        : 'Impossible de lire le texte de ce lien. Fais une capture de la recette ou colle le texte.');
-    }
+  const text = [got.title, got.text].filter(Boolean).join('\n\n') + extraText;
+  const noRecipe = x => !x || x.is_recipe === false || !arr(x.ingredients).some(it => it && it.name);
+  if (noRecipe(j) && text.trim().length >= 15) {
     onStep('Gemini lit la recette…');
     j = await generateJSON([textPart(promptFor('link', { text, note, url: got.url, platform: got.platform }))], { isCancelled, onStatus: onStep });
+  }
+  // Recette dite dans la vidéo : on télécharge la vidéo du post et Gemini la regarde.
+  if (noRecipe(j) && got.video) {
+    got.trace = got.trace || [];
+    onStep('Téléchargement de la vidéo…');
+    if (cache.video === undefined) cache.video = await downloadVideo(got.video);
+    const v = cache.video;
+    if (isCancelled()) throw new AIError('cancelled', 'Annulé.');
+    if (v && v.b64) {
+      got.trace.push(`vidéo ${v.mb.toFixed(1).replace('.', ',')} Mo`);
+      onStep('Gemini regarde la vidéo…');
+      const jv = await generateJSON([videoPart(v.b64, v.type), textPart(promptFor('video', { text: got.text + extraText, note }))], { isCancelled, onStatus: onStep });
+      if (!noRecipe(jv)) j = jv;
+      else got.trace.push('rien dans la vidéo non plus');
+    } else got.trace.push(`vidéo : ${(v && v.error) || 'illisible'}`);
+  }
+  if (!j) {
+    throw new AIError('empty', got.platform === 'instagram'
+      ? 'Instagram n’a pas donné la légende de ce post. Fais une capture de la recette et partage-la à l’appli.'
+      : 'Impossible de lire le texte de ce lien. Fais une capture de la recette ou colle le texte.');
   }
   const recipe = normalizeRecipe(j, { url: got.url, label });
   const photo = await photoP;
