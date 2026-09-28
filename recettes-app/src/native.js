@@ -49,6 +49,29 @@ export function onShared(cb) {
 }
 export function clearShared() { if (ShareInNative) ShareInNative.clear().catch(() => {}); }
 
+/* ---------- navigateur caché (lit une page comme Chrome, avec les comptes connectés) */
+const WebReaderNative = isNative ? registerPlugin('WebReader') : null;
+export const hasWebReader = () => !!WebReaderNative || !!(typeof window !== 'undefined' && window.__agpMockWebRead);
+export async function webRead(url, { wait = 3500, timeout = 25000 } = {}) {
+  if (!isNative && window.__agpMockWebRead) return window.__agpMockWebRead(url);
+  if (!WebReaderNative) return null;
+  try { return await WebReaderNative.read({ url, wait, timeout }); } catch (e) { return null; }
+}
+export async function webLogin(url, title) {
+  if (!isNative && window.__agpMockWebLogin) return window.__agpMockWebLogin(url);
+  if (!WebReaderNative) return null;
+  try { return await WebReaderNative.open({ url, title }); } catch (e) { return null; }
+}
+export async function webCookies(url) {
+  if (!isNative && window.__agpMockCookies) return window.__agpMockCookies(url) || '';
+  if (!WebReaderNative) return '';
+  try { const r = await WebReaderNative.cookies({ url }); return (r && r.cookies) || ''; } catch (e) { return ''; }
+}
+export async function webLogout(urls) {
+  if (!WebReaderNative) return;
+  try { await WebReaderNative.logout({ urls }); } catch (e) { /* rien */ }
+}
+
 /* ---------- bouton retour Android */
 export function onBack(handler) {
   if (!isNative) return;

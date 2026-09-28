@@ -1,5 +1,5 @@
 // Import de recettes : liens (Instagram, TikTok, YouTube, Facebook, sites), texte, photos.
-import { http, MOBILE_UA } from './native.js';
+import { http, MOBILE_UA, webRead, webCookies, hasWebReader } from './native.js';
 import { S } from './store.js';
 import { generateJSON, textPart, imagePart, youtubePart, videoPart, AIError } from './ai.js';
 import { lookupPer, applyPer } from './macros.js';
@@ -177,7 +177,13 @@ async function fromInstagram(url, onStep) {
       if (!image) image = meta(doc, 'og:image');
     } catch (err) { /* rien de plus */ }
   }
-  return { url: canon, text, title: '', author, image, video, trace: [video ? 'vidéo trouvée' : 'pas de vidéo dans la page'] };
+  const trace = [video ? 'vidéo trouvée' : 'pas de vidéo dans la page'];
+  if (!text && hasWebReader()) {
+    onStep('Ouverture du post comme dans Chrome…');
+    const w = await readWithBrowser(canon, trace, (await isConnected('instagram')) ? 'connecté' : '');
+    if (w) { text = w.text; image = image || w.image; video = video || w.video; }
+  }
+  return { url: canon, text, title: '', author, image, video, trace };
 }
 
 function youtubeId(url) {
@@ -201,7 +207,8 @@ async function fromYouTube(url, onStep) {
 }
 
 const DESKTOP_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
-const FB_BLOCKED = 'Facebook refuse d’ouvrir cette publication sans être connecté. Fais une capture de la recette (description dépliée) et partage-la à l’appli, ou copie le texte du post.';
+const FB_BLOCKED = 'Facebook refuse d’ouvrir cette publication. Fais une capture de la recette (description dépliée) et partage-la à l’appli, ou copie le texte du post.';
+const FB_LOGIN = 'Facebook ne montre ce post qu’aux personnes connectées. Connecte ton compte Facebook dans l’appli, une seule fois : elle lira ensuite les posts comme ton appli Facebook, commentaires compris.';
 const isFbVideo = u => /\/(reels?|videos?|watch)\b|fb\.watch|\/share\/(r|v)\//i.test(u);
 const fbHeaders = (dest = 'document', ua = MOBILE_UA) => ({
   'User-Agent': ua,
@@ -230,6 +237,29 @@ function fbClean(u) {
   } catch (e) { return u; }
 }
 const hdr = (h, k) => { if (!h) return ''; for (const [a, b] of Object.entries(h)) if (a.toLowerCase() === k) return String(b); return ''; };
+
+/* ---------- comptes (connexion dans le navigateur de l'appli) */
+export const ACCOUNTS = {
+  facebook: { label: 'Facebook', login: 'https://m.facebook.com/login/', cookieUrl: 'https://www.facebook.com', mark: 'c_user=', urls: ['https://www.facebook.com', 'https://m.facebook.com'] },
+  instagram: { label: 'Instagram', login: 'https://www.instagram.com/accounts/login/', cookieUrl: 'https://www.instagram.com', mark: 'sessionid=', urls: ['https://www.instagram.com'] },
+};
+export async function isConnected(site) {
+  const a = ACCOUNTS[site];
+  if (!a || !hasWebReader()) return false;
+  const c = await webCookies(a.cookieUrl).catch(() => '');
+  return String(c).includes(a.mark);
+}
+const loginWall = t => /(mot de passe oublié|forgot(ten)? password|créer (un )?(nouveau )?compte|create new account|connectez-vous pour|log in to continue|inscrivez-vous)/i.test(t) && t.length < 4000;
+/** Ouvre la page dans le navigateur caché de l'appli (comme Chrome, avec le compte s'il est connecté). */
+async function readWithBrowser(url, trace, label = '') {
+  if (!hasWebReader()) return null;
+  const r = await webRead(url, { wait: 4000, timeout: 25000 });
+  if (!r || r.error) { trace.push(`navigateur → ${r && r.error ? r.error : 'rien'}`); return null; }
+  const text = [r.ogDesc, r.text].filter(Boolean).join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
+  trace.push(`navigateur${label ? ` (${label})` : ''} → ${text.length} car.`);
+  if (fbBlocked(text) || loginWall(text)) return null;
+  return { url: r.url || url, text: text.slice(0, 15000), image: r.image || r.ogImage || '', video: r.video && !/^blob:/.test(r.video) ? r.video : '' };
+}
 
 /** Les liens /share/… et fb.watch redirigent : on suit à la main pour garder le lien complet. */
 async function resolveFb(url, trace) {
@@ -291,18 +321,24 @@ function fbContent(html) {
   for (const t of jsonTexts(html)) if (!text.includes(t.slice(0, 30))) text = `${t}\n\n${text}`;
   return { text: text.replace(/\n{3,}/g, '\n\n').trim().slice(0, 12000), image: (video && video.getAttribute('poster')) || (imgs[0] && imgs[0].src) || '', video: findVideoUrl(html) };
 }
-const fbBlocked = t => t.length < 60 || (t.length < 700 && /(connectez-vous|se connecter|log in|log into|créer (un )?(nouveau )?compte|create new account|n.est pas disponible|non disponible|n.existe plus|l.autorisation de|isn.t available|not available|unavailable|no longer available)/i.test(t));
+const fbBlocked = t => t.length < 60 || (t.length < 700 && /(connectez-vous|se connecter|log in|log into|créer (un )?(nouveau )?compte|create new account|n.est pas disponible|n.est plus disponible|plus disponible|non disponible|n.existe plus|l.autorisation de|supprimée|confidentialité|isn.t available|not available|unavailable|no longer available)/i.test(t));
 
 async function fromFacebook(url, onStep) {
   const trace = [];
+  const connected = await isConnected('facebook').catch(() => false);
+  if (connected) {
+    onStep('Ouverture du post avec ton compte Facebook…');
+    const w = await readWithBrowser(url, trace, 'connecté');
+    if (w) return { url: w.url, text: w.text, title: '', author: '', image: w.image, video: w.video, trace };
+  }
   onStep('Ouverture du lien Facebook…');
   const hrefs = await resolveFb(url, trace).catch(() => [url]);
   onStep('Lecture de la publication Facebook…');
   let best = null;
-  outer: for (const href of hrefs) {
+  outer: for (const [hi, href] of hrefs.entries()) {
     const kinds = isFbVideo(href) || isFbVideo(url) ? ['video', 'post'] : ['post', 'video'];
     for (const kind of kinds) {
-      for (const ua of [MOBILE_UA, DESKTOP_UA]) {
+      for (const ua of hi === 0 ? [MOBILE_UA, DESKTOP_UA] : [MOBILE_UA]) {
         try {
           const p = await http({ url: `https://www.facebook.com/plugins/${kind}.php?href=${encodeURIComponent(href)}&show_text=true&width=500`, headers: fbHeaders('iframe', ua), timeout: 20000 });
           const html = typeof p.data === 'string' ? p.data : '';
@@ -327,7 +363,12 @@ async function fromFacebook(url, onStep) {
       else if (!best.text.includes(og.slice(0, 40))) best.text = `${og}\n\n${best.text}`;
     }
   } catch (e) { trace.push('page → erreur'); }
-  if (!best) throw new AIError('blocked-site', FB_BLOCKED, trace.join(' · '));
+  if (!best && !connected && hasWebReader()) {
+    onStep('Ouverture du post comme dans Chrome…');
+    const w = await readWithBrowser(url, trace);
+    if (w) best = { text: w.text, image: w.image, href: w.url, video: w.video };
+  }
+  if (!best) throw new AIError(connected || !hasWebReader() ? 'blocked-site' : 'fb-login', connected || !hasWebReader() ? FB_BLOCKED : FB_LOGIN, trace.join(' · '));
   trace.push(best.video ? 'vidéo trouvée' : 'pas de vidéo dans la page');
   return { url: best.href, text: best.text, title: '', author: '', image: best.image, video: best.video || '', trace };
 }

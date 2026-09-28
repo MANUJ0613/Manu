@@ -2,7 +2,8 @@
 import { S } from '../store.js';
 import { $, esc, str, arr, firstUrl, dataUrlToBlob, hostOf } from '../util.js';
 import { pushPage, openSheet, icon, toast, nav } from '../ui.js';
-import { importFromLink, importFromText, importFromImages, detectPlatform, PLATFORM_LABEL } from '../importers.js';
+import { importFromLink, importFromText, importFromImages, detectPlatform, PLATFORM_LABEL, ACCOUNTS, isConnected } from '../importers.js';
+import { webLogin } from '../native.js';
 import { hasKey } from '../ai.js';
 import { openEditor } from './editor.js';
 import { openKeySetup } from './profile.js';
@@ -143,16 +144,18 @@ export function startImport(input) {
     if (st.err) {
       const e = st.err;
       const keyIssue = e.code === 'nokey' || e.code === 'key';
-      const captureFirst = ['blocked-site', 'link', 'empty', 'norecipe'].includes(e.code);
-      const title = keyIssue ? 'Clé Gemini nécessaire' : e.code === 'blocked-site' ? 'Facebook bloque la lecture' : 'Import impossible';
+      const captureFirst = ['blocked-site', 'link', 'empty', 'norecipe', 'fb-login'].includes(e.code);
+      const title = keyIssue ? 'Clé Gemini nécessaire' : e.code === 'fb-login' ? 'Connexion Facebook nécessaire' : e.code === 'blocked-site' ? 'Facebook bloque la lecture' : 'Import impossible';
       const btn = {
         key: `<button type="button" class="btn primary" data-act="key">${icon('key')}Ajouter ma clé Gemini</button>`,
         retry: `<button type="button" class="btn ${captureFirst ? 'ghost' : 'primary'}" data-act="retry">Réessayer</button>`,
         photo: `<button type="button" class="btn ${captureFirst ? 'primary' : 'ghost'}" data-act="photo">${icon('image')}Importer une capture à la place</button>`,
         text: `<button type="button" class="btn ghost" data-act="text">${icon('text')}Coller le texte</button>`,
         write: `<button type="button" class="btn ghost" data-act="write">${icon('pen')}L'écrire moi-même</button>`,
+        login: `<button type="button" class="btn primary" data-act="login">${icon('user')}Connecter mon ${esc(ACCOUNTS[e.login] ? ACCOUNTS[e.login].label : '')}</button>`,
       };
-      const order = keyIssue ? ['key', 'photo', 'text', 'write'] : captureFirst ? ['photo', 'text', 'retry', 'write'] : ['retry', 'photo', 'text', 'write'];
+      let order = keyIssue ? ['key', 'photo', 'text', 'write'] : captureFirst ? ['photo', 'text', 'retry', 'write'] : ['retry', 'photo', 'text', 'write'];
+      if (e.login && !keyIssue) { order = ['login', ...order]; btn.photo = btn.photo.replace('btn primary', 'btn ghost'); }
       p.el.innerHTML = `<div class="imp">
         <button type="button" class="icon-btn imp-x" data-act="close" aria-label="Fermer">${icon('close')}</button>
         <div class="imp-card">
@@ -179,6 +182,14 @@ export function startImport(input) {
   }
   const setMsg = m => { page.state.msg = m; const el = $('.imp-msg', page.el); if (el) el.textContent = m; };
 
+  /** Propose de connecter Facebook / Instagram si le lien en vient et que le compte n'est pas connecté. */
+  async function loginOffer() {
+    if (input.kind !== 'link') return '';
+    const site = detectPlatform(input.url);
+    if (!ACCOUNTS[site]) return '';
+    try { return (await isConnected(site)) ? '' : site; } catch (err) { return ''; }
+  }
+
   async function run() {
     page.state.err = null;
     t0 = Date.now();
@@ -197,6 +208,7 @@ export function startImport(input) {
       if (!recipe.isRecipe) {
         const got = res.got || {};
         page.state.err = { code: 'norecipe', message: 'Pas de recette trouvée dans ce contenu. Souvent la recette est dite dans la vidéo, ou mise en commentaire : fais des captures des ingrédients.', read: got.text || '', trace: (got.trace || []).join(' · ') };
+        page.state.err.login = await loginOffer();
         page.refresh();
         return;
       }
@@ -210,6 +222,7 @@ export function startImport(input) {
       clearInterval(timer);
       console.error(e);
       page.state.err = { code: (e && e.code) || 'error', message: (e && e.message) || 'Erreur inconnue.', detail: (e && e.detail) || (e && !e.code && e.message ? String(e.message).slice(0, 160) : '') };
+      if (['fb-login', 'blocked-site', 'empty', 'norecipe'].includes(page.state.err.code)) page.state.err.login = await loginOffer();
       page.refresh();
     }
   }
@@ -221,6 +234,19 @@ export function startImport(input) {
     if (a === 'close') { page.close(); return; }
     if (a === 'retry') { run(); return; }
     if (a === 'key') { openKeySetup(() => run()); return; }
+    if (a === 'login') {
+      const site = page.state.err && page.state.err.login;
+      const acc = ACCOUNTS[site];
+      if (!acc) return;
+      webLogin(acc.login, `Connexion ${acc.label}`).then(async () => {
+        if (await isConnected(site)) {
+          toast(`${acc.label} connecté.`);
+          delete cache.got; delete cache.video; delete cache.photo;
+          run();
+        } else toast(`Pas encore connecté à ${acc.label}.`);
+      });
+      return;
+    }
     page.close();
     setTimeout(() => {
       if (a === 'photo') pickImages(files => openPhotoSheet(files, input.url || ''));

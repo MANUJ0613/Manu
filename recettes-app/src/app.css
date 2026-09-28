@@ -497,6 +497,8 @@ input[type=search]::-webkit-search-cancel-button { filter: grayscale(1); }
 .rowb b { font-weight: 700; }
 .rowb small { color: var(--muted); font-size: 13px; }
 .foot-note { text-align: center; color: var(--muted); font-size: 12.5px; margin: 18px 0; }
+.foot-note.left { text-align: left; margin: -6px 4px 18px; }
+.rows-h { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 750; margin: 18px 4px 8px; }
 .plan-name { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); text-align: left; }
 .plan-name b { flex: 1; font-size: 16px; }
 .plan-name .ic { color: var(--muted); width: 18px; height: 18px; }

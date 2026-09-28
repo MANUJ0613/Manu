@@ -3,9 +3,9 @@ import { S, savePlan, saveFood, deleteFood, saveSettings, exportBackup, importBa
 import { $, $$, esc, num, str, arr, f0, f1, norm, rid, pos1, gOrNull, todayISO, plural, resizeImage, blobToB64 } from '../util.js';
 import { pushPage, icon, openSheet, actionSheet, confirmSheet, askText, toast, busyHTML } from '../ui.js';
 import { setKey, hasKey, KEY_URL, generateJSON, imagePart, textPart } from '../ai.js';
-import { readLabel } from '../importers.js';
+import { readLabel, ACCOUNTS, isConnected } from '../importers.js';
 import { searchFoods } from '../macros.js';
-import { openExternal, shareFile, appVersion } from '../native.js';
+import { openExternal, shareFile, appVersion, hasWebReader, webLogin, webLogout } from '../native.js';
 import { openHowTo } from './add.js';
 import { guessCat } from './groceries.js';
 
@@ -35,8 +35,23 @@ export function renderProfile(root) {
     <nav class="rows">
       <button type="button" class="rowb" data-go="howto">${icon('shareIn')}<span><b>Importer depuis Insta ou TikTok</b><small>Le bouton Partager, pas à pas</small></span>${icon('next')}</button>
     </nav>
+    ${hasWebReader() ? `<p class="rows-h">Comptes connectés</p>
+    <nav class="rows">
+      ${Object.entries(ACCOUNTS).map(([site, a]) => `<button type="button" class="rowb" data-acc="${site}">${icon('user')}<span><b>${esc(a.label)}</b><small data-acc-state="${site}">…</small></span>${icon('next')}</button>`).join('')}
+    </nav>
+    <p class="foot-note left">Connecte ton compte une fois : l'appli lit alors les posts privés, les groupes et les commentaires comme ton appli. La connexion se fait sur le site officiel et reste sur ce téléphone.</p>` : ''}
     <p class="foot-note">Tes recettes restent sur ce téléphone. Pense à sauvegarder de temps en temps.${version ? `<br>Version ${esc(version)}` : ''}</p>`;
+  if (hasWebReader()) {
+    for (const site of Object.keys(ACCOUNTS)) {
+      isConnected(site).then(ok => {
+        const el = root.querySelector(`[data-acc-state="${site}"]`);
+        if (el) el.textContent = ok ? 'Connecté' : 'Pas connecté · pour les posts privés, les groupes, les commentaires';
+      });
+    }
+  }
   root.onclick = e => {
+    const acc = e.target.closest('[data-acc]');
+    if (acc) { accountMenu(acc.dataset.acc, () => renderProfile(root)); return; }
     const b = e.target.closest('[data-go]');
     if (!b) return;
     const g = b.dataset.go;
@@ -48,6 +63,21 @@ export function renderProfile(root) {
     else if (g === 'howto') openHowTo();
   };
 }
+async function accountMenu(site, done) {
+  const a = ACCOUNTS[site];
+  const login = async () => {
+    await webLogin(a.login, `Connexion ${a.label}`);
+    const ok = await isConnected(site);
+    toast(ok ? `${a.label} connecté.` : `Pas connecté à ${a.label}.`);
+    done();
+  };
+  if (!(await isConnected(site))) { login(); return; }
+  actionSheet(a.label, [
+    { label: 'Reconnecter', icon: 'user', run: login },
+    { label: 'Se déconnecter', icon: 'close', danger: true, run: async () => { await webLogout(a.urls); toast(`${a.label} déconnecté.`); done(); } },
+  ]);
+}
+
 export function openProfileSection(what) {
   if (what === 'meals') openMeals();
   else if (what === 'foods') openFoods();
