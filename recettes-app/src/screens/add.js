@@ -119,6 +119,7 @@ function openPhotoSheet(files, text = '') {
 /* ============================================================ écran d'import */
 export function startImport(input) {
   let cancelled = false;
+  const cache = {};
   let t0 = Date.now();
   let timer = null;
   const page = pushPage({
@@ -158,6 +159,7 @@ export function startImport(input) {
           ${sourceHTML()}
           <h2>${esc(title)}</h2>
           <p class="imp-err">${esc(e.message || 'Erreur inconnue.')}</p>
+          ${e.detail ? `<p class="imp-detail">Détail : ${esc(e.detail)}</p>` : ''}
           <div class="row-btns stack">${order.map(k => btn[k]).join('')}</div>
         </div>
       </div>`;
@@ -185,7 +187,7 @@ export function startImport(input) {
     const common = { note: input.note || '', onStep: setMsg, isCancelled: () => cancelled };
     try {
       let res;
-      if (input.kind === 'link') res = await importFromLink(input.url, { ...common, sharedText: input.text || '' });
+      if (input.kind === 'link') res = await importFromLink(input.url, { ...common, sharedText: input.text || '', cache });
       else if (input.kind === 'text') res = await importFromText(input.text, { ...common, url: input.url || '' });
       else res = await importFromImages(input.images, { ...common, text: input.text || '' });
       if (cancelled) return;
@@ -205,7 +207,7 @@ export function startImport(input) {
       if (cancelled || (e && e.code === 'cancelled')) return;
       clearInterval(timer);
       console.error(e);
-      page.state.err = { code: (e && e.code) || 'error', message: (e && e.message) || 'Erreur inconnue.', text: '' };
+      page.state.err = { code: (e && e.code) || 'error', message: (e && e.message) || 'Erreur inconnue.', detail: (e && e.detail) || (e && !e.code && e.message ? String(e.message).slice(0, 160) : '') };
       page.refresh();
     }
   }

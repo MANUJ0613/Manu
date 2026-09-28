@@ -368,10 +368,11 @@ export function normalizeRecipe(j, extra = {}) {
 
 /* ============================================================ points d'entrée */
 /** Lien → recette. onStep(message) informe l'écran d'import. */
-export async function importFromLink(url, { note = '', sharedText = '', onStep = () => {}, isCancelled = () => false } = {}) {
-  const got = await fetchLink(url, onStep);
+export async function importFromLink(url, { note = '', sharedText = '', onStep = () => {}, isCancelled = () => false, cache = {} } = {}) {
+  const got = cache.got || await fetchLink(url, onStep);
+  cache.got = got;
   if (isCancelled()) throw new AIError('cancelled', 'Annulé.');
-  const photoP = downloadImage(got.image);
+  const photoP = cache.photo !== undefined ? Promise.resolve(cache.photo) : downloadImage(got.image).then(b => { cache.photo = b; return b; });
   const extraText = sharedText && !got.text.includes(sharedText.slice(0, 40)) ? `\n\n(Texte partagé : ${sharedText})` : '';
   const label = [...new Set([got.author, PLATFORM_LABEL[got.platform]].filter(Boolean))].join(' · ');
   let j = null;

@@ -8,7 +8,7 @@ const DEFAULT_CHAIN = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.5-fl
 export const KEY_URL = 'https://aistudio.google.com/apikey';
 
 export class AIError extends Error {
-  constructor(code, message) { super(message); this.code = code; }
+  constructor(code, message, detail = '') { super(message); this.code = code; this.detail = detail; }
 }
 export const hasKey = () => !!(S.settings.geminiKey || '').trim();
 
@@ -75,7 +75,7 @@ export async function generateJSON(parts, { isCancelled = () => false, onStatus 
   const noThink = Object.assign({}, S.settings.noThinking || {});
   let lastErr = null;
   for (const model of chain) {
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 2; attempt++) {
       if (isCancelled()) throw new AIError('cancelled', 'Annulé.');
       const body = { contents: [{ role: 'user', parts }], generationConfig: { responseMimeType: 'application/json' } };
       if (!noThink[model]) body.generationConfig.thinkingConfig = { thinkingLevel: 'low' };
@@ -84,10 +84,16 @@ export async function generateJSON(parts, { isCancelled = () => false, onStatus 
         r = await http({
           url: `${BASE}/models/${model}:generateContent`, method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-          data: body, responseType: 'json', timeout: 150000,
+          data: body, responseType: 'json', timeout: 90000,
         });
       } catch (e) {
-        throw new AIError('net', 'Pas de connexion internet (ou Google ne répond pas).');
+        if (isCancelled()) throw new AIError('cancelled', 'Annulé.');
+        const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+        lastErr = new AIError('net', offline ? 'Pas de connexion internet.' : 'Gemini ne répond pas pour le moment. Réessaie dans un instant.', `${model} : ${String((e && (e.message || e.errorMessage)) || e).slice(0, 160)}`);
+        if (offline) throw lastErr;
+        if (attempt === 0) { onStatus('Connexion instable, nouvel essai…'); await sleep(1500); continue; }
+        onStatus('Essai avec un autre modèle…');
+        break;
       }
       if (isCancelled()) throw new AIError('cancelled', 'Annulé.');
       const d = r.data && typeof r.data === 'object' ? r.data : parseJSONLoose(r.data) || {};
@@ -99,8 +105,8 @@ export async function generateJSON(parts, { isCancelled = () => false, onStatus 
           if (S.settings.lastModel !== model) saveSettings({ lastModel: model }).catch(() => {});
           return j;
         }
-        if (/SAFETY|RECITATION|BLOCK|PROHIBITED/i.test(reason)) lastErr = new AIError('blocked', 'Gemini a refusé de lire ce contenu. Essaie avec une capture ou le texte collé.');
-        else lastErr = new AIError('format', 'Réponse de Gemini illisible.');
+        if (/SAFETY|RECITATION|BLOCK|PROHIBITED/i.test(reason)) lastErr = new AIError('blocked', 'Gemini a refusé de lire ce contenu. Essaie avec une capture ou le texte collé.', `${model} : ${reason}`);
+        else lastErr = new AIError('format', 'Réponse de Gemini illisible.', `${model} : ${reason || 'vide'}`);
         break;
       }
       if (r.status === 400 && /thinking/i.test(msg) && !noThink[model]) {
@@ -115,20 +121,21 @@ export async function generateJSON(parts, { isCancelled = () => false, onStatus 
         throw new AIError('media', 'Gemini ne peut pas ouvrir ce média.');
       }
       if (r.status === 404 || r.status === 403 || (r.status === 400 && /model/i.test(msg))) {
-        lastErr = new AIError('model', 'Modèle indisponible.');
+        lastErr = new AIError('model', 'Modèle indisponible.', `${model} : ${r.status} ${msg.slice(0, 120)}`);
         break;
       }
       if (r.status === 429) {
-        lastErr = new AIError('quota', 'Limite gratuite de Gemini atteinte pour le moment. Réessaie dans une minute.');
+        lastErr = new AIError('quota', 'Limite gratuite de Gemini atteinte pour le moment. Réessaie dans une minute.', `${model} : 429`);
         onStatus('Limite atteinte, essai d’un autre modèle…');
         break;
       }
       if (r.status >= 500) {
-        if (attempt < 2) { onStatus('Google est chargé, nouvel essai…'); await sleep(1500 * (attempt + 1)); continue; }
-        lastErr = new AIError('busy', 'Google est surchargé. Réessaie dans un moment.');
+        if (attempt === 0) { onStatus('Gemini est surchargé, nouvel essai…'); await sleep(2000); continue; }
+        lastErr = new AIError('busy', 'Gemini est surchargé en ce moment. Réessaie dans une minute.', `${model} : ${r.status} ${msg.slice(0, 120)}`);
+        onStatus('Essai avec un autre modèle…');
         break;
       }
-      lastErr = new AIError('api', msg ? `Gemini : ${msg}` : `Erreur Gemini (${r.status}).`);
+      lastErr = new AIError('api', msg ? `Gemini : ${msg}` : `Erreur Gemini (${r.status}).`, `${model} : ${r.status}`);
       break;
     }
   }
