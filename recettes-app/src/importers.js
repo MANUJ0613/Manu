@@ -188,13 +188,14 @@ const isFbVideo = u => /\/(reels?|videos?|watch)\b|fb\.watch|\/share\/(r|v)\//i.
 const hdr = (h, k) => { if (!h) return ''; for (const [a, b] of Object.entries(h)) if (a.toLowerCase() === k) return String(b); return ''; };
 
 /** Les liens /share/… et fb.watch redirigent : on suit à la main pour garder le lien complet. */
-async function resolveFb(url) {
+async function resolveFb(url, trace) {
   const seen = [url];
   let cur = url;
   for (let i = 0; i < 5; i++) {
     let r;
-    try { r = await http({ url: cur, headers: HDRS, redirects: false, timeout: 15000 }); } catch (e) { break; }
+    try { r = await http({ url: cur, headers: HDRS, redirects: false, timeout: 15000 }); } catch (e) { trace.push(`lien → erreur ${String(e && e.message || e).slice(0, 60)}`); break; }
     const loc = hdr(r.headers, 'location');
+    trace.push(`lien → ${r.status}${loc ? ' ' + shortUrl(loc) : ''}`);
     if (!(r.status >= 300 && r.status < 400) || !loc) break;
     let next;
     try { next = new URL(loc, cur).toString(); } catch (e) { break; }
@@ -210,6 +211,18 @@ async function resolveFb(url) {
   }
   return seen.reverse().slice(0, 2);
 }
+const shortUrl = u => String(u).replace(/^https?:\/\/(www\.|m\.)?facebook\.com/, '').slice(0, 60);
+/** Textes longs cachés dans les données JSON de la page (légende de la vidéo, message du post…). */
+function jsonTexts(html) {
+  const out = new Set();
+  const re = /"(?:text|description|message|savable_description|title|caption)"\s*:\s*(?:\{\s*"text"\s*:\s*)?"((?:[^"\\]|\\.){40,5000})"/g;
+  let m;
+  while ((m = re.exec(html)) && out.size < 20) {
+    const t = unescapeJSON(m[1]).replace(/\s+\n/g, '\n').trim();
+    if (t.length >= 40 && !/^https?:\/\//.test(t) && !/[{}<>]{3,}/.test(t)) out.add(t);
+  }
+  return [...out].sort((a, b) => b.length - a.length).slice(0, 5);
+}
 function fbContent(html) {
   const doc = parseHTML(html);
   const imgs = [...doc.querySelectorAll('img')]
@@ -220,38 +233,45 @@ function fbContent(html) {
   const d = doc.cloneNode(true);
   d.querySelectorAll('script, style, noscript').forEach(e => e.remove());
   let text = textOf(d.body);
-  const j = html.match(/"message":\{"text":"((?:[^"\\]|\\.)*)"/) || html.match(/"description":\{"text":"((?:[^"\\]|\\.)*)"/);
-  if (j) { const t = unescapeJSON(j[1]); if (t && !text.includes(t.slice(0, 30))) text = `${t}\n\n${text}`; }
+  for (const t of jsonTexts(html)) if (!text.includes(t.slice(0, 30))) text = `${t}\n\n${text}`;
   return { text: text.replace(/\n{3,}/g, '\n\n').trim().slice(0, 12000), image: (video && video.getAttribute('poster')) || (imgs[0] && imgs[0].src) || '' };
 }
 const fbBlocked = t => t.length < 60 || (t.length < 700 && /(connectez-vous|se connecter|log in|log into|créer (un )?(nouveau )?compte|create new account|n.est pas disponible|isn.t available|not available)/i.test(t));
 
 async function fromFacebook(url, onStep) {
+  const trace = [];
   onStep('Ouverture du lien Facebook…');
-  const hrefs = await resolveFb(url).catch(() => [url]);
+  const hrefs = await resolveFb(url, trace).catch(() => [url]);
   onStep('Lecture de la publication Facebook…');
-  for (const href of hrefs) {
+  let best = null;
+  outer: for (const href of hrefs) {
     const kinds = isFbVideo(href) || isFbVideo(url) ? ['video', 'post'] : ['post', 'video'];
     for (const kind of kinds) {
       for (const ua of [MOBILE_UA, DESKTOP_UA]) {
         try {
           const p = await http({ url: `https://www.facebook.com/plugins/${kind}.php?href=${encodeURIComponent(href)}&show_text=true&width=500`, headers: { ...HDRS, 'User-Agent': ua }, timeout: 20000 });
-          if (p.status !== 200 || typeof p.data !== 'string') continue;
-          const got = fbContent(p.data);
-          if (!fbBlocked(got.text)) return { url: href, text: got.text, title: '', author: '', image: got.image };
-        } catch (e) { /* essai suivant */ }
+          const html = typeof p.data === 'string' ? p.data : '';
+          const got = p.status === 200 && html ? fbContent(html) : { text: '', image: '' };
+          trace.push(`${kind}.php ${ua === MOBILE_UA ? 'mobile' : 'pc'} → ${p.status}, ${got.text.length} car.`);
+          if (!fbBlocked(got.text) && (!best || got.text.length > best.text.length)) best = { ...got, href };
+          if (best && best.text.length > 300) break outer;
+        } catch (e) { trace.push(`${kind}.php → erreur`); }
       }
     }
   }
+  // la page elle-même : description (og) et textes cachés, en complément
   try {
     const p = await get(hrefs[0]);
-    if (p.status < 400) {
-      const doc = parseHTML(p.html);
-      const text = [meta(doc, 'og:title'), meta(doc, 'og:description', 'description')].filter(Boolean).join('\n');
-      if (!fbBlocked(text)) return { url: hrefs[0], text, title: '', author: '', image: meta(doc, 'og:image') };
+    const doc = parseHTML(p.html);
+    const og = [meta(doc, 'og:title'), meta(doc, 'og:description', 'description'), ...(p.status < 400 ? jsonTexts(p.html) : [])].filter(Boolean).join('\n');
+    trace.push(`page → ${p.status}, ${og.length} car.`);
+    if (p.status < 400 && !fbBlocked(og)) {
+      if (!best) best = { text: og, image: meta(doc, 'og:image'), href: hrefs[0] };
+      else if (!best.text.includes(og.slice(0, 40))) best.text = `${og}\n\n${best.text}`;
     }
-  } catch (e) { /* bloqué */ }
-  throw new AIError('blocked-site', FB_BLOCKED);
+  } catch (e) { trace.push('page → erreur'); }
+  if (!best) throw new AIError('blocked-site', FB_BLOCKED, trace.join(' · '));
+  return { url: best.href, text: best.text, title: '', author: '', image: best.image, trace };
 }
 
 async function fromPage(url, onStep, platform) {

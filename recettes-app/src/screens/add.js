@@ -160,6 +160,7 @@ export function startImport(input) {
           <h2>${esc(title)}</h2>
           <p class="imp-err">${esc(e.message || 'Erreur inconnue.')}</p>
           ${e.detail ? `<p class="imp-detail">Détail : ${esc(e.detail)}</p>` : ''}
+          ${e.read ? `<details class="imp-read"><summary>Voir ce que l’appli a lu</summary><pre>${esc(e.read.slice(0, 2500))}</pre>${e.trace ? `<p class="imp-detail">${esc(e.trace)}</p>` : ''}</details>` : ''}
           <div class="row-btns stack">${order.map(k => btn[k]).join('')}</div>
         </div>
       </div>`;
@@ -194,7 +195,8 @@ export function startImport(input) {
       clearInterval(timer);
       const recipe = res.recipe;
       if (!recipe.isRecipe) {
-        page.state.err = { code: 'norecipe', message: 'Pas de recette trouvée dans ce contenu. Si elle est seulement dite dans la vidéo, fais des captures des ingrédients.' };
+        const got = res.got || {};
+        page.state.err = { code: 'norecipe', message: 'Pas de recette trouvée dans ce contenu. Souvent la recette est dite dans la vidéo, ou mise en commentaire : fais des captures des ingrédients.', read: got.text || '', trace: (got.trace || []).join(' · ') };
         page.refresh();
         return;
       }
