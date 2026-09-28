@@ -182,10 +182,82 @@ async function fromYouTube(url, onStep) {
   return { url: watch, text, title, author, image, video: true };
 }
 
+const DESKTOP_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
+const FB_BLOCKED = 'Facebook ne laisse pas lire cette publication sans être connecté. Fais une capture de la recette (description dépliée) et partage-la à l’appli, ou copie le texte du post.';
+const isFbVideo = u => /\/(reels?|videos?|watch)\b|fb\.watch|\/share\/(r|v)\//i.test(u);
+const hdr = (h, k) => { if (!h) return ''; for (const [a, b] of Object.entries(h)) if (a.toLowerCase() === k) return String(b); return ''; };
+
+/** Les liens /share/… et fb.watch redirigent : on suit à la main pour garder le lien complet. */
+async function resolveFb(url) {
+  const seen = [url];
+  let cur = url;
+  for (let i = 0; i < 5; i++) {
+    let r;
+    try { r = await http({ url: cur, headers: HDRS, redirects: false, timeout: 15000 }); } catch (e) { break; }
+    const loc = hdr(r.headers, 'location');
+    if (!(r.status >= 300 && r.status < 400) || !loc) break;
+    let next;
+    try { next = new URL(loc, cur).toString(); } catch (e) { break; }
+    if (/\/login|checkpoint/.test(next)) {
+      let n = '';
+      try { n = new URL(next).searchParams.get('next') || ''; } catch (e) { /* lien illisible */ }
+      if (n && !seen.includes(n)) seen.push(n);
+      break;
+    }
+    if (seen.includes(next)) break;
+    seen.push(next);
+    cur = next;
+  }
+  return seen.reverse().slice(0, 2);
+}
+function fbContent(html) {
+  const doc = parseHTML(html);
+  const imgs = [...doc.querySelectorAll('img')]
+    .map(i => ({ src: i.getAttribute('src') || '', w: +(i.getAttribute('width') || 0) }))
+    .filter(x => /scontent|fbcdn/.test(x.src))
+    .sort((a, b) => b.w - a.w);
+  const video = doc.querySelector('video[poster]');
+  const d = doc.cloneNode(true);
+  d.querySelectorAll('script, style, noscript').forEach(e => e.remove());
+  let text = textOf(d.body);
+  const j = html.match(/"message":\{"text":"((?:[^"\\]|\\.)*)"/) || html.match(/"description":\{"text":"((?:[^"\\]|\\.)*)"/);
+  if (j) { const t = unescapeJSON(j[1]); if (t && !text.includes(t.slice(0, 30))) text = `${t}\n\n${text}`; }
+  return { text: text.replace(/\n{3,}/g, '\n\n').trim().slice(0, 12000), image: (video && video.getAttribute('poster')) || (imgs[0] && imgs[0].src) || '' };
+}
+const fbBlocked = t => t.length < 60 || (t.length < 700 && /(connectez-vous|se connecter|log in|log into|créer (un )?(nouveau )?compte|create new account|n.est pas disponible|isn.t available|not available)/i.test(t));
+
+async function fromFacebook(url, onStep) {
+  onStep('Ouverture du lien Facebook…');
+  const hrefs = await resolveFb(url).catch(() => [url]);
+  onStep('Lecture de la publication Facebook…');
+  for (const href of hrefs) {
+    const kinds = isFbVideo(href) || isFbVideo(url) ? ['video', 'post'] : ['post', 'video'];
+    for (const kind of kinds) {
+      for (const ua of [MOBILE_UA, DESKTOP_UA]) {
+        try {
+          const p = await http({ url: `https://www.facebook.com/plugins/${kind}.php?href=${encodeURIComponent(href)}&show_text=true&width=500`, headers: { ...HDRS, 'User-Agent': ua }, timeout: 20000 });
+          if (p.status !== 200 || typeof p.data !== 'string') continue;
+          const got = fbContent(p.data);
+          if (!fbBlocked(got.text)) return { url: href, text: got.text, title: '', author: '', image: got.image };
+        } catch (e) { /* essai suivant */ }
+      }
+    }
+  }
+  try {
+    const p = await get(hrefs[0]);
+    if (p.status < 400) {
+      const doc = parseHTML(p.html);
+      const text = [meta(doc, 'og:title'), meta(doc, 'og:description', 'description')].filter(Boolean).join('\n');
+      if (!fbBlocked(text)) return { url: hrefs[0], text, title: '', author: '', image: meta(doc, 'og:image') };
+    }
+  } catch (e) { /* bloqué */ }
+  throw new AIError('blocked-site', FB_BLOCKED);
+}
+
 async function fromPage(url, onStep, platform) {
   onStep(platform === 'facebook' ? 'Lecture de la publication Facebook…' : 'Lecture de la page…');
   const p = await get(url);
-  if (p.status >= 400) throw new AIError('link', `Le site a refusé l'accès (code ${p.status}).`);
+  if (p.status >= 400) throw new AIError('link', `Le site a refusé l'accès (code ${p.status}). Fais une capture de la recette ou colle le texte.`);
   const doc = parseHTML(p.html);
   const ld = findRecipeLD(doc);
   const title = meta(doc, 'og:title') || str(doc.title);
@@ -205,6 +277,7 @@ export async function fetchLink(url, onStep = () => {}) {
   if (platform === 'tiktok') res = await fromTikTok(url, onStep);
   else if (platform === 'instagram') res = await fromInstagram(url, onStep);
   else if (platform === 'youtube') res = await fromYouTube(url, onStep);
+  else if (platform === 'facebook') res = await fromFacebook(url, onStep);
   else res = await fromPage(url, onStep, platform);
   return { platform, ...res, text: str(res.text).slice(0, 20000) };
 }
@@ -300,7 +373,7 @@ export async function importFromLink(url, { note = '', sharedText = '', onStep =
   if (isCancelled()) throw new AIError('cancelled', 'Annulé.');
   const photoP = downloadImage(got.image);
   const extraText = sharedText && !got.text.includes(sharedText.slice(0, 40)) ? `\n\n(Texte partagé : ${sharedText})` : '';
-  const label = [got.author, PLATFORM_LABEL[got.platform]].filter(Boolean).join(' · ');
+  const label = [...new Set([got.author, PLATFORM_LABEL[got.platform]].filter(Boolean))].join(' · ');
   let j = null;
   if (got.platform === 'youtube') {
     onStep('Gemini regarde la vidéo…');

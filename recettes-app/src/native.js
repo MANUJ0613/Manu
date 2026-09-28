@@ -15,12 +15,12 @@ export const MOBILE_UA = 'Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/
  * Requête HTTP. Sur le téléphone elle passe par le réseau natif (pas de blocage CORS).
  * responseType : 'text' | 'json' | 'blob' (blob → base64 dans data).
  */
-export async function http({ url, method = 'GET', headers = {}, data, responseType = 'text', timeout = 30000 }) {
-  if (!isNative && window.__agpMockHttp) return window.__agpMockHttp({ url, method, headers, data, responseType });
+export async function http({ url, method = 'GET', headers = {}, data, responseType = 'text', timeout = 30000, redirects = true }) {
+  if (!isNative && window.__agpMockHttp) return window.__agpMockHttp({ url, method, headers, data, responseType, redirects });
   if (isNative) {
     const r = await CapacitorHttp.request({
       url, method, headers, data, responseType,
-      connectTimeout: 15000, readTimeout: timeout,
+      connectTimeout: 15000, readTimeout: timeout, disableRedirects: !redirects,
     });
     return { status: r.status, data: r.data, url: r.url || url, headers: r.headers || {} };
   }
@@ -28,7 +28,7 @@ export async function http({ url, method = 'GET', headers = {}, data, responseTy
   const t = setTimeout(() => ctl.abort(), timeout);
   try {
     const body = data == null ? undefined : typeof data === 'string' ? data : JSON.stringify(data);
-    const res = await fetch(url, { method, headers, body, signal: ctl.signal });
+    const res = await fetch(url, { method, headers, body, signal: ctl.signal, redirect: redirects ? 'follow' : 'manual' });
     const ct = res.headers.get('content-type') || '';
     let out;
     if (responseType === 'blob') out = await blobToB64(await res.blob());

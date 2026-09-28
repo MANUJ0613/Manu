@@ -142,18 +142,23 @@ export function startImport(input) {
     if (st.err) {
       const e = st.err;
       const keyIssue = e.code === 'nokey' || e.code === 'key';
+      const captureFirst = ['blocked-site', 'link', 'empty', 'norecipe'].includes(e.code);
+      const title = keyIssue ? 'Clé Gemini nécessaire' : e.code === 'blocked-site' ? 'Facebook bloque la lecture' : 'Import impossible';
+      const btn = {
+        key: `<button type="button" class="btn primary" data-act="key">${icon('key')}Ajouter ma clé Gemini</button>`,
+        retry: `<button type="button" class="btn ${captureFirst ? 'ghost' : 'primary'}" data-act="retry">Réessayer</button>`,
+        photo: `<button type="button" class="btn ${captureFirst ? 'primary' : 'ghost'}" data-act="photo">${icon('image')}Importer une capture à la place</button>`,
+        text: `<button type="button" class="btn ghost" data-act="text">${icon('text')}Coller le texte</button>`,
+        write: `<button type="button" class="btn ghost" data-act="write">${icon('pen')}L'écrire moi-même</button>`,
+      };
+      const order = keyIssue ? ['key', 'photo', 'text', 'write'] : captureFirst ? ['photo', 'text', 'retry', 'write'] : ['retry', 'photo', 'text', 'write'];
       p.el.innerHTML = `<div class="imp">
         <button type="button" class="icon-btn imp-x" data-act="close" aria-label="Fermer">${icon('close')}</button>
         <div class="imp-card">
           ${sourceHTML()}
-          <h2>${keyIssue ? 'Clé Gemini nécessaire' : 'Import impossible'}</h2>
+          <h2>${esc(title)}</h2>
           <p class="imp-err">${esc(e.message || 'Erreur inconnue.')}</p>
-          <div class="row-btns stack">
-            ${keyIssue ? `<button type="button" class="btn primary" data-act="key">${icon('key')}Ajouter ma clé Gemini</button>` : `<button type="button" class="btn primary" data-act="retry">Réessayer</button>`}
-            <button type="button" class="btn ghost" data-act="photo">${icon('image')}Importer une capture à la place</button>
-            <button type="button" class="btn ghost" data-act="text">${icon('text')}Coller le texte</button>
-            <button type="button" class="btn ghost" data-act="write">${icon('pen')}L'écrire moi-même</button>
-          </div>
+          <div class="row-btns stack">${order.map(k => btn[k]).join('')}</div>
         </div>
       </div>`;
       return;
