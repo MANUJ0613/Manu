@@ -4,7 +4,7 @@ import { $, esc, f0, f1, f2, sgn, num, arr, str, clone, norm } from '../util.js'
 import { pushPage, icon, actionSheet, confirmSheet, openSheet, toast, thumbHTML } from '../ui.js';
 import {
   perPortion, totals, servingsOf, stepFor, bestS, fitAt, fit, bestFit, verdictSub, compareMeals, mealById, hasMacros,
-  lines, isSec, scaleQty, macroStatus, STT, STW, calibrate, substitute, lineFromFood, searchFoods, foodByName, unitsText,
+  lines, isSec, scaleQty, macroStatus, STT, STW, substitute, lineFromFood, searchFoods, unitsText,
 } from '../macros.js';
 import { openExternal, shareText } from '../native.js';
 import { openEditor } from './editor.js';
@@ -14,6 +14,7 @@ import { openPlanPicker } from './planner.js';
 import { addRecipeToGroceries } from './groceries.js';
 import { suggestSteps } from '../importers.js';
 import { hasKey } from '../ai.js';
+import { adaptCardHTML, openAdapt, adaptMenu, revertAdapt } from './adapter.js';
 
 const kcalStatus = (e, t) => { const r = Math.abs(e) / Math.max(1, t); return r <= 0.03 ? 'ok' : r <= 0.07 ? 'near' : 'far'; };
 
@@ -68,6 +69,7 @@ function render(page) {
         <button type="button" data-act="groceries">${icon('cart')}<span>Courses</span></button>
         <button type="button" data-act="books">${icon('book')}<span>Livres</span></button>
       </div>
+      ${adaptCardHTML(r)}
       ${balanceHTML(r, st)}
       <section class="d-sec">
         <div class="sec-h">
@@ -150,7 +152,7 @@ function balanceHTML(r, st) {
     </div>
     <div class="bal-btns">
       ${best != null && Math.abs(best - st.s) > 1e-9 ? `<button type="button" class="btn small ghost" data-act="s-best">Meilleure portion : ${f2(best)}</button>` : ''}
-      ${fv.status !== 'ok' || fv.worst > 0.6 ? `<button type="button" class="btn small primary" data-act="calibrate">${icon('target')}Caler sur ${esc(m.name)} au gramme près</button>` : `<span class="okline">${icon('check')}Remplace ton ${esc(m.name)} tel quel.</span>`}
+      ${fv.status !== 'ok' || fv.worst > 0.6 ? `<button type="button" class="btn small primary" data-adapt="${esc(m.id)}">${icon('target')}Adapter à ${esc(m.name)} au gramme près</button>` : `<span class="okline">${icon('check')}Remplace ton ${esc(m.name)} tel quel.</span>`}
     </div>
   </section>`;
 }
@@ -190,6 +192,8 @@ function onClick(e, page) {
   }
   const ing = e.target.closest('[data-ing]');
   if (ing) { ingredientMenu(page, r, +ing.dataset.ing); return; }
+  const ad = e.target.closest('[data-adapt]');
+  if (ad) { startAdapt(page, r, ad.dataset.adapt); return; }
   const b = e.target.closest('[data-act]');
   if (!b) return;
   const a = b.dataset.act;
@@ -211,7 +215,7 @@ function onClick(e, page) {
   else if (a === 'books') openBookPicker(r);
   else if (a === 'edit') openEditor(r);
   else if (a === 'share') shareRecipe(r);
-  else if (a === 'calibrate') openCalibrate(page, r, mealById(st.meal));
+  else if (a === 'adapt-menu') adaptMenu(r, out => afterAdapt(page, out));
   else if (a === 'ai-steps') writeSteps(b, r);
 }
 
@@ -258,13 +262,33 @@ function groceriesSheet(r, st) {
   });
 }
 
+/* ============================================================ adaptation au plan */
+function afterAdapt(page, out, res) {
+  const st = page.state;
+  st.sv = servingsOf(out);
+  if (res) { st.meal = res.meal.id; st.s = res.k; }
+  else { const bf = bestFit(out); if (bf) { st.meal = bf.meal.id; st.s = bf.fit.s; } }
+  page.refresh();
+}
+function startAdapt(page, r, mealId) {
+  openAdapt(r, {
+    meal: mealId,
+    onApplied: (saved, res, isCopy) => {
+      if (isCopy) openRecipe(saved.id, { meal: res.meal.id, s: res.k });
+      else afterAdapt(page, saved, res);
+    },
+  });
+}
+
 function moreMenu(page, r) {
   const items = [
     { label: 'Modifier', icon: 'pen', run: () => openEditor(r) },
+    { label: 'Adapter à ton plan', icon: 'target', run: () => startAdapt(page, r, page.state.meal) },
     { label: 'Dupliquer', icon: 'copy', run: () => duplicate(r) },
     { label: 'Ranger dans un livre', icon: 'book', run: () => openBookPicker(r) },
     { label: 'Partager la recette', icon: 'share', run: () => shareRecipe(r) },
   ];
+  if (r.adapt && r.adapt.orig) items.push({ label: 'Revenir à la recette d’origine', icon: 'back', run: () => revertAdapt(r, out => afterAdapt(page, out)) });
   if (r.source && r.source.url) items.push({ label: 'Voir la publication d’origine', icon: 'link', run: () => openExternal(r.source.url) });
   items.push({
     label: 'Supprimer', icon: 'trash', danger: true,
@@ -304,72 +328,6 @@ export function recipeText(r) {
 }
 async function shareRecipe(r) {
   try { const how = await shareText(r.title, recipeText(r)); if (how === 'copied') toast('Recette copiée.'); } catch (e) { /* partage annulé */ }
-}
-
-/* ============================================================ recalage au gramme */
-function openCalibrate(page, r, meal) {
-  if (!meal) return;
-  const L = lines(r);
-  const movable = L.map((l, i) => (num(l.g) > 0 && num(l.p) + num(l.c) + num(l.f) > 0 ? i : -1)).filter(i => i >= 0);
-  let allowed = movable.slice();
-  const sh = openSheet({ title: `Caler sur ${meal.name}`, full: true, html: '<div id="cal"></div>' });
-  const paint = () => {
-    const res = calibrate(r, meal, allowed);
-    const box = $('#cal', sh.body);
-    const lockList = `<details class="cal-lock"><summary>Ingrédients qui peuvent bouger (${allowed.length}/${movable.length})</summary>
-      <div class="lock-list">${movable.map(i => `<label class="check"><input type="checkbox" data-lock="${i}" ${allowed.includes(i) ? 'checked' : ''}> ${esc(L[i].name)}</label>`).join('')}</div></details>`;
-    if (!res) {
-      box.innerHTML = `<p class="lead">Impossible de caler avec ces ingrédients. Autorise d'autres ingrédients à bouger, ou ajoute une source de protéines, de glucides ou de lipides.</p>${lockList}`;
-      return;
-    }
-    const f = res.fit;
-    const cell = (label, key) => `<div class="brow"><span class="bl">${label}</span><span class="bv">${f1(meal[key])}</span><span class="bv">${f1(f.s * perPortion(res.recipe)[key])}</span><span class="be st-${key === 'kcal' ? kcalStatus(f.e[key], num(meal[key])) : macroStatus(f.e[key])}">${sgn(f.e[key])}</span></div>`;
-    box.innerHTML = `
-      <p class="lead">${res.changes.length ? 'Pour que <b>1 portion</b> remplace ton ' + esc(meal.name) + ' :' : 'La recette est déjà calée.'}</p>
-      <ul class="changes">${res.changes.map(c => {
-        const food = foodByName(c.name);
-        const u = unitsText(food, c.to);
-        return `<li><span>${esc(c.name)}</span><b>${f1(c.from)} g → ${f1(c.to)} g</b>${u ? `<small>${esc(u)}</small>` : ''}</li>`;
-      }).join('')}</ul>
-      <div class="btable light">
-        <div class="brow head"><span></span><span class="bv">Cible</span><span class="bv">Recette</span><span class="be">Écart</span></div>
-        ${cell('Kcal', 'kcal')}${cell('Prot.', 'p')}${cell('Gluc.', 'c')}${cell('Lip.', 'f')}
-      </div>
-      <p class="verdict-mini st-${f.status}">${esc(STT[f.status])} · ${esc(verdictSub(f))}</p>
-      ${lockList}
-      ${res.changes.length ? `<div class="row-btns stack">
-        <button type="button" class="btn primary" data-save="replace">Appliquer à cette recette</button>
-        <button type="button" class="btn ghost" data-save="copy">Enregistrer en copie</button>
-      </div>` : ''}`;
-    sh.res = res;
-  };
-  paint();
-  sh.body.addEventListener('change', e => {
-    const c = e.target.closest('[data-lock]');
-    if (!c) return;
-    const i = +c.dataset.lock;
-    allowed = c.checked ? [...new Set([...allowed, i])] : allowed.filter(x => x !== i);
-    paint();
-  });
-  sh.body.addEventListener('click', async e => {
-    const b = e.target.closest('[data-save]');
-    if (!b || !sh.res) return;
-    const out = sh.res.recipe;
-    if (b.dataset.save === 'copy') {
-      out.id = ''; out.createdAt = 0;
-      out.title = `${r.title} (${meal.name})`;
-      const saved = await saveRecipe(out);
-      sh.close();
-      toast('Copie calée enregistrée.');
-      openRecipe(saved.id, { meal: meal.id });
-    } else {
-      await saveRecipe(out);
-      page.state.s = 1;
-      page.state.sv = servingsOf(out);
-      sh.close();
-      toast(`Recette calée sur ${meal.name}.`);
-    }
-  });
 }
 
 /* ============================================================ remplacer un ingrédient */
@@ -423,7 +381,7 @@ function openSwap(page, r, li) {
     const m = mealById(page.state.meal);
     const f = m && fit(out, m);
     if (m && f && f.status !== 'ok') {
-      toast(`${x.f.name} : ${f0(x.s.g)} g. Il reste un petit écart.`, { action: 'Caler', onAction: () => openCalibrate(page, recipeById(out.id), m) });
+      toast(`${x.f.name} : ${f0(x.s.g)} g. Il reste un petit écart.`, { action: 'Adapter', onAction: () => startAdapt(page, recipeById(out.id), m.id) });
     } else toast(`${line.name} remplacé par ${f0(x.s.g)} g de ${x.f.name}.`);
   });
 }

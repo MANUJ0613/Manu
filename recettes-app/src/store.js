@@ -263,6 +263,7 @@ export async function importBackup(data, { replacePlan = true } = {}) {
     source: sourceOf(r.source),
     photo: r.photo && (photoMap[r.photo] || typeof r.photo === 'string') ? r.photo : null,
     books: arr(r.books || r.carnets).map(String),
+    ...(r.adapt && typeof r.adapt === 'object' ? { adapt: r.adapt } : {}),
     createdAt: num(r.createdAt) || Date.now(),
     updatedAt: num(r.updatedAt) || Date.now(),
   }));

@@ -1,6 +1,6 @@
 // Calculs de macros : totaux, comparaison aux meals du plan, recalage au gramme, remplacements.
 import { S } from './store.js';
-import { num, arr, norm, pos1, round1, f1, f2, clone } from './util.js';
+import { num, arr, norm, pos1, round1, f1, f2 } from './util.js';
 
 export const TOL_OK = 2, TOL_NEAR = 5;
 export const MACN = { p: 'protéines', c: 'glucides', f: 'lipides' };
@@ -162,88 +162,6 @@ export function qtyForGrams(line, g) {
   return `${f0g(g)} g`;
 }
 const f0g = g => (g >= 10 ? String(Math.round(g)) : f1(g));
-
-/* ============================================================ recalage au gramme près */
-function solve(A, b) {
-  // Résout le système A x = b (n ≤ 3) par élimination de Gauss.
-  const n = b.length;
-  const M = A.map((row, i) => [...row, b[i]]);
-  for (let c = 0; c < n; c++) {
-    let p = c;
-    for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
-    if (Math.abs(M[p][c]) < 1e-10) return null;
-    [M[c], M[p]] = [M[p], M[c]];
-    for (let r = 0; r < n; r++) {
-      if (r === c) continue;
-      const k = M[r][c] / M[c][c];
-      for (let j = c; j <= n; j++) M[r][j] -= k * M[c][j];
-    }
-  }
-  return M.map((row, i) => row[n] / row[i]);
-}
-function combos(list, k, start = 0, acc = [], out = []) {
-  if (acc.length === k) { out.push(acc.slice()); return out; }
-  for (let i = start; i < list.length; i++) { acc.push(list[i]); combos(list, k, i + 1, acc, out); acc.pop(); }
-  return out;
-}
-/**
- * Ajuste les grammes de 1 à 3 ingrédients pour qu'UNE portion corresponde au meal.
- * `adjustable` : indices (dans lines(r)) autorisés à bouger ; par défaut tous ceux qui ont des macros.
- * Retourne { recipe, fit, changes } ou null.
- */
-export function calibrate(r, meal, adjustable = null) {
-  const n = servingsOf(r);
-  const L = lines(r);
-  const T = [num(meal.p) * n, num(meal.c) * n, num(meal.f) * n];
-  const tot = [0, 0, 0];
-  for (const l of L) { tot[0] += num(l.p); tot[1] += num(l.c); tot[2] += num(l.f); }
-  let cand = L.map((l, i) => ({ l, i, per: perFromLine(l) }))
-    .filter(x => x.per && num(x.l.g) > 0 && x.per.p + x.per.c + x.per.f > 0.5);
-  if (adjustable) cand = cand.filter(x => adjustable.includes(x.i));
-  if (!cand.length) return null;
-  // Au-delà de 9 candidats, on garde ceux qui pèsent le plus dans chaque macro.
-  if (cand.length > 9) {
-    const keep = new Set();
-    for (const k of ['p', 'c', 'f']) cand.slice().sort((a, b) => num(b.l[k]) - num(a.l[k])).slice(0, 3).forEach(x => keep.add(x));
-    cand = [...keep];
-  }
-  let best = null;
-  for (let k = 1; k <= Math.min(3, cand.length); k++) {
-    for (const set of combos(cand, k)) {
-      const fixed = tot.slice();
-      for (const x of set) { fixed[0] -= num(x.l.p); fixed[1] -= num(x.l.c); fixed[2] -= num(x.l.f); }
-      const b = [T[0] - fixed[0], T[1] - fixed[1], T[2] - fixed[2]];
-      const cols = set.map(x => [x.per.p / 100, x.per.c / 100, x.per.f / 100]);
-      // équations normales : (AᵀA) g = Aᵀb
-      const AtA = cols.map(ci => cols.map(cj => ci[0] * cj[0] + ci[1] * cj[1] + ci[2] * cj[2]));
-      const Atb = cols.map(ci => ci[0] * b[0] + ci[1] * b[1] + ci[2] * b[2]);
-      const g = solve(AtA, Atb);
-      if (!g || g.some(v => !Number.isFinite(v) || v < 0 || v > 3000)) continue;
-      const gr = g.map(v => (v >= 20 ? Math.round(v) : Math.round(v * 2) / 2));
-      const res = [0, 1, 2].map(m => cols.reduce((s, c, j) => s + c[m] * gr[j], 0) - b[m]);
-      const worst = Math.max(...res.map(Math.abs)) / n;
-      // pénalise surtout les gros bonds (x10 de mayo…) : changement relatif au carré
-      const change = set.reduce((s, x, j) => { const rel = (gr[j] - num(x.l.g)) / (num(x.l.g) + 25); return s + rel * rel; }, 0);
-      const cost = worst + 0.45 * change + 0.05 * k;
-      if (!best || cost < best.cost) best = { set, gr, worst, cost };
-    }
-  }
-  if (!best) return null;
-  const out = clone(r);
-  const outLines = lines(out);
-  const changes = [];
-  best.set.forEach((x, j) => {
-    const line = outLines[x.i];
-    const from = num(line.g), to = best.gr[j];
-    if (Math.abs(to - from) < 0.25) return;
-    line.qty = qtyForGrams(line, to);
-    line.g = to;
-    applyPer(line, x.per);
-    changes.push({ name: line.name, from, to });
-  });
-  const pp = perPortion(out);
-  return { recipe: out, fit: fitAt(pp, meal, 1), changes };
-}
 
 /* ============================================================ remplacer un ingrédient */
 /** Grammes d'un aliment qui reproduisent au mieux les macros d'une ligne. */

@@ -10,6 +10,7 @@ import { renderPlanner } from './screens/planner.js';
 import { renderGroceries } from './screens/groceries.js';
 import { renderProfile, openOnboarding, openProfileSection } from './screens/profile.js';
 import { openAddSheet, handleShared } from './screens/add.js';
+import { adaptOptions } from './screens/adapter.js';
 
 const TABS = [
   { id: 'recettes', label: 'Recettes', icon: 'recipes', render: renderLibrary },
@@ -93,7 +94,7 @@ async function boot() {
   });
   if (!S.settings.onboarded) openOnboarding();
   onShared(d => { clearShared(); handleShared(d); });
-  if (!isNative) window.__agp = { S, handleShared, setTab };
+  if (!isNative) window.__agp = { S, handleShared, setTab, adaptOptions };
 }
 
 window.addEventListener('error', e => { console.error(e.error || e.message); toast('Oups, une erreur : ' + (e.message || 'inconnue')); });
