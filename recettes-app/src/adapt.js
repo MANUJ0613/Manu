@@ -47,7 +47,7 @@ function mealTaste0(m) {
   const note = String((m && m.note) || '').replace(/^plan du coach\s*:/i, '');
   const parts = note.split(/[,.;+]| et /).map(s => s.trim()).filter(Boolean);
   const s = sweetScore(m && m.name, parts);
-  return s >= 1 ? 1 : s <= -1 ? -1 : 0;
+  return s >= 2 ? 1 : s <= -2 ? -1 : 0; // un meal mixte (œufs + myrtilles…) reste neutre
 }
 
 /* ============================================================ rôle de chaque ingrédient */
@@ -222,10 +222,12 @@ function solveOne(ctx, meal, q, boosters) {
       for (let j = 0; j < N; j++) if (a[j]) H[i][j] += 2 * rq * a[i] * a[j];
     }
   });
-  const lo = [...free.map(x => (x.locked ? beta : x.lo * beta)), ...boosters.map(() => 0)];
-  const hi = [...free.map(x => (x.locked ? beta : x.hi * beta)), ...boosters.map(() => MAX_ADD_PER_MEAL * q)]; // pas plus de 350 g ajoutés par meal
+  // quantité imposée : ingrédient bloqué (proportion d'origine) ou arrondi à l'unité (3 œufs, 2 bananes)
+  const fixed = x => (x.fixG != null ? x.fixG / x.g0 : x.locked ? beta : null);
+  const lo = [...free.map(x => fixed(x) ?? x.lo * beta), ...boosters.map(() => 0)];
+  const hi = [...free.map(x => fixed(x) ?? x.hi * beta), ...boosters.map(() => MAX_ADD_PER_MEAL * q)]; // pas plus de 350 g ajoutés par meal
   // départ admissible : la recette telle quelle à la bonne échelle, rien d'ajouté
-  const z0 = [...free.map(() => beta), ...boosters.map(() => 0)];
+  const z0 = [...free.map(x => fixed(x) ?? beta), ...boosters.map(() => 0)];
   const z = boxqp(H, f, lo, hi, z0);
   if (!z || z.some(v => !Number.isFinite(v))) return null;
   const grams = new Map();
@@ -236,7 +238,7 @@ function solveOne(ctx, meal, q, boosters) {
 const stepOf = g => (g >= 20 ? 1 : 0.5);
 const roundG = g => (g >= 20 ? Math.round(g) : Math.round(g * 2) / 2);
 
-function finish(ctx, meal, q, boosters, raw) {
+function finish(ctx, meal, q, boosters, raw, polish = true) {
   const { items, n } = ctx;
   const beta = raw.beta;
   // Arrondi au gramme puis retouche pour coller au plus près des cibles.
@@ -252,10 +254,10 @@ function finish(ctx, meal, q, boosters, raw) {
   const err = () => MK.map((k, kk) => all.reduce((s, r) => s + (r.per[k] * (r.g || 0)) / 100, 0) / q - target[kk]);
   const worstOf = e => Math.max(...e.map(Math.abs));
   let e = err(), worst = worstOf(e);
-  for (let it = 0; it < 60 && worst > 0.05; it++) {
+  for (let it = 0; polish && it < 60 && worst > 0.05; it++) {
     let bestMove = null, bestScore = worst;
     for (const r of all) {
-      if (r.x && r.x.locked) continue;
+      if (r.x && (r.x.locked || r.x.fixG != null)) continue;
       if (!(r.g > 0) && !(r.b && r.cont >= 0.25)) continue;
       const st = stepOf(r.g || 0);
       for (const d of [st, -st]) {
@@ -296,7 +298,9 @@ function finish(ctx, meal, q, boosters, raw) {
   const servings = n > 1 ? k * q : 1;
   const status = worst <= 2 ? 'ok' : worst <= 5 ? 'near' : 'far';
   const taste = mealTaste(meal);
-  const level = status !== 'ok' || worst > TOL_EXACT ? 'impossible' : !changes.length ? 'none' : dist < 0.03 ? 'light' : dist < 0.1 ? 'medium' : 'strong';
+  // retouches : tout écart au-delà de l'arrondi, même petit (les « changes » ne gardent que les notables)
+  const tweaks = rows.filter(r => r.x.free && Math.abs((r.g || 0) - r.x.g0 * beta) >= Math.max(1, 0.03 * r.x.g0 * beta)).length + usedB.length;
+  const level = status !== 'ok' || worst > TOL_EXACT ? 'impossible' : !changes.length && !tweaks ? 'none' : dist < 0.03 ? 'light' : dist < 0.1 ? 'medium' : 'strong';
   // Recette sucrée pour un meal salé (ou l'inverse) : un peu moins naturel, sauf si rien ne change.
   const clash = level !== 'none' && taste && taste === (ctx.sweet ? -1 : 1) ? 0.1 : 0;
   const cost = dist + clash + (n > 1 ? 0.08 * Math.log(beta) ** 2 + (0.02 * Math.abs(servings - n)) / n : 0) + (worst > TOL_EXACT ? 2 + worst : 0);
@@ -310,7 +314,23 @@ function finish(ctx, meal, q, boosters, raw) {
 }
 
 /* ============================================================ préparation */
-function context(r, locked) {
+// Aliments qui se comptent à l'unité : on préfère 3 œufs à « 2,6 œufs » (demi-unité pour les fruits).
+const COUNTABLE = /^(oeuf|banane|pomme|oignon|steak|tranche|pita|pain|wrap|galette|portion|boite|cornichon|biscuit|pot)s?$/;
+const HALVES = /^(banane|pomme|oignon)s?$/;
+const FIDX = new WeakMap();
+function foodIndex(foods) {
+  const key = arr(foods);
+  let m = FIDX.get(key);
+  if (!m) {
+    m = new Map();
+    for (const f of key) for (const n of [f.name, ...arr(f.aliases)]) { const k = norm(n); if (k && !m.has(k)) m.set(k, f); }
+    if (Array.isArray(foods)) FIDX.set(foods, m);
+  }
+  return m;
+}
+
+function context(r, locked, foods) {
+  const fx = foodIndex(foods);
   const L = linesOf(r);
   const K0 = L.reduce((s, l) => s + num(l.kcal), 0);
   const M0 = L.reduce((s, l) => s + mkcal(l), 0);
@@ -328,6 +348,8 @@ function context(r, locked) {
       it.w = Math.max(0.06, share) * R.wMul;
       it.lo = R.lo; it.hi = R.hi;
       it.M = MK.map(k => num(l[k]));
+      const food = fx.get(norm(l.name));
+      if (food && num(food.unitG) > 0 && COUNTABLE.test(norm(food.unit))) { it.unitG = num(food.unitG); it.half = HALVES.test(norm(food.unit)); }
     }
     return it;
   });
@@ -360,7 +382,7 @@ function boosterSpec(type, food, q) {
  */
 export function adaptFor(r, meal, foods, opts = {}) {
   const locked = new Set(arr(opts.locked));
-  const ctx = context(r, locked);
+  const ctx = context(r, locked, foods);
   if (!meal || !ctx.items.some(x => x.free) || !(ctx.M0 > 0) || !(mkcal(meal) > 0)) return null;
   const choices = {};
   // On n'ajoute pas ce que la recette a déjà : plus de whey plutôt qu'un 2e ingrédient protéiné, etc.
@@ -383,13 +405,14 @@ export function adaptFor(r, meal, foods, opts = {}) {
     if (!raw) return null;
     const res = finish(ctx, meal, q, boosters, raw);
     res.cost += 0.015 * set.length;
+    res.specs = boosters;
     return keep(res);
   };
   const fits = res => res && res.level !== 'impossible';
   for (const q of qs) {
     // Telle quelle, juste à la bonne échelle : si ça colle déjà, rien à changer.
     const beta = (q * mkcal(meal)) / ctx.M0;
-    const asIs = finish(ctx, meal, q, [], { beta, grams: new Map(ctx.items.filter(x => x.free).map(x => [x, x.g0 * beta])), bgr: [] });
+    const asIs = finish(ctx, meal, q, [], { beta, grams: new Map(ctx.items.filter(x => x.free).map(x => [x, x.g0 * beta])), bgr: [] }, false);
     if (asIs.level === 'none') { keep(asIs); continue; }
     const r0 = run(q, []);
     if (fits(r0) && r0.dist < 0.03) continue; // petits ajustements suffisent : pas besoin d'ajouter quoi que ce soit
@@ -397,6 +420,7 @@ export function adaptFor(r, meal, foods, opts = {}) {
     if (fits(r0) || singles.some(fits)) continue;
     for (const set of [['p', 'c'], ['p', 'f'], ['c', 'f']]) run(q, set);
   }
+  if (best && best.level !== 'impossible' && best.level !== 'none') best = snapCountables(ctx, meal, best);
   if (best) {
     best.sweet = ctx.sweet;
     best.choices = choices;
@@ -404,6 +428,44 @@ export function adaptFor(r, meal, foods, opts = {}) {
     best.n = ctx.n;
   }
   return best;
+}
+
+/** Arrondit œufs, bananes, tranches… à l'unité (ou à la demie) puis recalcule le reste, si ça reste exact. */
+function snapCountables(ctx, meal, best) {
+  const specs = best.specs || [];
+  const cands = ctx.items.filter(x => x.free && !x.locked && x.unitG > 0).sort((a, b) => b.g0 - a.g0).slice(0, 3);
+  if (!cands.length) return best;
+  // pour chaque ingrédient : l'unité (ou demie) juste en dessous et juste au-dessus
+  const options = cands.map(x => {
+    const row = best.rows.find(rw => rw.idx === x.idx);
+    const g = (row && row.to) || 0;
+    const step = x.half ? 0.5 : 1;
+    const u = g / x.unitG / step;
+    const outs = [...new Set([Math.floor(u), Math.ceil(u)])].map(v => Math.max(1, v) * step)
+      .map(v => Math.round(v * x.unitG * 10) / 10)
+      .filter(gs => g > 0 && Math.abs(gs - g) <= 0.4 * g);
+    return outs.length ? outs : [null];
+  });
+  let pick = best;
+  const combo = (i, acc) => {
+    if (i === cands.length) {
+      if (acc.every(v => v == null)) return;
+      cands.forEach((x, k) => { x.fixG = acc[k]; });
+      const raw = solveOne(ctx, meal, best.q, specs);
+      const res = raw && finish(ctx, meal, best.q, specs, raw);
+      if (res && res.level !== 'impossible' && res.dist <= best.dist + 0.06 && (pick === best || res.dist < pick.dist)) {
+        res.cost += 0.015 * specs.length;
+        res.specs = specs;
+        res.fixes = acc.slice();
+        pick = res;
+      }
+      return;
+    }
+    for (const v of options[i]) combo(i + 1, [...acc, v]);
+  };
+  combo(0, []);
+  cands.forEach((x, k) => { x.fixG = pick.fixes ? pick.fixes[k] : null; });
+  return pick;
 }
 
 /** Toutes les meals, de la plus naturelle à la moins naturelle. */

@@ -16,6 +16,8 @@ export const LEVEL = {
   impossible: 'Impossible sans dénaturer la recette',
 };
 const LEVEL_DOT = { none: 'ok', light: 'ok', medium: 'near', strong: 'near', impossible: 'far' };
+/** « Rien à changer », ou « Juste la taille » quand une recette d'une portion doit seulement grossir ou rapetisser. */
+const levelText = res => (res.level === 'none' && res.n <= 1 && Math.abs(res.beta - 1) > 0.03 ? 'Juste la taille, mêmes proportions' : LEVEL[res.level]);
 
 /* ============================================================ calcul (mis en cache par recette) */
 const CACHE = new WeakMap();
@@ -34,7 +36,8 @@ export function adaptOptions(r) {
 /** Changements les plus parlants en premier (ajouts, puis les plus gros écarts en kcal). */
 function sortedChanges(res) {
   const rows = new Map(res.rows.map(x => [x.idx, x]));
-  return res.changes.slice().sort((a, b) => {
+  // un ingrédient gardé tel quel (même quantité qu'à l'origine) n'est pas un changement à afficher
+  return res.changes.filter(c => c.added || Math.abs(c.to - c.from) >= 0.5).sort((a, b) => {
     if (a.added !== b.added) return a.added ? -1 : 1;
     const ka = Math.abs(a.to - a.from * res.beta) * ((rows.get(a.idx) || {}).per || { kcal: 100 }).kcal;
     const kb = Math.abs(b.to - b.from * res.beta) * ((rows.get(b.idx) || {}).per || { kcal: 100 }).kcal;
@@ -44,7 +47,7 @@ function sortedChanges(res) {
 const gTxt = g => `${f1(g)} g`;
 function changeHTML(c, res) {
   if (c.added) return `<li><span>+ ${esc(c.name)}${res.q > 1 ? `<small>${gTxt(c.to / res.q)} par ${esc(res.meal.name)}</small>` : ''}</span><b class="up">${gTxt(c.to)}</b></li>`;
-  return `<li><span>${esc(c.name)}</span><b class="${c.to > c.from * res.beta ? 'up' : 'down'}">${gTxt(c.from)} → ${gTxt(c.to)}</b></li>`;
+  return `<li><span>${esc(c.name)}</span><b class="${c.to > c.from ? 'up' : 'down'}">${gTxt(c.from)} → ${gTxt(c.to)}</b></li>`;
 }
 function lotText(res) {
   if (res.n <= 1) return res.beta > 1.05 || res.beta < 0.95 ? 'la recette entière, quantités ajustées' : 'la recette entière';
@@ -84,7 +87,7 @@ export function adaptCardHTML(r) {
   return `<section class="adapt-card">
     <h2>${icon('sparkle')}Adapter à ton plan</h2>
     <p class="ac-big">${best.k} ${portionWord(best.k)} = ${esc(best.meal.name)}</p>
-    <p class="ac-sub"><span class="dot st-${LEVEL_DOT[best.level]}"></span><b>${esc(LEVEL[best.level])}</b> · ${esc(lotText(best))}</p>
+    <p class="ac-sub"><span class="dot st-${LEVEL_DOT[best.level]}"></span><b>${esc(levelText(best))}</b> · ${esc(lotText(best))}</p>
     ${ch.length ? `<ul class="ac-list">${ch.slice(0, 3).map(c => changeHTML(c, best)).join('')}</ul>
     ${ch.length > 3 ? `<p class="ac-more-n">+ ${ch.length - 3} autre${ch.length - 3 > 1 ? 's' : ''} changement${ch.length - 3 > 1 ? 's' : ''}</p>` : ''}` : ''}
     <button type="button" class="btn primary block" data-adapt="${esc(best.meal.id)}">${icon('target')}Voir l'adaptation</button>
@@ -214,7 +217,7 @@ export function openAdapt(r0, opts = {}) {
       const locked = st.locked.includes(li);
       let q;
       if (row.to == null || (row.neutral && Math.abs(row.to - num(row.from)) < 0.05)) q = `<span class="muted">${esc(it.qty || (row.to ? gTxt(row.to) : 'sans grammes'))}</span>`;
-      else if (Math.abs(row.to - num(row.from)) >= 0.5) q = `<s>${gTxt(row.from)}</s> <b class="${changed.has(li) ? (row.to > row.from * res.beta ? 'up' : 'down') : ''}">${gTxt(row.to)}</b>`;
+      else if (Math.abs(row.to - num(row.from)) >= 0.5) q = `<s>${gTxt(row.from)}</s> <b class="${changed.has(li) ? (row.to > row.from ? 'up' : 'down') : ''}">${gTxt(row.to)}</b>`;
       else q = `<span>${gTxt(row.to)}</span>`;
       const food = foodByName(it.name);
       const u = row.to != null ? unitsText(food, row.to) : '';
@@ -280,7 +283,7 @@ export function openAdapt(r0, opts = {}) {
       body = `
         <section class="bal ad-panel st-${ok ? 'ok' : 'far'}">
           <p class="verdict">${ok ? `${res.k} ${portionWord(res.k)} = ${esc(res.meal.name)}` : 'Impossible'}</p>
-          <p class="verdict-sub">${ok ? `${esc(LEVEL[res.level])} · ${esc(lotText(res))}` : esc(missText(res))}</p>
+          <p class="verdict-sub">${ok ? `${esc(levelText(res))} · ${esc(lotText(res))}` : esc(missText(res))}</p>
           ${lotStep}
           ${tableHTML()}
         </section>

@@ -319,7 +319,12 @@ function fbContent(html) {
   d.querySelectorAll('script, style, noscript').forEach(e => e.remove());
   let text = textOf(d.body);
   for (const t of jsonTexts(html)) if (!text.includes(t.slice(0, 30))) text = `${t}\n\n${text}`;
-  return { text: text.replace(/\n{3,}/g, '\n\n').trim().slice(0, 12000), image: (video && video.getAttribute('poster')) || (imgs[0] && imgs[0].src) || '', video: findVideoUrl(html) };
+  // images du post dans l'ordre (carrousel : la recette est souvent écrite dessus)
+  const inOrder = [...doc.querySelectorAll('img')]
+    .map(i => ({ src: i.getAttribute('src') || '', w: +(i.getAttribute('width') || 0) }))
+    .filter(x => /scontent/.test(x.src) && !/static\.|rsrc\.php|emoji|\/rsrc\//.test(x.src) && (!x.w || x.w >= 150))
+    .map(x => x.src.replace(/&amp;/g, '&'));
+  return { text: text.replace(/\n{3,}/g, '\n\n').trim().slice(0, 12000), image: (video && video.getAttribute('poster')) || (imgs[0] && imgs[0].src) || '', images: [...new Set(inOrder)].slice(0, 8), video: findVideoUrl(html) };
 }
 const fbBlocked = t => t.length < 60 || (t.length < 700 && /(connectez-vous|se connecter|log in|log into|créer (un )?(nouveau )?compte|create new account|n.est pas disponible|n.est plus disponible|plus disponible|non disponible|n.existe plus|l.autorisation de|supprimée|confidentialité|isn.t available|not available|unavailable|no longer available)/i.test(t));
 
@@ -358,7 +363,7 @@ async function fromFacebook(url, onStep) {
     const og = [meta(doc, 'og:title'), meta(doc, 'og:description', 'description'), ...(p.status < 400 ? jsonTexts(p.html) : [])].filter(Boolean).join('\n');
     trace.push(`page → ${p.status}, ${og.length} car.`);
     if (p.status < 400 && !fbBlocked(og)) {
-      if (!best) best = { text: og, image: meta(doc, 'og:image'), href: hrefs[0], video: findVideoUrl(p.html) };
+      if (!best) best = { text: og, image: meta(doc, 'og:image'), images: meta(doc, 'og:image') ? [meta(doc, 'og:image')] : [], href: hrefs[0], video: findVideoUrl(p.html) };
       else if (!best.video) best.video = findVideoUrl(p.html);
       else if (!best.text.includes(og.slice(0, 40))) best.text = `${og}\n\n${best.text}`;
     }
@@ -366,11 +371,11 @@ async function fromFacebook(url, onStep) {
   if (!best && !connected && hasWebReader()) {
     onStep('Ouverture du post comme dans Chrome…');
     const w = await readWithBrowser(url, trace);
-    if (w) best = { text: w.text, image: w.image, href: w.url, video: w.video };
+    if (w) best = { text: w.text, image: w.image, images: w.image ? [w.image] : [], href: w.url, video: w.video };
   }
   if (!best) throw new AIError(connected || !hasWebReader() ? 'blocked-site' : 'fb-login', connected || !hasWebReader() ? FB_BLOCKED : FB_LOGIN, trace.join(' · '));
   trace.push(best.video ? 'vidéo trouvée' : 'pas de vidéo dans la page');
-  return { url: best.href, text: best.text, title: '', author: '', image: best.image, video: best.video || '', trace };
+  return { url: best.href, text: best.text, title: '', author: '', image: best.image, images: arr(best.images), video: best.video || '', trace };
 }
 
 async function fromPage(url, onStep, platform) {
@@ -415,8 +420,8 @@ export async function downloadVideo(url) {
   }
 }
 
-/** Télécharge une image distante et la réduit (pour la photo de la recette). */
-export async function downloadImage(url) {
+/** Télécharge une image distante et la réduit (photo de la recette, ou lecture par Gemini). */
+export async function downloadImage(url, max = 1200) {
   if (!url) return null;
   try {
     const r = await http({ url, headers: { 'User-Agent': MOBILE_UA }, responseType: 'blob', timeout: 20000 });
@@ -424,10 +429,60 @@ export async function downloadImage(url) {
     const type = /png/i.test(String(r.headers['Content-Type'] || r.headers['content-type'] || '')) ? 'image/png' : 'image/jpeg';
     const blob = typeof r.data === 'string' ? b64ToBlob(r.data, type) : r.data;
     if (!blob || blob.size < 500) return null;
-    return await resizeImage(blob, 1200, 0.84);
+    return await resizeImage(blob, max, 0.85);
   } catch (e) {
     return null;
   }
+}
+
+/* ============================================================ images pour Gemini */
+/**
+ * Prépare des images pour Gemini. Une capture très haute (post défilé, carrousel collé bout à bout)
+ * réduite d'un bloc deviendrait illisible : on la découpe en morceaux qui se chevauchent un peu.
+ */
+export async function imageTiles(blobs, maxParts = 14) {
+  const out = [];
+  for (const b of arr(blobs)) {
+    if (out.length >= maxParts) break;
+    let bmp = null;
+    try { bmp = await createImageBitmap(b); } catch (e) { bmp = null; }
+    if (!bmp || bmp.height <= bmp.width * 2.2) {
+      if (bmp && bmp.close) bmp.close();
+      out.push(await resizeImage(b, 1600, 0.85));
+      continue;
+    }
+    const w = bmp.width, h = bmp.height;
+    const k = Math.min(1, 1280 / w);
+    let th = Math.round(w * 1.4);
+    const ov = Math.round(th * 0.1);
+    let n = Math.ceil((h - ov) / (th - ov));
+    const room = maxParts - out.length;
+    if (n > room) { n = room; th = Math.ceil((h + ov * (n - 1)) / n); }
+    for (let i = 0; i < n; i++) {
+      const y = Math.max(0, Math.min(h - th, i * (th - ov)));
+      const cv = document.createElement('canvas');
+      cv.width = Math.max(1, Math.round(w * k));
+      cv.height = Math.max(1, Math.round(Math.min(th, h) * k));
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, cv.width, cv.height);
+      ctx.drawImage(bmp, 0, y, w, Math.min(th, h), 0, 0, cv.width, cv.height);
+      const t = await new Promise(res => cv.toBlob(x => res(x), 'image/jpeg', 0.85));
+      if (t) out.push(t);
+    }
+    if (bmp.close) bmp.close();
+  }
+  return out.filter(Boolean);
+}
+async function imageParts(tiles) {
+  const parts = [];
+  for (const t of tiles) parts.push(imagePart(await blobToB64(t), 'image/jpeg'));
+  return parts;
+}
+/** Image choisie par Gemini comme photo du plat (numéro à partir de 1), sinon la première. */
+function pickPhoto(j, tiles) {
+  const i = Math.round(num(j && j.photo));
+  return tiles[i >= 1 && i <= tiles.length ? i - 1 : 0] || null;
 }
 
 /* ============================================================ prompt et normalisation */
@@ -435,25 +490,26 @@ export function libText() {
   return S.foods.map(f => `${f.name} : ${f1(f.kcal)}/${f1(f.p)}/${f1(f.c)}/${f1(f.f)}`).join('\n');
 }
 const IMPORT_RULES = `Réponds avec UNIQUEMENT un objet JSON de cette forme :
-{"is_recipe": true, "title": "Nom court", "servings": 1, "ingredients": [{"section": "Crème"}, {"name": "Flocons d'avoine", "qty": "30 g", "g": 30, "kcal": 112.5, "p": 3.8, "c": 20.3, "f": 2.3}], "steps": ["Préchauffe le four à 180 °C."], "steps_source": "source", "notes": "", "author": ""}
+{"is_recipe": true, "title": "Nom court", "servings": 1, "ingredients": [{"section": "Crème"}, {"name": "Flocons d'avoine", "qty": "30 g", "g": 30, "kcal": 112.5, "p": 3.8, "c": 20.3, "f": 2.3}], "steps": ["Préchauffe le four à 180 °C."], "steps_source": "source", "notes": "", "author": "", "photo": 0}
 
 Règles :
 - is_recipe = false s'il n'y a aucune recette (pas d'ingrédients) ; le reste peut alors rester vide.
 - Tout en français (traduis si besoin). Titre court, sans emoji ni hashtag.
 - servings = nombre de portions ou de pièces de la recette telle qu'écrite. Pour une recette à découper ou à partager (barres, cookies, muffins, gâteau, pancakes…) sans nombre indiqué, estime un nombre de pièces réaliste et dis-le dans notes ; sinon 1.
 - Garde l'ordre des ingrédients. Si la recette a des parties (base, crème, topping…), mets un objet {"section": "Nom"} avant chaque partie.
-- qty = la quantité telle qu'écrite (« 1 banane », « 2 c. à soupe »). g = son poids en grammes : 1 c.à.s ≈ 15 g, 1 c.à.c ≈ 5 g, 1 œuf ≈ 55 g, 1 banane ≈ 118 g, 1 dose de whey ≈ 30 g ; pour « 150 à 200 g », prends le milieu ; convertis cups, oz et ml. g = null seulement pour le sel, le poivre, les épices, l'eau, le café, la levure et l'édulcorant (macros à 0).
+- qty = la quantité telle qu'écrite (« 1 banane », « 2 c. à soupe »). g = son poids en grammes : 1 c.à.s ≈ 15 g (poudres légères comme cacao, farine ou whey : ≈ 8 g ; flocons d'avoine : ≈ 10 g), 1 c.à.c ≈ 5 g (poudres : ≈ 3 g), 1 œuf ≈ 55 g, 1 banane ≈ 118 g, 1 dose de whey ≈ 30 g ; pour « 150 à 200 g », prends le milieu ; convertis cups, oz et ml. g = null seulement pour le sel, le poivre, les épices, l'eau, le café, la levure et l'édulcorant (macros à 0).
 - kcal, p (protéines), c (glucides), f (lipides) = valeurs pour ces g, arrondies à 0,1. Si l'aliment est dans MA BASE ci-dessous, reprends son nom EXACT et ses valeurs pour 100 g ; sinon, des valeurs d'étiquette françaises courantes.
 - steps : une étape par élément, sans numéro, reformulées avec tes mots en phrases courtes à la 2e personne du singulier. Si la source ne donne pas la préparation, écris quand même des étapes simples et logiques pour réaliser la recette avec ces ingrédients (ordre, cuisson, température, temps, repos), et dis dans notes qu'elles sont déduites.
 - steps_source = "source" si les étapes viennent du contenu, "deduites" si tu les as écrites toi-même.
 - notes : astuces, conservation, variantes de la source (reformulées). Si des quantités manquaient et que tu les as estimées, dis-le. author : le compte (@…) ou le site s'il est visible, sinon "".
-- N'invente aucun ingrédient absent de la source.`;
+- N'invente aucun ingrédient absent de la source.
+- photo = numéro (1, 2…) de l'image jointe qui montre le mieux le plat fini, de préférence sans gros texte dessus ; 0 s'il n'y a pas d'image jointe ou si aucune ne montre le plat.`;
 
-function promptFor(kind, { text = '', note = '', url = '', platform = '' } = {}) {
+function promptFor(kind, { text = '', note = '', url = '', platform = '', count = 0 } = {}) {
   const src = PLATFORM_LABEL[platform] || 'la source';
   const body = {
     text: `Voici le texte de la recette :\n"""\n${text}\n"""`,
-    images: `La recette est dans les images jointes (captures d'écran d'un post, d'une vidéo ou d'une page, ou photo d'un livre). Lis tout le texte visible, légende comprise.${text ? `\nTexte partagé avec les images :\n"""\n${text}\n"""` : ''}`,
+    images: `La recette est dans les images jointes (captures d'écran d'un post, d'un carrousel, d'une vidéo ou d'une page, ou photo d'un livre). Lis tout le texte visible, légende comprise.${count > 1 ? ` Il y a ${count} images, numérotées de 1 à ${count} dans l'ordre. Une longue capture peut être découpée en morceaux qui se suivent avec un léger chevauchement : ne compte pas deux fois le même ingrédient.` : ''}${text ? `\nTexte partagé avec les images :\n"""\n${text}\n"""` : ''}`,
     link: `Voici ce que j'ai récupéré du lien ${url} (${src}) : légende ou description du post, titre, texte de la page.\n"""\n${text}\n"""`,
     video: `La recette est dans la vidéo jointe : regarde-la et écoute-la en entier (ingrédients dits à l'oral ou affichés à l'écran).${text ? `\nDescription de la vidéo :\n"""\n${text}\n"""` : ''}`,
   }[kind];
@@ -540,6 +596,21 @@ export async function importFromLink(url, { note = '', sharedText = '', onStep =
       else got.trace.push('rien dans la vidéo non plus');
     } else got.trace.push(`vidéo : ${(v && v.error) || 'illisible'}`);
   }
+  // Recette écrite sur les images du post (carrousel, photo d'une fiche) : Gemini lit les images.
+  let imgPhoto = null;
+  const postImgs = arr(got.images).length ? arr(got.images) : got.image ? [got.image] : [];
+  if (noRecipe(j) && postImgs.length) {
+    got.trace = got.trace || [];
+    onStep('Gemini lit les images du post…');
+    if (cache.images === undefined) cache.images = (await Promise.all(postImgs.slice(0, 6).map(u => downloadImage(u, 1600)))).filter(Boolean);
+    if (isCancelled()) throw new AIError('cancelled', 'Annulé.');
+    const tiles = await imageTiles(cache.images);
+    if (tiles.length) {
+      const ji = await generateJSON([...await imageParts(tiles), textPart(promptFor('images', { text: got.text + extraText, note, count: tiles.length }))], { isCancelled, onStatus: onStep });
+      if (!noRecipe(ji)) { j = ji; imgPhoto = pickPhoto(ji, tiles); got.trace.push(`recette lue sur ${cache.images.length} image${cache.images.length > 1 ? 's' : ''}`); }
+      else got.trace.push('rien sur les images non plus');
+    } else got.trace.push('images du post illisibles');
+  }
   const deduced = x => x && (x.steps_source === 'deduites' || !arr(x.steps).some(s => str(s)));
   if (!noRecipe(j) && deduced(j) && got.video && got.platform !== 'youtube') {
     got.trace = got.trace || [];
@@ -567,7 +638,7 @@ export async function importFromLink(url, { note = '', sharedText = '', onStep =
       : 'Impossible de lire le texte de ce lien. Fais une capture de la recette ou colle le texte.');
   }
   const recipe = normalizeRecipe(j, { url: got.url, label });
-  const photo = await photoP;
+  const photo = imgPhoto || await photoP;
   return { recipe, photo, got };
 }
 
@@ -581,17 +652,15 @@ export async function importFromText(text, { note = '', url = '', onStep = () =>
 /** Captures / photos (Blob) → recette. La première image peut servir de photo. */
 export async function importFromImages(blobs, { note = '', text = '', onStep = () => {}, isCancelled = () => false } = {}) {
   onStep('Préparation des images…');
-  const parts = [];
-  for (const b of blobs.slice(0, 6)) {
-    const small = await resizeImage(b, 1600, 0.85);
-    parts.push(imagePart(await blobToB64(small), 'image/jpeg'));
-  }
+  const src = blobs.slice(0, 6);
+  const tiles = await imageTiles(src);
+  const parts = await imageParts(tiles);
   const url = firstUrl(text);
-  parts.push(textPart(promptFor('images', { text, note })));
-  onStep('Gemini lit les images…');
+  parts.push(textPart(promptFor('images', { text, note, count: tiles.length })));
+  onStep(tiles.length > src.length ? `Gemini lit la capture (${tiles.length} morceaux)…` : 'Gemini lit les images…');
   const j = await generateJSON(parts, { isCancelled, onStatus: onStep });
   const label = url ? PLATFORM_LABEL[detectPlatform(url)] : '';
-  return { recipe: normalizeRecipe(j, { url, label }), photo: null };
+  return { recipe: normalizeRecipe(j, { url, label }), photo: pickPhoto(j, tiles) };
 }
 
 /** Écrit les étapes d'une recette à partir de ses ingrédients (quand la source ne les donne pas). */

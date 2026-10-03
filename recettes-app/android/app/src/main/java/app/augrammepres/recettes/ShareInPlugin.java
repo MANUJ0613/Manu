@@ -30,7 +30,10 @@ import java.util.List;
 public class ShareInPlugin extends Plugin {
 
     private static final int MAX_IMAGES = 6;
-    private static final int MAX_SIDE = 1600;
+    // Largeur max et nombre de pixels max : une capture très haute (post défilé) garde sa largeur,
+    // sinon le texte deviendrait illisible. Les photos classiques sont ramenées à 1600 px de large.
+    private static final int MAX_W = 1600;
+    private static final long MAX_PIXELS = 12_000_000L;
 
     private JSObject pending = null;
 
@@ -117,10 +120,9 @@ public class ShareInPlugin extends Plugin {
                     decoder.setAllocator(ImageDecoder.ALLOCATOR_SOFTWARE);
                     int w = info.getSize().getWidth();
                     int h = info.getSize().getHeight();
-                    int max = Math.max(w, h);
-                    if (max > MAX_SIDE) {
-                        float k = (float) MAX_SIDE / max;
-                        decoder.setTargetSize(Math.max(1, Math.round(w * k)), Math.max(1, Math.round(h * k)));
+                    double k = Math.min(1.0, Math.min((double) MAX_W / w, Math.sqrt((double) MAX_PIXELS / ((double) w * h))));
+                    if (k < 1.0) {
+                        decoder.setTargetSize(Math.max(1, (int) Math.round(w * k)), Math.max(1, (int) Math.round(h * k)));
                     }
                 });
             } else {
@@ -130,7 +132,8 @@ public class ShareInPlugin extends Plugin {
                     BitmapFactory.decodeStream(in, null, bounds);
                 }
                 int sample = 1;
-                while (Math.max(bounds.outWidth, bounds.outHeight) / (sample * 2) >= MAX_SIDE) sample *= 2;
+                while (bounds.outWidth / (sample * 2) >= MAX_W
+                        || (long) bounds.outWidth * bounds.outHeight / ((long) sample * sample) > 4L * MAX_PIXELS) sample *= 2;
                 BitmapFactory.Options opts = new BitmapFactory.Options();
                 opts.inSampleSize = sample;
                 try (InputStream in = getContext().getContentResolver().openInputStream(uri)) {

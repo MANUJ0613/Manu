@@ -214,7 +214,7 @@ export function startImport(input) {
       }
       if (input.label && !recipe.source.label) recipe.source.label = input.label;
       let photo = res.photo || null;
-      if (!photo && input.kind === 'images' && input.keepPhoto !== false) photo = input.images[0];
+      if (input.kind === 'images') photo = input.keepPhoto !== false ? (res.photo || input.images[0]) : null;
       page.close();
       openEditor(null, { draft: recipe, photoBlob: photo, fromImport: true });
     } catch (e) {
@@ -241,7 +241,7 @@ export function startImport(input) {
       webLogin(acc.login, `Connexion ${acc.label}`).then(async () => {
         if (await isConnected(site)) {
           toast(`${acc.label} connecté.`);
-          delete cache.got; delete cache.video; delete cache.photo;
+          delete cache.got; delete cache.video; delete cache.photo; delete cache.images;
           run();
         } else toast(`Pas encore connecté à ${acc.label}.`);
       });
