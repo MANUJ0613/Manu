@@ -1,0 +1,19 @@
+[Unit]
+Description=Outil de revente SEO (Flask) - Leboncoin & Vinted
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/annonces-seo
+EnvironmentFile=/etc/annonces-seo.env
+# gunicorn : le planificateur d'alertes tourne dans chaque worker, mais un
+# anti-spam en base (une alerte par créneau horaire) évite les notifs en double.
+ExecStart=/opt/annonces-seo/venv/bin/gunicorn --workers 2 --threads 4 \
+    --bind 0.0.0.0:8000 --timeout 120 annonces_seo:app
+Restart=always
+RestartSec=10
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target
